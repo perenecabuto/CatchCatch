@@ -1,0 +1,46 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+
+<script>
+  window.addEventListener("DOMContentLoaded", function() {
+    var connectionsEl = document.getElementById("connections");
+    var timeEl = document.getElementById("time");
+
+    var socket = io('//' + location.host);
+    socket.on('connect', function() {
+        console.log("connected");
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            var coords = {x: pos.coords.latitude, y: pos.coords.longitude};
+            console.log("update pos", coords);
+            socket.emit('player:update', JSON.stringify(coords));
+        });
+    });
+    socket.on('player:list', function(list) {
+        console.log("player:list", list);
+        for (let i in list.players) {
+            let player = list.players[i];
+            connectionsEl.innerHTML += "<li id='d-" + player.id + "'>" + JSON.stringify(player) + "</li>";
+        }
+    });
+    socket.on('player:updated', function(player) {
+        var playerEl = document.getElementById("d-" + player.id);
+        if (playerEl !== null) playerEl.innerText = JSON.stringify(player);
+    })
+    socket.on('player:new', function(player) {
+        connectionsEl.innerHTML += "<li id='d-" + player.id + "'>" + JSON.stringify(player) + "</li>";
+    });
+    socket.on("player:destroy", function(player) {
+        var playerEl = document.getElementById("d-" + player.id);
+        if (playerEl !== null) playerEl.remove();
+    });
+    socket.on("hello", function(data) {
+        timeEl.innerText = data;
+    });
+  });
+</script>
+
+<body>
+    <h1>Connections</h1>
+    <h2 id="time"></h2>
+    <ul id="connections"></ul>
+</body>
