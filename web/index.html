@@ -11,12 +11,12 @@
         if (!navigator.geolocation) return;
         navigator.geolocation.getCurrentPosition(function(pos) {
             var coords = {x: pos.coords.latitude, y: pos.coords.longitude};
-            console.log("update pos", coords);
             socket.emit('player:update', JSON.stringify(coords));
         });
     });
     socket.on('player:list', function(list) {
         console.log("player:list", list);
+        connectionsEl.innerHTML = "";
         for (let i in list.players) {
             let player = list.players[i];
             connectionsEl.innerHTML += "<li id='d-" + player.id + "'>" + JSON.stringify(player) + "</li>";
