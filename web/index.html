@@ -33,9 +33,6 @@
         var playerEl = document.getElementById("d-" + player.id);
         if (playerEl !== null) playerEl.remove();
     });
-    socket.on("hello", function(data) {
-        timeEl.innerText = data;
-    });
   });
 </script>
 
