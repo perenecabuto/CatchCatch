@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -96,6 +97,10 @@ type Player struct {
 	ID string  `json:"id"`
 	X  float32 `json:"x"`
 	Y  float32 `json:"y"`
+}
+
+func (p *Player) String() string {
+	return fmt.Sprintln("id:", p.ID, "x:", p.X, "y:", p.Y)
 }
 
 // PlayerList payload for list of players
