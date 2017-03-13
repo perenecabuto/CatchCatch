@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"os"
+	"os/signal"
 
 	"github.com/garyburd/redigo/redis"
 	socketio "github.com/googollee/go-socket.io"
@@ -16,7 +18,13 @@ var (
 
 func main() {
 	conn = mustRedisConnect()
-	defer conn.Close()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Kill, os.Interrupt)
+	go func() {
+		<-c
+		redisCleanUp()
+		os.Exit(0)
+	}()
 
 	server, err := socketio.NewServer(nil)
 	if err != nil {
@@ -83,6 +91,13 @@ func mustRedisConnect() redis.Conn {
 		log.Println("PING", res)
 	}
 	return conn
+}
+
+func redisCleanUp() {
+	log.Println("Cleaning location DB...")
+	conn.Send("FLUSHDB")
+	conn.Flush()
+	conn.Close()
 }
 
 // Player payload
