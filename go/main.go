@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 	"os"
 	"os/signal"
 
@@ -47,13 +46,6 @@ func main() {
 			log.Println("--> error to get players", err)
 		}
 
-		timer := time.NewTicker(2 * time.Second)
-		go func() {
-			for range timer.C {
-				so.Emit("hello", time.Now().String())
-			}
-		}()
-
 		so.On("player:update", func(msg string) {
 			log.Println("player:update", msg)
 
@@ -68,7 +60,6 @@ func main() {
 		so.On("disconnection", func() {
 			so.Leave(channel)
 			so.BroadcastTo(channel, "player:destroy", player)
-			timer.Stop()
 			removePlayer(player)
 			log.Println("diconnected", player)
 		})
