@@ -1,3 +1,6 @@
+# Bin
+go/go
+
 # Android
 *.iml
 .gradle
