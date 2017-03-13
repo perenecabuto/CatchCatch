@@ -112,7 +112,13 @@ public class MainActivity extends Activity {
             focusOn(l);
         }));
 
-        focusOn(locationManager.getLastKnownLocation(provider));
+        Location lastKnownLocation = locationManager.getLastKnownLocation(provider);
+        try {
+            manager.sendPosition(lastKnownLocation);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        focusOn(lastKnownLocation);
     }
 
     private void focusOn(Location location) {
