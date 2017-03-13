@@ -39,6 +39,10 @@ class ConnectionManager {
         socket.emit("player:update", coords.toString());
     }
 
+    void disconnect() {
+        socket.disconnect();
+    }
+
     class NoConnectionException extends Exception {
         NoConnectionException(String msg) {
             super(msg);
