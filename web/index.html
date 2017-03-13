@@ -8,12 +8,8 @@
     var socket = io('//' + location.host);
     socket.on('connect', function() {
         console.log("connected");
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition(function(pos) {
-            var coords = {x: pos.coords.latitude, y: pos.coords.longitude};
-            socket.emit('player:update', JSON.stringify(coords));
-        });
     });
+
     socket.on('player:list', function(list) {
         console.log("player:list", list);
         connectionsEl.innerHTML = "";
@@ -22,16 +18,25 @@
             connectionsEl.innerHTML += "<li id='d-" + player.id + "'>" + JSON.stringify(player) + "</li>";
         }
     });
+
     socket.on('player:updated', function(player) {
         var playerEl = document.getElementById("d-" + player.id);
         if (playerEl !== null) playerEl.innerText = JSON.stringify(player);
     })
+
     socket.on('player:new', function(player) {
         connectionsEl.innerHTML += "<li id='d-" + player.id + "'>" + JSON.stringify(player) + "</li>";
     });
+
     socket.on("player:destroy", function(player) {
         var playerEl = document.getElementById("d-" + player.id);
         if (playerEl !== null) playerEl.remove();
+    });
+
+    navigator.geolocation.watchPosition(function(pos) {
+        console.log("position updated");
+        var coords = {x: pos.coords.latitude, y: pos.coords.longitude};
+        socket.emit('player:update', JSON.stringify(coords));
     });
   });
 </script>
