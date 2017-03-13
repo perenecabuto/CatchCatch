@@ -35,13 +35,13 @@ func main() {
 		channel := "main"
 		player := &Player{so.Id(), 0, 0}
 
-		registerPlayer(player)
 		so.Join(channel)
-		log.Println("connected player", player.ID, "to channel", channel)
-
+		registerPlayer(player)
+		so.Emit("player:registred", player)
 		so.BroadcastTo(channel, "player:new", player)
+
 		if players, err := allPlayers(); err == nil {
-			log.Println("send players to", players)
+			log.Println("send players to", player)
 			so.Emit("player:list", players)
 		} else {
 			log.Println("--> error to get players", err)
@@ -54,6 +54,7 @@ func main() {
 				log.Println("player:update event error", err.Error())
 				return
 			}
+			so.Emit("player:updated", player)
 			so.BroadcastTo(channel, "player:updated", player)
 			updatePlayerPosition(player)
 		})
