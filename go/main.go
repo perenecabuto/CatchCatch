@@ -27,17 +27,15 @@ func main() {
 		service.Register(player)
 		so.Emit("player:registred", player)
 		so.BroadcastTo(channel, "player:new", player)
+		log.Println("new player connected", player)
 
 		if players, err := service.All(); err == nil {
-			log.Println("send players to", player)
 			so.Emit("player:list", players)
 		} else {
 			log.Println("--> error to get players", err)
 		}
 
 		so.On("player:update", func(msg string) {
-			log.Println("player:update", msg)
-
 			if err := json.Unmarshal([]byte(msg), player); err != nil {
 				log.Println("player:update event error", err.Error())
 				return
