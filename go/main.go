@@ -12,20 +12,9 @@ import (
 	socketio "github.com/googollee/go-socket.io"
 )
 
-var (
-	conn redis.Conn
-)
-
 func main() {
-	conn = mustRedisConnect()
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Kill, os.Interrupt)
-	go func() {
-		<-c
-		redisCleanUp()
-		os.Exit(0)
-	}()
-
+	conn := mustRedisConnect()
+	service := &PlayerLocationService{conn}
 	server, err := socketio.NewServer(nil)
 	if err != nil {
 		log.Fatal(err)
@@ -36,11 +25,11 @@ func main() {
 		player := &Player{so.Id(), 0, 0}
 
 		so.Join(channel)
-		registerPlayer(player)
+		service.Register(player)
 		so.Emit("player:registred", player)
 		so.BroadcastTo(channel, "player:new", player)
 
-		if players, err := allPlayers(); err == nil {
+		if players, err := service.All(); err == nil {
 			log.Println("send players to", player)
 			so.Emit("player:list", players)
 		} else {
@@ -56,13 +45,13 @@ func main() {
 			}
 			so.Emit("player:updated", player)
 			so.BroadcastTo(channel, "player:updated", player)
-			updatePlayerPosition(player)
+			service.Update(player)
 		})
 
 		so.On("disconnection", func() {
 			so.Leave(channel)
 			so.BroadcastTo(channel, "player:destroy", player)
-			removePlayer(player)
+			service.Remove(player)
 			log.Println("diconnected", player)
 		})
 	})
@@ -83,73 +72,21 @@ func mustRedisConnect() redis.Conn {
 	} else {
 		log.Println("PING", res)
 	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Kill, os.Interrupt)
+	go func() {
+		<-c
+		redisCleanUp(conn)
+		os.Exit(0)
+	}()
+
 	return conn
 }
 
-func redisCleanUp() {
+func redisCleanUp(conn redis.Conn) {
 	log.Println("Cleaning location DB...")
 	conn.Send("FLUSHDB")
 	conn.Flush()
 	conn.Close()
-}
-
-// Player payload
-type Player struct {
-	ID string  `json:"id"`
-	X  float32 `json:"x"`
-	Y  float32 `json:"y"`
-}
-
-func (p *Player) String() string {
-	return fmt.Sprintln("id:", p.ID, "x:", p.X, "y:", p.Y)
-}
-
-// PlayerList payload for list of players
-type PlayerList struct {
-	Players []*Player `json:"players"`
-}
-
-func registerPlayer(p *Player) error {
-	return conn.Send("SET", "player", p.ID, "POINT", p.X, p.Y)
-}
-
-func updatePlayerPosition(p *Player) error {
-	return conn.Send("SET", "player", p.ID, "POINT", p.X, p.Y)
-}
-
-func removePlayer(p *Player) error {
-	return conn.Send("DEL", "player", p.ID)
-}
-
-func allPlayers() (*PlayerList, error) {
-	result, err := conn.Do("SCAN", "player")
-	if err != nil {
-		return nil, err
-	}
-
-	var payload []interface{}
-	redis.Scan(result.([]interface{}), nil, &payload)
-
-	list := make([]*Player, len(payload))
-	for i, d := range payload {
-		var id string
-		var data []byte
-		redis.Scan(d.([]interface{}), &id, &data)
-		geo := &struct {
-			Coords [2]float32 `json:"coordinates"`
-		}{}
-		json.Unmarshal(data, geo)
-		list[i] = &Player{ID: id, X: geo.Coords[0], Y: geo.Coords[1]}
-	}
-	return &PlayerList{list}, nil
-}
-
-func getPlayerPosition(name string) (*Player, error) {
-	result, err := conn.Do("GET", "player", name)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Println("->", string(result.([]uint8)))
-	return &Player{}, nil
 }
