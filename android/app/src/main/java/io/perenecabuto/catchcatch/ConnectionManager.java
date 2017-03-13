@@ -23,11 +23,11 @@ class ConnectionManager {
 
     void connect() throws URISyntaxException, NoConnectionException {
         socket
-            .on(Socket.EVENT_CONNECT, args -> Log.d(TAG, "connect: " + Arrays.toString(args)))
-            .on("player:list", args -> Log.d(TAG, "player:list" + Arrays.toString(args)))
-            .on("player:updated", args -> Log.d(TAG, "player:updated" + Arrays.toString(args)))
-            .on("player:new", args -> Log.d(TAG, "player:new" + Arrays.toString(args)))
-            .on(Socket.EVENT_DISCONNECT, args -> Log.d(TAG, "disconnect: " + Arrays.toString(args)));
+            .on(Socket.EVENT_CONNECT, (Object... args) -> Log.d(TAG, "connect: " + Arrays.toString(args)))
+            .on("player:list", (Object... args) -> Log.d(TAG, "player:list" + Arrays.toString(args)))
+            .on("player:updated", (Object... args) -> Log.d(TAG, "player:updated" + Arrays.toString(args)))
+            .on("player:new", (Object... args) -> Log.d(TAG, "player:new" + Arrays.toString(args)))
+            .on(Socket.EVENT_DISCONNECT, (Object... args) -> Log.d(TAG, "disconnect: " + Arrays.toString(args)));
 
         socket.connect();
     }
