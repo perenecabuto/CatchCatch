@@ -55,7 +55,9 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *EventHandler) newPlayer(so io.Socket, channel string) *Player {
 	player := &Player{so.Id(), 0, 0}
 	so.Join(channel)
-	h.service.Register(player)
+	if err := h.service.Register(player); err != nil {
+		log.Fatal("could not register:", err)
+	}
 	so.Emit("player:registred", player)
 	so.BroadcastTo(channel, "remote-player:new", player)
 	log.Println("new player connected", player)
