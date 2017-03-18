@@ -26,21 +26,26 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.sendPlayerList(so)
 
 		so.On("player:update", func(msg string) {
-			println(msg)
 			if err := json.Unmarshal([]byte(msg), player); err != nil {
 				log.Println("player:update event error", err.Error())
 				return
 			}
+			log.Println("player:updated", player)
 			so.Emit("player:updated", player)
 			so.BroadcastTo(channel, "remote-player:updated", player)
 			h.service.Update(player)
 		})
 
 		so.On("disconnection", func() {
-			so.Leave(channel)
-			so.BroadcastTo(channel, "remote-player:destroy", player)
+			if err := so.Leave(channel); err != nil {
+				log.Fatal("Error leaving channel", channel, err)
+			}
+			if err := so.BroadcastTo(channel, "remote-player:destroy", player); err != nil {
+				log.Fatal("Error broadcasting remote-player:destroy", channel, err)
+			}
 			h.service.Remove(player)
-			log.Println("diconnected", player)
+			log.Println("----> diconnected", player)
+			player = nil
 		})
 	})
 
