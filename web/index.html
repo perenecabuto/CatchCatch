@@ -54,7 +54,7 @@
   window.addEventListener("DOMContentLoaded", function() {
       var socket = io('//' + location.host);
       socket.on('connect', I.showConnected);
-      socket.on('player:list', I.showListAllPlayers);
+      socket.on('remote-player:list', I.showListAllPlayers);
       socket.on('player:registred', I.registerMyData)
       socket.on('player:updated', I.showSuccessMessage)
       socket.on('disconnected', function() {
