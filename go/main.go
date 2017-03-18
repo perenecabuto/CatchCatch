@@ -1,69 +1,52 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 
+	"flag"
+
 	"github.com/garyburd/redigo/redis"
-	socketio "github.com/googollee/go-socket.io"
+	io "github.com/googollee/go-socket.io"
+)
+
+var (
+	redisAddress   = flag.String("redis-addr", "localhost:9851", "redis address")
+	maxConnections = flag.Int("redis-connections", 100, "redis address")
 )
 
 func main() {
-	conn := mustRedisConnect()
-	service := &PlayerLocationService{conn}
-	server, err := socketio.NewServer(nil)
+	pool := mustRedisConnect()
+	service := &PlayerLocationService{pool}
+	server, err := io.NewServer(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+	eventH := NewEventHandler(server, service)
 
-	server.On("connection", func(so socketio.Socket) {
-		channel := "main"
-		player := &Player{so.Id(), 0, 0}
-
-		so.Join(channel)
-		service.Register(player)
-		so.Emit("player:registred", player)
-		so.BroadcastTo(channel, "player:new", player)
-		log.Println("new player connected", player)
-
-		if players, err := service.All(); err == nil {
-			so.Emit("player:list", players)
-		} else {
-			log.Println("--> error to get players", err)
-		}
-
-		so.On("player:update", func(msg string) {
-			if err := json.Unmarshal([]byte(msg), player); err != nil {
-				log.Println("player:update event error", err.Error())
-				return
-			}
-			so.Emit("player:updated", player)
-			so.BroadcastTo(channel, "player:updated", player)
-			service.Update(player)
-		})
-
-		so.On("disconnection", func() {
-			so.Leave(channel)
-			so.BroadcastTo(channel, "player:destroy", player)
-			service.Remove(player)
-			log.Println("diconnected", player)
-		})
-	})
-
-	http.Handle("/socket.io/", server)
+	http.Handle("/socket.io/", eventH)
 	http.Handle("/", http.FileServer(http.Dir("../web")))
 	log.Println("Serving at localhost: 5000...")
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
 
-func mustRedisConnect() redis.Conn {
-	conn, err := redis.Dial("tcp", "localhost:9851")
+func mustRedisConnect() *redis.Pool {
+	pool := redis.NewPool(func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", *redisAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		return c, err
+	}, *maxConnections)
+
+	conn, err := pool.Dial()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer pool.Close()
 	if res, err := conn.Do("PING"); err != nil {
 		log.Fatal(err)
 	} else {
@@ -78,7 +61,7 @@ func mustRedisConnect() redis.Conn {
 		os.Exit(0)
 	}()
 
-	return conn
+	return pool
 }
 
 func redisCleanUp(conn redis.Conn) {
