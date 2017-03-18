@@ -61,7 +61,7 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 	return err
 }
 
-type geo struct {
+type position struct {
 	Coords [2]float32 `json:"coordinates"`
 }
 
@@ -81,8 +81,8 @@ func (s *PlayerLocationService) All() (*PlayerList, error) {
 		var id string
 		var data []byte
 		redis.Scan(d.([]interface{}), &id, &data)
-		var geo *geo
-		json.Unmarshal(data, geo)
+		var geo position
+		json.Unmarshal(data, &geo)
 		list[i] = &Player{ID: id, X: geo.Coords[0], Y: geo.Coords[1]}
 	}
 	return &PlayerList{list}, nil
