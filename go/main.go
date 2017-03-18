@@ -1,15 +1,14 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 
-	"flag"
-
-	"github.com/garyburd/redigo/redis"
 	io "github.com/googollee/go-socket.io"
+	redis "gopkg.in/redis.v5"
 )
 
 var (
@@ -35,40 +34,22 @@ func main() {
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
 
-func mustRedisConnect() *redis.Pool {
-	pool := redis.NewPool(func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", *redisAddress)
-		if err != nil {
-			return nil, err
-		}
-		return c, err
-	}, *maxConnections)
-
-	conn, err := pool.Dial()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer pool.Close()
-	if res, err := conn.Do("PING"); err != nil {
-		log.Fatal(err)
-	} else {
-		log.Println("PING", res)
-	}
+func mustRedisConnect() *redis.Client {
+	client := redis.NewClient(&redis.Options{Addr: *redisAddress, PoolSize: 1000})
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Kill, os.Interrupt)
 	go func() {
 		<-c
-		redisCleanUp(conn)
+		redisCleanUp(client)
 		os.Exit(0)
 	}()
 
-	return pool
+	return client
 }
 
-func redisCleanUp(conn redis.Conn) {
+func redisCleanUp(conn *redis.Client) {
 	log.Println("Cleaning location DB...")
-	conn.Send("FLUSHDB")
-	conn.Flush()
+	conn.FlushDb()
 	conn.Close()
 }

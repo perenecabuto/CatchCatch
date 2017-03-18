@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/garyburd/redigo/redis"
+	redis "gopkg.in/redis.v5"
 )
 
 // Player payload
@@ -25,40 +25,23 @@ type PlayerList struct {
 
 // PlayerLocationService manages player locations
 type PlayerLocationService struct {
-	pool *redis.Pool
+	client *redis.Client
 }
 
 func (s *PlayerLocationService) Register(p *Player) error {
-	conn, err := s.pool.Dial()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	reply, err := conn.Do("SET", "player", p.ID, "POINT", p.X, p.Y)
-	if err != nil {
-		return err
-	}
-	return err
+	return s.Update(p)
 }
 
 func (s *PlayerLocationService) Update(p *Player) error {
-	conn, err := s.pool.Dial()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	_, err = conn.Do("SET", "player", p.ID, "POINT", p.X, p.Y)
-	return err
+	cmd := redis.NewStringCmd("SET", "player", p.ID, "POINT", p.X, p.Y)
+	s.client.Process(cmd)
+	return cmd.Err()
 }
 
 func (s *PlayerLocationService) Remove(p *Player) error {
-	conn, err := s.pool.Dial()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	_, err = conn.Do("DEL", "player", p.ID)
-	return err
+	cmd := redis.NewStringCmd("DEL", "player", p.ID)
+	s.client.Process(cmd)
+	return cmd.Err()
 }
 
 type position struct {
@@ -66,24 +49,22 @@ type position struct {
 }
 
 func (s *PlayerLocationService) All() (*PlayerList, error) {
-	conn, err := s.pool.Dial()
+	cmd := redis.NewSliceCmd("SCAN", "player")
+	s.client.Process(cmd)
+	res, err := cmd.Result()
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
-	var payload []interface{}
-	result, err := conn.Do("SCAN", "player")
-	redis.Scan(result.([]interface{}), nil, &payload)
-
+	payload, _ := redis.NewSliceResult(res[1].([]interface{}), err).Result()
 	list := make([]*Player, len(payload))
-	for i, d := range payload {
-		var id string
-		var data []byte
-		redis.Scan(d.([]interface{}), &id, &data)
-		var geo position
-		json.Unmarshal(data, &geo)
+	for i, item := range payload {
+		itemRes, _ := redis.NewSliceResult(item.([]interface{}), nil).Result()
+		id, data, geo := itemRes[0].(string), []byte(itemRes[1].(string)), &position{}
+		json.Unmarshal(data, geo)
+
 		list[i] = &Player{ID: id, X: geo.Coords[0], Y: geo.Coords[1]}
 	}
+
 	return &PlayerList{list}, nil
 }
