@@ -34,7 +34,11 @@ func (s *PlayerLocationService) Register(p *Player) error {
 		return err
 	}
 	defer conn.Close()
-	return conn.Send("SET", "player", p.ID, "POINT", p.X, p.Y)
+	reply, err := conn.Do("SET", "player", p.ID, "POINT", p.X, p.Y)
+	if err != nil {
+		return err
+	}
+	return err
 }
 
 func (s *PlayerLocationService) Update(p *Player) error {
@@ -43,7 +47,8 @@ func (s *PlayerLocationService) Update(p *Player) error {
 		return err
 	}
 	defer conn.Close()
-	return conn.Send("SET", "player", p.ID, "POINT", p.X, p.Y)
+	_, err = conn.Do("SET", "player", p.ID, "POINT", p.X, p.Y)
+	return err
 }
 
 func (s *PlayerLocationService) Remove(p *Player) error {
@@ -52,7 +57,8 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 		return err
 	}
 	defer conn.Close()
-	return conn.Send("DEL", "player", p.ID)
+	_, err = conn.Do("DEL", "player", p.ID)
+	return err
 }
 
 type geo struct {
