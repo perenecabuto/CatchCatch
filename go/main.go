@@ -24,6 +24,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	server.On("error", func(so io.Socket, err error) {
+		log.Println("error:", err)
+	})
 	eventH := NewEventHandler(server, service)
 
 	http.Handle("/socket.io/", eventH)
@@ -38,7 +41,6 @@ func mustRedisConnect() *redis.Pool {
 		if err != nil {
 			return nil, err
 		}
-
 		return c, err
 	}, *maxConnections)
 
