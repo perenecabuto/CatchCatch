@@ -14,6 +14,7 @@ type EventHandler struct {
 	service *PlayerLocationService
 }
 
+// NewEventHandler EventHandler builder
 func NewEventHandler(server *io.Server, service *PlayerLocationService) *EventHandler {
 	handler := &EventHandler{server, service}
 	return handler.bindEvents()

@@ -28,16 +28,19 @@ type PlayerLocationService struct {
 	client *redis.Client
 }
 
+// Register add new player
 func (s *PlayerLocationService) Register(p *Player) error {
 	return s.Update(p)
 }
 
+// Update player data
 func (s *PlayerLocationService) Update(p *Player) error {
 	cmd := redis.NewStringCmd("SET", "player", p.ID, "POINT", p.X, p.Y)
 	s.client.Process(cmd)
 	return cmd.Err()
 }
 
+// Remove player
 func (s *PlayerLocationService) Remove(p *Player) error {
 	cmd := redis.NewStringCmd("DEL", "player", p.ID)
 	s.client.Process(cmd)
@@ -48,6 +51,7 @@ type position struct {
 	Coords [2]float32 `json:"coordinates"`
 }
 
+// All return all registred players
 func (s *PlayerLocationService) All() (*PlayerList, error) {
 	cmd := redis.NewSliceCmd("SCAN", "player")
 	s.client.Process(cmd)
