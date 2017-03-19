@@ -15,10 +15,11 @@ type EventHandler struct {
 }
 
 func NewEventHandler(server *io.Server, service *PlayerLocationService) *EventHandler {
-	return &EventHandler{server, service}
+	handler := &EventHandler{server, service}
+	return handler.bindEvents()
 }
 
-func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *EventHandler) bindEvents() *EventHandler {
 	h.server.On("connection", func(so io.Socket) {
 		channel := "main"
 		player := h.newPlayer(so, channel)
@@ -49,6 +50,10 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	})
 
+	return h
+}
+
+func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.server.ServeHTTP(w, r)
 }
 
