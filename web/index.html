@@ -27,10 +27,10 @@
             '<div id="d-' + player.id + '">' + playerHTML + '</div>';
     }
 
-    var I = {
+    var EventHandler = {
         player: {},
 
-        showListAllPlayers: function(list) {
+        onRemotePlayerList: function (list) {
             console.log("remote-player:list", list);
             var connectionsEl = document.getElementById("connections");
             connectionsEl.innerHTML = "";
@@ -38,50 +38,54 @@
                 renderPlayerItem(list.players[i]);
             }
         },
-        registerMyData: function(player) {
+        onPlayerRegistred: function (player) {
             this.player = player;
             let logEl = document.getElementById("log");
             logEl.innerHTML = "connected as " + this.player.id;
         },
-        showSuccessMessage: function(player) {
+        onPlayerUpdated: function (player) {
             let logEl = document.getElementById("log");
             logEl.innerHTML = "connected as " + player.id;
             renderPlayerItem(player);
         },
-        showConnected: function() {
+        onRemotePlayerUpdated: function (player) {
+            renderPlayerItem(player);
+        },
+        onRemotePlayerNew: function (player) {
+            renderPlayerItem(player)
+        },
+        onRemotePlayerDestroy: function (player) {
+            var playerEl = document.getElementById("d-" + player.id);
+            if (playerEl !== null) playerEl.remove();
+        },
+        onConnect: function () {
             console.log("connected");
+        },
+        onDisconnected: function () {
+            console.log("disconnected");
         }
     };
 
-  window.addEventListener("DOMContentLoaded", function() {
-      var socket = io('//' + location.host);
-      socket.on('connect', I.showConnected);
-      socket.on('remote-player:list', I.showListAllPlayers);
-      socket.on('player:registred', I.registerMyData)
-      socket.on('player:updated', I.showSuccessMessage)
-      socket.on('disconnected', function() {
-          console.log("disconnected");
-      })
-      
-      socket.on('remote-player:updated', function(player) {
-          renderPlayerItem(player);
-      })
-  
-      socket.on('remote-player:new', function(player) {
-        renderPlayerItem(player)
-      });
-  
-      socket.on("remote-player:destroy", function(player) {
-          var playerEl = document.getElementById("d-" + player.id);
-          if (playerEl !== null) playerEl.remove();
-      });
-  
-      navigator.geolocation.watchPosition(function(pos) {
-          console.log("position updated");
-          var coords = {x: pos.coords.latitude, y: pos.coords.longitude};
-          socket.emit('player:update', JSON.stringify(coords));
-      });
-  });
+    window.addEventListener("DOMContentLoaded", function () {
+        var socket = io('//' + location.host);
+
+        socket.on('connect', EventHandler.onConnect);
+        socket.on('player:registred', EventHandler.onPlayerRegistred)
+        socket.on('player:updated', EventHandler.onPlayerUpdated)
+        socket.on('disconnected', EventHandler.onDisconnected)
+
+        socket.on('remote-player:list', EventHandler.onRemotePlayerList);
+        socket.on('remote-player:updated', EventHandler.onRemotePlayerUpdated)
+        socket.on('remote-player:new', EventHandler.onRemotePlayerNew);
+        socket.on("remote-player:destroy", EventHandler.onRemotePlayerDestroy);
+
+        navigator.geolocation.watchPosition(function (pos) {
+            console.log("position updated");
+            var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
+            socket.emit('player:update', JSON.stringify(coords));
+        });
+    });
+
 </script>
 
 <body>
