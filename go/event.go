@@ -28,25 +28,17 @@ func (h *EventHandler) bindEvents() *EventHandler {
 		h.sendPlayerList(so)
 
 		so.On("player:update", func(msg string) {
+			playerID := player.ID
 			if err := json.Unmarshal([]byte(msg), player); err != nil {
-				log.Println("player:update event error", err.Error())
+				log.Panicln("player:update event error", err.Error())
 				return
 			}
-			log.Println("player:updated", player)
-			so.Emit("player:updated", player)
-			so.BroadcastTo(channel, "remote-player:updated", player)
-			h.service.Update(player)
+			player.ID = playerID
+			h.updatePlayer(so, player, channel)
 		})
 
 		so.On("disconnection", func() {
-			if err := so.Leave(channel); err != nil {
-				log.Fatal("Error leaving channel", channel, err)
-			}
-			if err := so.BroadcastTo(channel, "remote-player:destroy", player); err != nil {
-				log.Fatal("Error broadcasting remote-player:destroy", channel, err)
-			}
-			h.service.Remove(player)
-			log.Println("----> diconnected", player)
+			h.removePlayer(so, player, channel)
 			player = nil
 		})
 	})
@@ -68,6 +60,24 @@ func (h *EventHandler) newPlayer(so io.Socket, channel string) *Player {
 	so.BroadcastTo(channel, "remote-player:new", player)
 	log.Println("new player connected", player)
 	return player
+}
+
+func (h *EventHandler) updatePlayer(so io.Socket, player *Player, channel string) {
+	log.Println("player:updated", player)
+	so.Emit("player:updated", player)
+	so.BroadcastTo(channel, "remote-player:updated", player)
+	h.service.Update(player)
+}
+
+func (h *EventHandler) removePlayer(so io.Socket, player *Player, channel string) {
+	if err := so.Leave(channel); err != nil {
+		log.Panicln("Error leaving channel", channel, err)
+	}
+	if err := so.BroadcastTo(channel, "remote-player:destroy", player); err != nil {
+		log.Panicln("Error broadcasting remote-player:destroy", channel, err)
+	}
+	h.service.Remove(player)
+	log.Println("--> diconnected", player)
 }
 
 func (h *EventHandler) sendPlayerList(so io.Socket) {
