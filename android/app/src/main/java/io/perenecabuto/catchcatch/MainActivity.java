@@ -13,7 +13,6 @@ import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -130,11 +129,9 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     private void showPlayerOnMap(Player p) {
         Marker m = markers.get(p.getId());
         if (m == null) {
-            Log.d(TAG, "--> add player" + p);
             m = map.addMarker(new MarkerOptions().position(p.getPoint()).title(p.getId()));
             markers.put(p.getId(), m);
         } else {
-            Log.d(TAG, "--> update player" + p);
             m.setPosition(p.getPoint());
         }
         if (p.getId().equals(player.getId())) {
