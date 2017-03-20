@@ -43,7 +43,6 @@ func (h *EventHandler) bindEvents() *EventHandler {
 
 		so.On("disconnection", func() {
 			h.removePlayer(so, player, channel)
-			player = nil
 		})
 	})
 
