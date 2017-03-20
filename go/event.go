@@ -27,6 +27,10 @@ func (h *EventHandler) bindEvents() *EventHandler {
 
 		h.sendPlayerList(so)
 
+		so.On("player:request-list", func() {
+			h.sendPlayerList(so)
+		})
+
 		so.On("player:update", func(msg string) {
 			playerID := player.ID
 			if err := json.Unmarshal([]byte(msg), player); err != nil {
