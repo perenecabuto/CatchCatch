@@ -1,8 +1,48 @@
 package io.perenecabuto.catchcatch;
 
-/**
- * Created by bacamarte on 3/19/17.
- */
+
+import android.location.Location;
+
+import com.google.android.gms.maps.model.LatLng;
 
 class Player {
+    private final String id;
+    private double x;
+    private double y;
+
+    Player(String id, double x, double y) {
+        this.id = id;
+        this.x = x;
+        this.y = y;
+    }
+
+    @Override
+    public String toString() {
+        return "Player{" +
+            "id='" + id + '\'' +
+            ", x=" + x +
+            ", y=" + y +
+            '}';
+    }
+
+    String getId() {
+        return id;
+    }
+
+    double getX() {
+        return x;
+    }
+
+    double getY() {
+        return y;
+    }
+
+    void updateLocation(Location l) {
+        x = l.getLatitude();
+        y = l.getLongitude();
+    }
+
+    LatLng getPoint() {
+        return new LatLng(x, y);
+    }
 }

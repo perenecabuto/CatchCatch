@@ -14,11 +14,14 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONException;
 
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.List;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -28,16 +31,17 @@ import static android.location.LocationManager.NETWORK_PROVIDER;
 import static android.support.v4.content.PermissionChecker.PERMISSION_GRANTED;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements ConnectionManager.EventCallback {
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int LOCATION_PERMISSION_REQUEST_CODE = (int) (Math.random() * 10000);
     private String provider = NETWORK_PROVIDER;
-    private Location currentLocation = new Location(provider);
 
     private MapFragment mapFragment;
     private GoogleMap map;
     private ConnectionManager manager;
+    private HashMap<String, Marker> markers = new HashMap<>();
+    private Player player = new Player("", 0, 0);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +51,6 @@ public class MainActivity extends Activity {
         mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.activity_main_map);
         mapFragment.getMapAsync((GoogleMap m) -> {
             map = m;
-            focusOn(currentLocation);
             // TODO OnMapCreate get features around and plot them
             m.setOnCameraMoveListener(() -> {
                 // TODO OnCameraChange get features around and plot them
@@ -73,7 +76,7 @@ public class MainActivity extends Activity {
     private void setupConnection() {
         try {
             Socket socket = IO.socket("http://192.168.23.102:5000");
-            manager = new ConnectionManager(socket);
+            manager = new ConnectionManager(socket, this);
             manager.connect();
         } catch (URISyntaxException | ConnectionManager.NoConnectionException e) {
             e.printStackTrace();
@@ -109,24 +112,67 @@ public class MainActivity extends Activity {
                 e.printStackTrace();
                 Toast.makeText(this, "Error to send position", Toast.LENGTH_SHORT).show();
             }
-            focusOn(l);
+            player.updateLocation(l);
+            showPlayerOnMap(player);
         }));
-
-        Location lastKnownLocation = locationManager.getLastKnownLocation(provider);
-        try {
-            manager.sendPosition(lastKnownLocation);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        focusOn(lastKnownLocation);
     }
 
-    private void focusOn(Location location) {
-        if (location == null || map == null)
-            return;
-        currentLocation = location;
-        LatLng point = new LatLng(location.getLatitude(), location.getLongitude());
-        map.addMarker(new MarkerOptions().position(point).title(location.getTime() + ""));
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(point, 15));
+    @Override
+    public void onPlayerList(List<Player> players) {
+        runOnUiThread(() -> {
+            Log.d(TAG, "remote-player:list " + players);
+            for (Player p : players) {
+                showPlayerOnMap(p);
+            }
+        });
+    }
+
+    private void showPlayerOnMap(Player p) {
+        Marker m = markers.get(p.getId());
+        if (m == null) {
+            Log.d(TAG, "--> add player" + p);
+            m = map.addMarker(new MarkerOptions().position(p.getPoint()).title(p.getId()));
+            markers.put(p.getId(), m);
+        } else {
+            Log.d(TAG, "--> update player" + p);
+            m.setPosition(p.getPoint());
+        }
+        if (p.getId().equals(player.getId())) {
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(p.getPoint(), 15));
+        }
+        m.setVisible(true);
+        m.showInfoWindow();
+    }
+
+    @Override
+    public void onRemotePlayerUpdate(Player p) {
+        runOnUiThread(() -> {
+            Log.d(TAG, "remote-player:updated " + p);
+            showPlayerOnMap(p);
+        });
+    }
+
+    @Override
+    public void onRemoteNewPlayer(Player p) {
+        runOnUiThread(() -> {
+            Log.d(TAG, "remote-player:new " + p);
+            showPlayerOnMap(p);
+        });
+    }
+
+    @Override
+    public void onRegistred(Player p) {
+        this.player = p;
+        runOnUiThread(() -> {
+            Log.d(TAG, "player:registered " + p);
+            showPlayerOnMap(p);
+        });
+    }
+
+    @Override
+    public void onRemotePlayerDestroy(Player p) {
+        Marker m = markers.get(p.getId());
+        markers.remove(p.getId());
+        runOnUiThread(() -> m.remove());
     }
 }
