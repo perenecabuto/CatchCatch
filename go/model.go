@@ -67,7 +67,7 @@ func (s *PlayerLocationService) All() (*PlayerList, error) {
 		id, data, geo := itemRes[0].(string), []byte(itemRes[1].(string)), &position{}
 		json.Unmarshal(data, geo)
 
-		list[i] = &Player{ID: id, X: geo.Coords[0], Y: geo.Coords[1]}
+		list[i] = &Player{ID: id, X: geo.Coords[1], Y: geo.Coords[0]}
 	}
 
 	return &PlayerList{list}, nil
