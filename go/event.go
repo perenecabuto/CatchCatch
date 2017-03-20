@@ -61,12 +61,12 @@ func (h *EventHandler) newPlayer(so io.Socket, channel string) *Player {
 	}
 	so.Emit("player:registred", player)
 	so.BroadcastTo(channel, "remote-player:new", player)
-	log.Println("new player connected", player)
+	go log.Println("new player connected", player)
 	return player
 }
 
 func (h *EventHandler) updatePlayer(so io.Socket, player *Player, channel string) {
-	log.Println("player:updated", player)
+	go log.Println("player:updated", player)
 	so.Emit("player:updated", player)
 	so.BroadcastTo(channel, "remote-player:updated", player)
 	h.service.Update(player)
@@ -80,13 +80,13 @@ func (h *EventHandler) removePlayer(so io.Socket, player *Player, channel string
 		log.Panicln("Error broadcasting remote-player:destroy", channel, err)
 	}
 	h.service.Remove(player)
-	log.Println("--> diconnected", player)
+	go log.Println("--> diconnected", player)
 }
 
 func (h *EventHandler) sendPlayerList(so io.Socket) {
 	if players, err := h.service.All(); err == nil {
 		so.Emit("remote-player:list", players)
 	} else {
-		log.Println("--> error to get players: ", err)
+		go log.Println("--> error to get players: ", err)
 	}
 }
