@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 
+	engineio "github.com/googollee/go-engine.io"
 	io "github.com/googollee/go-socket.io"
 )
 
@@ -14,9 +16,36 @@ type EventHandler struct {
 	service *PlayerLocationService
 }
 
+type SessionManager struct {
+	sync.RWMutex
+	connections map[string]engineio.Conn
+}
+
+func (sm *SessionManager) Get(id string) engineio.Conn {
+	sm.RLock()
+	defer sm.RUnlock()
+	return sm.connections[id]
+}
+
+func (sm *SessionManager) Set(id string, conn engineio.Conn) {
+	sm.Lock()
+	defer sm.Unlock()
+	sm.connections[id] = conn
+}
+
+func (sm *SessionManager) Remove(id string) {
+	sm.Lock()
+	defer sm.Unlock()
+	delete(sm.connections, id)
+}
+
+var sessionManager = &SessionManager{connections: make(map[string]engineio.Conn)}
+
 // NewEventHandler EventHandler builder
 func NewEventHandler(server *io.Server, service *PlayerLocationService) *EventHandler {
 	handler := &EventHandler{server, service}
+
+	server.SetSessionManager(sessionManager)
 	return handler.bindEvents()
 }
 
@@ -39,6 +68,19 @@ func (h *EventHandler) bindEvents() *EventHandler {
 			}
 			player.ID = playerID
 			h.updatePlayer(so, player, channel)
+		})
+
+		so.On("admin:disconnect", func(playerID string) {
+			// h.removePlayer(so, remotePlayer, channel)
+			log.Printf("admin:disconnect >%s< \n", playerID)
+
+			conn := sessionManager.Get(playerID)
+			if conn != nil {
+				conn.Close()
+			} else {
+				player := &Player{ID: playerID}
+				h.removePlayer(so, player, channel)
+			}
 		})
 
 		so.On("disconnection", func() {
@@ -73,11 +115,11 @@ func (h *EventHandler) updatePlayer(so io.Socket, player *Player, channel string
 }
 
 func (h *EventHandler) removePlayer(so io.Socket, player *Player, channel string) {
-	if err := so.Leave(channel); err != nil {
-		log.Panicln("Error leaving channel", channel, err)
-	}
 	if err := so.BroadcastTo(channel, "remote-player:destroy", player); err != nil {
 		log.Panicln("Error broadcasting remote-player:destroy", channel, err)
+	}
+	if err := so.Emit("remote-player:destroy", player); err != nil {
+		log.Println("Error broadcasting remote-player:destroy", channel, err)
 	}
 	h.service.Remove(player)
 	go log.Println("--> diconnected", player)
