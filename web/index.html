@@ -35,6 +35,7 @@
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
     }
 
+    var socket = io('//' + location.host);
     var EventHandler = {
         player: {},
 
@@ -50,10 +51,19 @@
             this.player = player;
             let logEl = document.getElementById("log");
             logEl.innerHTML = "connected as " + this.player.id;
+
+            var that = this;
+            setInterval(function() {
+                if (!document.getElementById("run").checked) return;
+                
+                that.player.y += 0.00005
+                that.player.x += 0.00005
+                socket.emit('player:update', JSON.stringify(that.player));
+            }, 100);
         },
         onPlayerUpdated: function (player) {
             let logEl = document.getElementById("log");
-            logEl.innerHTML = "connected as " + player.id;
+            this.player = player;
             renderPlayerItem(player);
         },
         onRemotePlayerUpdated: function (player) {
@@ -63,20 +73,21 @@
             renderPlayerItem(player)
         },
         onRemotePlayerDestroy: function (player) {
+            console.log("player-destroy:", player);
             var playerEl = document.getElementById("d-" + player.id);
             if (playerEl !== null) playerEl.remove();
         },
         onConnect: function () {
-            console.log("connected");
+            let logEl = document.getElementById("log");            
+            logEl.innerHTML = "connected";
         },
         onDisconnected: function () {
-            console.log("disconnected");
+            let logEl = document.getElementById("log");
+            logEl.innerHTML = "disconnected";
         }
     };
 
     window.addEventListener("DOMContentLoaded", function () {
-        var socket = io('//' + location.host);
-
         socket.on('connect', EventHandler.onConnect);
         socket.on('player:registred', EventHandler.onPlayerRegistred)
         socket.on('player:updated', EventHandler.onPlayerUpdated)
@@ -97,7 +108,11 @@
 </script>
 
 <body>
-    <div class="container">
+    <div class="container-fluid">
+        <div>
+            <label for="run">Run</run>
+            <input type="checkbox" id="run">
+        </div>
         <h1>Connections</h1>
         <h2 id="log"></h2>
         <div id="connections"></div>
