@@ -10,22 +10,29 @@
 
 <script>
 
+    function removePlayer(playerId) {
+        console.log("remove", playerId);
+        socket.emit('admin:disconnect', playerId);
+    }
+
     function renderPlayerItem(player) {
-        var playerHTML = '<span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span>' +
-            '<span>' + player.id + '(' + player.x + ',' + player.y + ')' + '</span>';
-
-        playerHTML = '<div class="panel panel-default">' +
-            '<div class="panel-body">' + playerHTML + '</div>' +
-            '</div>';
-
+        var playerData = player.id + '(' + player.x + ',' + player.y + ')';
         var playerEl = document.getElementById("d-" + player.id);
-        if (playerEl !== null) {
-            playerEl.innerHTML = playerHTML;
-            return;
+        if (playerEl === null) {
+            var playerHTML = '<span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span>' +
+                '<span class="player-data"></span>' +
+                '<span class="pull-right" onclick="removePlayer(\''+ player.id +'\')">X</span>';
+
+            playerHTML = '<div class="panel panel-default">' +
+                '<div class="panel-body">' + playerHTML + '</div>' +
+                '</div>';
+
+            document.getElementById("connections").innerHTML +=
+                '<div id="d-' + player.id + '">' + playerHTML + '</div>';
         }
-        var connectionsEl = document.getElementById("connections");
-        connectionsEl.innerHTML +=
-            '<div id="d-' + player.id + '">' + playerHTML + '</div>';
+        
+        var playerEl = document.getElementById("d-" + player.id);
+        playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
     }
 
     var EventHandler = {
