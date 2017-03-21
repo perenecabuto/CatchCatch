@@ -1,15 +1,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <!-- Latest compiled and minified CSS -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
-    integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+    crossorigin="anonymous">
 <!-- Optional theme -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
-    integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
+    crossorigin="anonymous">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
 
 <script>
-
     function removePlayer(playerId) {
         console.log("remove", playerId);
         socket.emit('admin:disconnect', playerId);
@@ -21,7 +20,7 @@
         if (playerEl === null) {
             var playerHTML = '<span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span>' +
                 '<span class="player-data"></span>' +
-                '<span class="pull-right" onclick="removePlayer(\''+ player.id +'\')">X</span>';
+                '<span class="pull-right" onclick="removePlayer(\'' + player.id + '\')">X</span>';
 
             playerHTML = '<div class="panel panel-default">' +
                 '<div class="panel-body">' + playerHTML + '</div>' +
@@ -30,7 +29,7 @@
             document.getElementById("connections").innerHTML +=
                 '<div id="d-' + player.id + '">' + playerHTML + '</div>';
         }
-        
+
         var playerEl = document.getElementById("d-" + player.id);
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
     }
@@ -53,9 +52,9 @@
             logEl.innerHTML = "connected as " + this.player.id;
 
             var that = this;
-            setInterval(function() {
+            setInterval(function () {
                 if (!document.getElementById("run").checked) return;
-                
+
                 that.player.y += 0.00005
                 that.player.x += 0.00005
                 socket.emit('player:update', JSON.stringify(that.player));
@@ -78,7 +77,7 @@
             if (playerEl !== null) playerEl.remove();
         },
         onConnect: function () {
-            let logEl = document.getElementById("log");            
+            let logEl = document.getElementById("log");
             logEl.innerHTML = "connected";
         },
         onDisconnected: function () {
