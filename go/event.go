@@ -59,7 +59,7 @@ func (h *EventHandler) bindEvents() *EventHandler {
 		channel := "main"
 		player := h.newPlayer(so, channel)
 
-		h.sendPlayerList(so)
+		go h.sendPlayerList(so)
 
 		so.On("player:request-list", func() {
 			h.sendPlayerList(so)
