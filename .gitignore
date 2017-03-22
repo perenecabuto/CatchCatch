@@ -1,5 +1,6 @@
 # Bin
 go/go
+go/debug
 
 # Android
 *.iml
@@ -13,6 +14,9 @@ go/go
 .externalNativeBuild
 .idea
 build/
+
+# VSCode
+.vscode/
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
