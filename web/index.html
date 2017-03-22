@@ -44,19 +44,25 @@
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
     }
 
-    setInterval(function () {
-        var run = document.getElementById("run") !== undefined 
-            && document.getElementById("run").checked;
-        if (!run) return;
-
-        EventHandler.player.y += 0.00005
-        EventHandler.player.x += 0.00005
-        socket.emit('player:update', JSON.stringify(EventHandler.player));
-    }, 100);
+    function toggleRun(btn) {
+        if (this.interval !== undefined) {
+            clearInterval(this.interval);
+            this.interval = undefined;
+            btn.innerText = btn.originalText;
+            return;
+        }
+        btn.originalText = btn.innerText;
+        btn.innerText = "stop";
+        this.interval = setInterval(function () {
+            EventHandler.player.y += 0.00005;
+            EventHandler.player.x += 0.00005;
+            socket.emit('player:update', JSON.stringify(EventHandler.player));
+        }, 100);
+    }
 
     var socket = io('//' + location.host);
     var EventHandler = {
-        player: {x: 0, y: 0},
+        player: { x: 0, y: 0 },
 
         onRemotePlayerList: function (list) {
             var connectionsEl = document.getElementById("connections");
@@ -113,12 +119,15 @@
 
 <body>
     <div class="container-fluid">
-        <div>
-            <label for="run">Run</run>
-            <input type="checkbox" id="run">
-        </div>
-        <h1>Connections</h1>
-        <h2 id="log"></h2>
+
+        <head>
+            <h1>CatchCatch</h1>
+            <button type="button" class="btn btn-default" onclick="toggleRun(this)">run</button>
+            <button type="button" class="btn btn-default" onclick="reset()">reset</button>
+        </head>
+
+        <h2>Connections</h2>
+        <pre id="log"></pre>
         <div id="connections"></div>
     </div>
 </body>
