@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"sync"
+	"sync/atomic"
 
 	engineio "github.com/googollee/go-engine.io"
 	io "github.com/googollee/go-socket.io"
@@ -12,40 +12,45 @@ import (
 
 // EventHandler handle socket.io events
 type EventHandler struct {
-	server  *io.Server
-	service *PlayerLocationService
+	server   *io.Server
+	service  *PlayerLocationService
+	sessions *SessionManager
 }
 
+type Connections map[string]engineio.Conn
+
 type SessionManager struct {
-	sync.RWMutex
-	connections map[string]engineio.Conn
+	connections atomic.Value
+}
+
+func NewSessionManager() *SessionManager {
+	sessions := &SessionManager{}
+	sessions.connections.Store(make(Connections))
+	return sessions
 }
 
 func (sm *SessionManager) Get(id string) engineio.Conn {
-	sm.RLock()
-	defer sm.RUnlock()
-	return sm.connections[id]
+	conns := sm.connections.Load().(Connections)
+	return conns[id]
 }
 
 func (sm *SessionManager) Set(id string, conn engineio.Conn) {
-	sm.Lock()
-	defer sm.Unlock()
-	sm.connections[id] = conn
+	conns := sm.connections.Load().(Connections)
+	conns[id] = conn
+	sm.connections.Store(conns)
 }
 
 func (sm *SessionManager) Remove(id string) {
-	sm.Lock()
-	defer sm.Unlock()
-	delete(sm.connections, id)
+	conns := sm.connections.Load().(Connections)
+	delete(conns, id)
+	sm.connections.Store(conns)
 }
-
-var sessionManager = &SessionManager{connections: make(map[string]engineio.Conn)}
 
 // NewEventHandler EventHandler builder
 func NewEventHandler(server *io.Server, service *PlayerLocationService) *EventHandler {
-	handler := &EventHandler{server, service}
-
-	server.SetSessionManager(sessionManager)
+	sessions := NewSessionManager()
+	server.SetSessionManager(sessions)
+	handler := &EventHandler{server, service, sessions}
 	return handler.bindEvents()
 }
 
@@ -71,10 +76,9 @@ func (h *EventHandler) bindEvents() *EventHandler {
 		})
 
 		so.On("admin:disconnect", func(playerID string) {
-			// h.removePlayer(so, remotePlayer, channel)
 			log.Printf("admin:disconnect >%s< \n", playerID)
 
-			conn := sessionManager.Get(playerID)
+			conn := h.sessions.Get(playerID)
 			if conn != nil {
 				conn.Close()
 			} else {
