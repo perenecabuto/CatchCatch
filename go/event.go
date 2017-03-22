@@ -42,9 +42,16 @@ func (h *EventHandler) bindEvents() *EventHandler {
 			player.ID = playerID
 			h.updatePlayer(so, player, channel)
 		})
+		so.On("disconnection", func() {
+			h.removePlayer(player, channel)
+		})
+
+		so.On("admin:clear", func(playerID string) {
+			h.service.client.FlushDb()
+			h.sessions.CloseAll()
+		})
 		so.On("admin:disconnect", func(playerID string) {
 			log.Println("admin:disconnect", playerID)
-
 			conn := h.sessions.Get(playerID)
 			if conn != nil {
 				conn.Close()
@@ -52,9 +59,6 @@ func (h *EventHandler) bindEvents() *EventHandler {
 				player := &Player{ID: playerID}
 				h.removePlayer(player, channel)
 			}
-		})
-		so.On("disconnection", func() {
-			h.removePlayer(player, channel)
 		})
 	})
 
@@ -78,7 +82,7 @@ func (h *EventHandler) newPlayer(so io.Socket, channel string) *Player {
 }
 
 func (h *EventHandler) updatePlayer(so io.Socket, player *Player, channel string) {
-	go log.Println("player:updated", player)
+	// go log.Println("player:updated", player)
 	so.Emit("player:updated", player)
 	so.BroadcastTo(channel, "remote-player:updated", player)
 	h.service.Update(player)

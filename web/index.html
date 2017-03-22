@@ -9,8 +9,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
 
 <script>
+    function reset() {
+        console.log("admin:clear");
+        socket.emit('admin:clear');
+    }
+
     function removePlayer(playerId) {
-        console.log("remove", playerId);
+        console.log("admin:disconnect", playerId);
         socket.emit('admin:disconnect', playerId);
     }
 

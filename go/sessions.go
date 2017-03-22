@@ -34,3 +34,11 @@ func (sm *SessionManager) Remove(id string) {
 	delete(conns, id)
 	sm.connections.Store(conns)
 }
+
+func (sm *SessionManager) CloseAll() {
+	conns := sm.connections.Load().(Connections)
+	for _, c := range conns {
+		c.Close()
+	}
+	sm.connections.Store(conns)
+}
