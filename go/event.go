@@ -33,7 +33,6 @@ func (h *EventHandler) bindEvents() *EventHandler {
 		so.On("player:request-list", func() {
 			h.sendPlayerList(so)
 		})
-
 		so.On("player:update", func(msg string) {
 			playerID := player.ID
 			if err := json.Unmarshal([]byte(msg), player); err != nil {
@@ -43,21 +42,19 @@ func (h *EventHandler) bindEvents() *EventHandler {
 			player.ID = playerID
 			h.updatePlayer(so, player, channel)
 		})
-
 		so.On("admin:disconnect", func(playerID string) {
-			log.Printf("admin:disconnect >%s< \n", playerID)
+			log.Println("admin:disconnect", playerID)
 
 			conn := h.sessions.Get(playerID)
 			if conn != nil {
 				conn.Close()
 			} else {
 				player := &Player{ID: playerID}
-				h.removePlayer(so, player, channel)
+				h.removePlayer(player, channel)
 			}
 		})
-
 		so.On("disconnection", func() {
-			h.removePlayer(so, player, channel)
+			h.removePlayer(player, channel)
 		})
 	})
 
@@ -87,13 +84,8 @@ func (h *EventHandler) updatePlayer(so io.Socket, player *Player, channel string
 	h.service.Update(player)
 }
 
-func (h *EventHandler) removePlayer(so io.Socket, player *Player, channel string) {
-	if err := so.BroadcastTo(channel, "remote-player:destroy", player); err != nil {
-		log.Panicln("Error broadcasting remote-player:destroy", channel, err)
-	}
-	if err := so.Emit("remote-player:destroy", player); err != nil {
-		log.Println("Error broadcasting remote-player:destroy", channel, err)
-	}
+func (h *EventHandler) removePlayer(player *Player, channel string) {
+	h.server.BroadcastTo(channel, "remote-player:destroy", player)
 	h.service.Remove(player)
 	go log.Println("--> diconnected", player)
 }
