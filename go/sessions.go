@@ -1,6 +1,10 @@
 package main
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+
+	engineio "github.com/googollee/go-engine.io"
+)
 
 type Connections map[string]engineio.Conn
 
