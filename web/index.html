@@ -14,6 +14,11 @@
         socket.emit('admin:disconnect', playerId);
     }
 
+    function updatePosition(pos) {
+        var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
+        socket.emit('player:update', JSON.stringify(coords));
+    }
+
     function renderPlayerItem(player) {
         var playerData = player.id + '(' + player.x + ',' + player.y + ')';
         var playerEl = document.getElementById("d-" + player.id);
@@ -34,12 +39,21 @@
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
     }
 
+    setInterval(function () {
+        var run = document.getElementById("run") !== undefined 
+            && document.getElementById("run").checked;
+        if (!run) return;
+
+        EventHandler.player.y += 0.00005
+        EventHandler.player.x += 0.00005
+        socket.emit('player:update', JSON.stringify(EventHandler.player));
+    }, 100);
+
     var socket = io('//' + location.host);
     var EventHandler = {
-        player: {},
+        player: {x: 0, y: 0},
 
         onRemotePlayerList: function (list) {
-            console.log("remote-player:list", list);
             var connectionsEl = document.getElementById("connections");
             connectionsEl.innerHTML = "";
             for (let i in list.players) {
@@ -47,22 +61,12 @@
             }
         },
         onPlayerRegistred: function (player) {
-            this.player = player;
+            EventHandler.player = player;
             let logEl = document.getElementById("log");
-            logEl.innerHTML = "connected as " + this.player.id;
-
-            var that = this;
-            setInterval(function () {
-                if (!document.getElementById("run").checked) return;
-
-                that.player.y += 0.00005
-                that.player.x += 0.00005
-                socket.emit('player:update', JSON.stringify(that.player));
-            }, 100);
+            logEl.innerHTML = "connected as " + EventHandler.player.id;
         },
         onPlayerUpdated: function (player) {
-            let logEl = document.getElementById("log");
-            this.player = player;
+            EventHandler.player = player;
             renderPlayerItem(player);
         },
         onRemotePlayerUpdated: function (player) {
@@ -72,13 +76,13 @@
             renderPlayerItem(player)
         },
         onRemotePlayerDestroy: function (player) {
-            console.log("player-destroy:", player);
             var playerEl = document.getElementById("d-" + player.id);
             if (playerEl !== null) playerEl.remove();
         },
-        onConnect: function () {
+        onConnect: function (so) {
             let logEl = document.getElementById("log");
             logEl.innerHTML = "connected";
+            navigator.geolocation.getCurrentPosition(updatePosition)
         },
         onDisconnected: function () {
             let logEl = document.getElementById("log");
@@ -97,11 +101,7 @@
         socket.on('remote-player:new', EventHandler.onRemotePlayerNew);
         socket.on("remote-player:destroy", EventHandler.onRemotePlayerDestroy);
 
-        navigator.geolocation.watchPosition(function (pos) {
-            console.log("position updated");
-            var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
-            socket.emit('player:update', JSON.stringify(coords));
-        });
+        navigator.geolocation.watchPosition(updatePosition);
     });
 
 </script>
