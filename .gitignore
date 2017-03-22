@@ -15,6 +15,9 @@ go/debug
 .idea
 build/
 
+# tile38
+data/*
+
 # VSCode
 .vscode/
 
