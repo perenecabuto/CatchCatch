@@ -51,12 +51,18 @@
             '<div class="glyphicon glyphicon-map-marker" aria-hidden="true"> (' + player.x + ', ' + player.y + ')</div>';
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
 
-        let feat = new ol.Feature({
-            geometry: new ol.geom.Point([player.y, player.x], 'XY'),
-            name: player.id
-        });
+        var feat = source.getFeatureById(player.id);
+        var coords = [player.y, player.x];
+        if (feat === null) {
+            feat = new ol.Feature({
+                geometry: new ol.geom.Point(coords, 'XY'),
+                name: player.id,
+            });
+            feat.setId(player.id);
+            source.addFeature(feat);        
+        }
 
-        source.addFeature(feat);
+        feat.getGeometry().setCoordinates(coords);
     }
 
     function toggleRun(btn) {
