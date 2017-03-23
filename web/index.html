@@ -1,11 +1,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<!-- Latest compiled and minified CSS -->
+
+<!-- BOOTSTRAP -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
     crossorigin="anonymous">
-<!-- Optional theme -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
+<link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/yeti/bootstrap.min.css" rel="stylesheet" integrity="sha384-HzUaiJdCTIY/RL2vDPRGdEQHHahjzwoJJzGUkYjHVzTwXFQ2QN/nVgX7tzoMW3Ov"
     crossorigin="anonymous">
 
+<!-- SOCKETIO -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
 
 <script>
@@ -25,12 +26,12 @@
     }
 
     function renderPlayerItem(player) {
-        var playerData = player.id + '(' + player.x + ',' + player.y + ')';
         var playerEl = document.getElementById("d-" + player.id);
         if (playerEl === null) {
-            var playerHTML = '<span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span>' +
+            var playerHTML = '<div>' +
                 '<span class="player-data"></span>' +
-                '<span class="pull-right" onclick="removePlayer(\'' + player.id + '\')">X</span>';
+                '<a href="javascript:void(0)"class="pull-right" onclick="removePlayer(\'' + player.id + '\')">X</a>' +
+                '</div>';
 
             playerHTML = '<div class="panel panel-default">' +
                 '<div class="panel-body">' + playerHTML + '</div>' +
@@ -41,6 +42,8 @@
         }
 
         var playerEl = document.getElementById("d-" + player.id);
+        var playerData = player.id + '<br/>' +
+            '<div class="glyphicon glyphicon-map-marker" aria-hidden="true"> (' + player.x + ', ' + player.y + ')</div>';
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
     }
 
@@ -117,17 +120,24 @@
 
 </script>
 
-<body>
-    <div class="container-fluid">
+<body class="container-fluid">
 
-        <head>
-            <h1>CatchCatch</h1>
-            <button type="button" class="btn btn-default" onclick="toggleRun(this)">run</button>
-            <button type="button" class="btn btn-default" onclick="reset()">reset</button>
-        </head>
+    <head>
+        <h1>CatchCatch</h1>
+        <button type="button" class="btn btn-primary" onclick="toggleRun(this)">start</button>
+        <button type="button" class="btn btn-warning" onclick="reset()">reset</button>
+    </head>
 
-        <h2>Connections</h2>
-        <pre id="log"></pre>
-        <div id="connections"></div>
+    <div class="row">
+        <div class="col-xs-4">
+            <h2 class="lead">Connections</h2>
+            <pre id="log"></pre>
+            <div id="connections"></div>
+        </div>
+
+        <div class="col-xs-8">
+            <h2 class="lead">Map</h2>
+            <div id="map" style="height: 70%"></div>
+        </div>
     </div>
 </body>
