@@ -9,6 +9,11 @@
 <!-- SOCKETIO -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
 
+<!-- MAP -->
+<link rel="stylesheet" href="https://openlayers.org/en/v4.0.1/css/ol.css" type="text/css">
+<script src="https://openlayers.org/en/v4.0.1/build/ol.js"></script>
+
+
 <script>
     function reset() {
         console.log("admin:clear");
@@ -45,6 +50,13 @@
         var playerData = player.id + '<br/>' +
             '<div class="glyphicon glyphicon-map-marker" aria-hidden="true"> (' + player.x + ', ' + player.y + ')</div>';
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
+
+        let feat = new ol.Feature({
+            geometry: new ol.geom.Point([player.y, player.x], 'XY'),
+            name: player.id
+        });
+
+        source.addFeature(feat);
     }
 
     function toggleRun(btn) {
@@ -116,6 +128,14 @@
         socket.on("remote-player:destroy", EventHandler.onRemotePlayerDestroy);
 
         navigator.geolocation.watchPosition(updatePosition);
+
+        var raster = new ol.layer.Tile({ source: new ol.source.OSM() });
+        source = new ol.source.Vector({ wrapX: false });
+        var vector = new ol.layer.Vector({ source: source });
+        var view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
+        var map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
+        var draw = new ol.interaction.Draw({ source: source, type: "Polygon" });
+        map.addInteraction(draw);
     });
 
 </script>
