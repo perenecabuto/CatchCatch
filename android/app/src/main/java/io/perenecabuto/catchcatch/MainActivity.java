@@ -188,7 +188,10 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     @Override
     public void onRemotePlayerDestroy(Player p) {
         Marker m = markers.get(p.getId());
-        markers.remove(p.getId());
+        if (m == null) {
+            return;
+        }
         runOnUiThread(() -> m.remove());
+        markers.remove(p.getId());
     }
 }
