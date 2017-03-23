@@ -22,6 +22,7 @@ import org.json.JSONException;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -142,6 +143,7 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     public void onPlayerList(List<Player> players) {
         runOnUiThread(() -> {
             Log.d(TAG, "remote-player:list " + players);
+            cleanMarkers();
             for (Player p : players) {
                 showPlayerOnMap(p);
             }
@@ -191,13 +193,24 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
         if (m == null) {
             return;
         }
-        runOnUiThread(() -> m.remove());
-        markers.remove(p.getId());
+        runOnUiThread(() -> {
+            m.remove();
+            markers.remove(p.getId());
+        });
     }
 
     @Override
     public void onDiconnected() {
         Log.d(TAG, "diconnected " + player + " " + markers.get(player.getId()));
-        onRemotePlayerDestroy(player);
+        cleanMarkers();
+    }
+
+    private void cleanMarkers() {
+        runOnUiThread(() -> {
+            for (Map.Entry<String, Marker> m : markers.entrySet()) {
+                m.getValue().remove();
+            }
+            markers.clear();
+        });
     }
 }
