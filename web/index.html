@@ -59,7 +59,7 @@
                 name: player.id,
             });
             feat.setId(player.id);
-            source.addFeature(feat);        
+            source.addFeature(feat);
         }
 
         feat.getGeometry().setCoordinates(coords);
@@ -150,19 +150,20 @@
 
     <head>
         <h1>CatchCatch</h1>
-        <button type="button" class="btn btn-primary" onclick="toggleRun(this)">start</button>
-        <button type="button" class="btn btn-warning" onclick="reset()">reset</button>
     </head>
 
     <div class="row">
         <div class="col-xs-4">
-            <h2 class="lead">Connections</h2>
+            <strong class="lead">Connections</strong>
+            <button type="button" class="btn btn-link" onclick="toggleRun(this)">start</button>
+            <button type="button" class="btn btn-link" onclick="reset()">reset</button>
+
             <pre id="log"></pre>
             <div id="connections"></div>
         </div>
 
         <div class="col-xs-8">
-            <h2 class="lead">Map</h2>
+            <strong class="lead" style="margin-bottom: 7px; display: block;">Map</strong>
             <div id="map" style="height: 70%"></div>
         </div>
     </div>
