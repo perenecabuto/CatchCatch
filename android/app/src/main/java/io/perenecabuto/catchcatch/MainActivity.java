@@ -121,8 +121,8 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     @SuppressWarnings("MissingPermission")
     private void setupLocation() {
         LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        locationManager.requestLocationUpdates(provider, 0, 0, new LocationUpdateListener((Location l) -> {
-            Log.d(TAG, "location updated");
+        LocationUpdateListener listener = new LocationUpdateListener((Location l) -> {
+            Log.d(TAG, "location updated to " + l.getLatitude() + ", " + l.getLatitude());
             try {
                 manager.sendPosition(l);
             } catch (JSONException e) {
@@ -131,7 +131,8 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             }
             player.updateLocation(l);
             showPlayerOnMap(player);
-        }));
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(player.getPoint(), 15));
+        });
 
         locationManager.requestLocationUpdates(NETWORK_PROVIDER, 0, 0, listener);
         locationManager.requestLocationUpdates(GPS_PROVIDER, 0, 0, listener);
@@ -154,9 +155,6 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             markers.put(p.getId(), m);
         } else {
             m.setPosition(p.getPoint());
-        }
-        if (p.getId().equals(player.getId())) {
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(p.getPoint(), 15));
         }
         m.setVisible(true);
         m.showInfoWindow();
