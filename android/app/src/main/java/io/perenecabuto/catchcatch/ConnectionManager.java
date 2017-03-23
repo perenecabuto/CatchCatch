@@ -76,7 +76,7 @@ class ConnectionManager {
                     e.printStackTrace();
                 }
             })
-            .on(Socket.EVENT_DISCONNECT, args -> Log.d(TAG, "disconnect: " + Arrays.toString(args)));
+            .on(Socket.EVENT_DISCONNECT, args -> callback.onDiconnected());
 
         socket.connect();
     }
@@ -108,6 +108,8 @@ class ConnectionManager {
         void onRegistred(Player player);
 
         void onRemotePlayerDestroy(Player player);
+
+        void onDiconnected();
     }
 
     class NoConnectionException extends Exception {

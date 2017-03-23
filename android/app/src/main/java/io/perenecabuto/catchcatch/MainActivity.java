@@ -194,4 +194,10 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
         runOnUiThread(() -> m.remove());
         markers.remove(p.getId());
     }
+
+    @Override
+    public void onDiconnected() {
+        Log.d(TAG, "diconnected " + player + " " + markers.get(player.getId()));
+        onRemotePlayerDestroy(player);
+    }
 }
