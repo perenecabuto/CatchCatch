@@ -132,6 +132,9 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             player.updateLocation(l);
             showPlayerOnMap(player);
         }));
+
+        locationManager.requestLocationUpdates(NETWORK_PROVIDER, 0, 0, listener);
+        locationManager.requestLocationUpdates(GPS_PROVIDER, 0, 0, listener);
     }
 
     @Override
