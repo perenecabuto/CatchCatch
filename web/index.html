@@ -20,7 +20,7 @@
         socket.emit('admin:clear');
     }
 
-    function removePlayer(playerId) {
+    function disconnectPlayer(playerId) {
         console.log("admin:disconnect", playerId);
         socket.emit('admin:disconnect', playerId);
     }
@@ -30,12 +30,22 @@
         socket.emit('player:update', JSON.stringify(coords));
     }
 
-    function renderPlayerItem(player) {
+    function removePlayer(player) {
+        var playerEl = document.getElementById("d-" + player.id);
+        if (playerEl !== null) playerEl.remove();
+
+        var feat = source.getFeatureById(player.id);
+        if (feat !== null) {
+            source.removeFeature(feat);
+        }
+    }
+
+    function updatePlayer(player) {
         var playerEl = document.getElementById("d-" + player.id);
         if (playerEl === null) {
             var playerHTML = '<div>' +
                 '<span class="player-data"></span>' +
-                '<a href="javascript:void(0)"class="pull-right" onclick="removePlayer(\'' + player.id + '\')">X</a>' +
+                '<a href="javascript:void(0)"class="pull-right" onclick="disconnectPlayer(\'' + player.id + '\')">X</a>' +
                 '</div>';
 
             playerHTML = '<div class="panel panel-default">' +
@@ -89,7 +99,7 @@
             var connectionsEl = document.getElementById("connections");
             connectionsEl.innerHTML = "";
             for (let i in list.players) {
-                renderPlayerItem(list.players[i]);
+                updatePlayer(list.players[i]);
             }
         },
         onPlayerRegistred: function (player) {
@@ -99,17 +109,16 @@
         },
         onPlayerUpdated: function (player) {
             EventHandler.player = player;
-            renderPlayerItem(player);
+            updatePlayer(player);
         },
         onRemotePlayerUpdated: function (player) {
-            renderPlayerItem(player);
+            updatePlayer(player);
         },
         onRemotePlayerNew: function (player) {
-            renderPlayerItem(player)
+            updatePlayer(player)
         },
         onRemotePlayerDestroy: function (player) {
-            var playerEl = document.getElementById("d-" + player.id);
-            if (playerEl !== null) playerEl.remove();
+            removePlayer(player);
         },
         onConnect: function (so) {
             let logEl = document.getElementById("log");
@@ -119,6 +128,7 @@
         onDisconnected: function () {
             let logEl = document.getElementById("log");
             logEl.innerHTML = "disconnected";
+            removePlayer(EventHandler.player);
         }
     };
 
@@ -126,7 +136,7 @@
         socket.on('connect', EventHandler.onConnect);
         socket.on('player:registred', EventHandler.onPlayerRegistred)
         socket.on('player:updated', EventHandler.onPlayerUpdated)
-        socket.on('disconnected', EventHandler.onDisconnected)
+        socket.on('disconnect', EventHandler.onDisconnected)
 
         socket.on('remote-player:list', EventHandler.onRemotePlayerList);
         socket.on('remote-player:updated', EventHandler.onRemotePlayerUpdated)
