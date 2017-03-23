@@ -64,11 +64,9 @@
         var feat = source.getFeatureById(player.id);
         var coords = [player.y, player.x];
         if (feat === null) {
-            feat = new ol.Feature({
-                geometry: new ol.geom.Point(coords, 'XY'),
-                name: player.id,
-            });
+            feat = new ol.Feature({ name: player.id, geometry: new ol.geom.Point(coords, 'XY') });
             feat.setId(player.id);
+            feat.setStyle(new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'marker.png' })) }));
             source.addFeature(feat);
         }
 
@@ -105,7 +103,7 @@
         onPlayerRegistred: function (player) {
             EventHandler.player = player;
             let logEl = document.getElementById("log");
-            logEl.innerHTML = "connected as " + EventHandler.player.id;
+            logEl.innerHTML = "connected as \n" + EventHandler.player.id;
         },
         onPlayerUpdated: function (player) {
             EventHandler.player = player;
