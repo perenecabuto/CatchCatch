@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -26,15 +27,19 @@ import io.socket.client.IO;
 import io.socket.client.Socket;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.location.LocationManager.GPS_PROVIDER;
 import static android.location.LocationManager.NETWORK_PROVIDER;
 import static android.support.v4.content.PermissionChecker.PERMISSION_GRANTED;
+import static android.view.KeyEvent.ACTION_DOWN;
+import static android.view.KeyEvent.KEYCODE_ENTER;
 
 
 public class MainActivity extends Activity implements ConnectionManager.EventCallback {
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int LOCATION_PERMISSION_REQUEST_CODE = (int) (Math.random() * 10000);
-    private String provider = NETWORK_PROVIDER;
+
+    private String serverAddress = "http://li456-21.members.linode.com:5000";
 
     private MapFragment mapFragment;
     private GoogleMap map;
@@ -57,6 +62,19 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             });
         });
 
+        EditText addressText = (EditText) findViewById(R.id.activity_main_address);
+        addressText.setText(serverAddress);
+        addressText.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == ACTION_DOWN && keyCode == KEYCODE_ENTER) {
+                serverAddress = addressText.getText().toString();
+                Toast.makeText(this, "Address updated to " + serverAddress, Toast.LENGTH_LONG).show();
+                manager.disconnect();
+                setupConnection();
+                return true;
+            }
+            return false;
+        });
+
         setupConnection();
 
         if (checkCallingOrSelfPermission(ACCESS_FINE_LOCATION) == PERMISSION_GRANTED) {
@@ -74,7 +92,7 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
 
     private void setupConnection() {
         try {
-            Socket socket = IO.socket("http://192.168.23.102:5000");
+            Socket socket = IO.socket(serverAddress);
             manager = new ConnectionManager(socket, this);
             manager.connect();
         } catch (URISyntaxException | ConnectionManager.NoConnectionException e) {
