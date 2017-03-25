@@ -3,6 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"net"
+	"strings"
+	"time"
 
 	redis "gopkg.in/redis.v5"
 )
@@ -71,4 +75,47 @@ func (s *PlayerLocationService) All() (*PlayerList, error) {
 	}
 
 	return &PlayerList{list}, nil
+}
+
+// AddGeofence persist geofence
+func (s *PlayerLocationService) AddGeofence(name string, geojson string) error {
+	cmd := redis.NewStringCmd("SET", "mapfences", name, "OBJECT", geojson)
+	s.client.Process(cmd)
+	return cmd.Err()
+}
+
+// StreamGeofenceEvents ...
+func (s *PlayerLocationService) StreamGeofenceEvents(callback func(msg string)) error {
+	conn, err := net.Dial("tcp", ":9851")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	cmd := "NEARBY player FENCE ROAM mapfences * 0\r\n"
+	log.Println("REDIS DEBUG:", cmd)
+	if _, err = fmt.Fprintf(conn, cmd); err != nil {
+		return err
+	}
+	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
+	res := string(buf[:n])
+	if res != "+OK\r\n" {
+		return fmt.Errorf("expected OK, got '%v'", res)
+	}
+
+	t := time.NewTicker(100 * time.Microsecond)
+	for range t.C {
+		if n, err = conn.Read(buf); err != nil {
+			return err
+		}
+		for _, line := range strings.Split(string(buf[:n]), "\n") {
+			if len(line) == 0 || line[0] != '{' {
+				continue
+			}
+			callback(line)
+		}
+	}
+
+	return nil
 }

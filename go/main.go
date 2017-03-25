@@ -28,6 +28,15 @@ func main() {
 		}
 	})
 
+	go func() {
+		err := service.StreamGeofenceEvents(func(msg string) {
+			log.Println("geofence:event", msg)
+		})
+		if err != nil {
+			log.Println("Error to stream geofence:event", err)
+		}
+	}()
+
 	server, err := io.NewServer(nil)
 	if err != nil {
 		log.Fatal(err)
