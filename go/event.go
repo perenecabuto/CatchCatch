@@ -21,11 +21,18 @@ func NewEventHandler(server *io.Server, service *PlayerLocationService) *EventHa
 	sessions := NewSessionManager()
 	server.SetSessionManager(sessions)
 	handler := &EventHandler{server, service, sessions}
-	return handler.bindEvents()
+	server.On("connection", handler.onConnection())
+	return handler
 }
 
-func (h *EventHandler) bindEvents() *EventHandler {
-	h.server.On("connection", func(so io.Socket) {
+func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.server.ServeHTTP(w, r)
+}
+
+// Event handlers
+
+func (h *EventHandler) onConnection() func(so io.Socket) {
+	return func(so io.Socket) {
 		channel := "main"
 		player, err := h.newPlayer(so, channel)
 		if err != nil {
@@ -34,46 +41,59 @@ func (h *EventHandler) bindEvents() *EventHandler {
 			return
 		}
 		log.Println("new player connected", player)
-
 		go h.sendPlayerList(so)
 
-		so.On("player:request-list", func() {
-			h.sendPlayerList(so)
-		})
-		so.On("player:update", func(msg string) {
-			playerID := player.ID
-			if err := json.Unmarshal([]byte(msg), player); err != nil {
-				log.Println("player:update event error: " + err.Error())
-				return
-			}
-			player.ID = playerID
-			h.updatePlayer(so, player, channel)
-		})
-		so.On("disconnection", func() {
-			h.removePlayer(player, channel)
-		})
-
-		so.On("admin:clear", func(playerID string) {
-			h.service.client.FlushDb()
-			h.sessions.CloseAll()
-		})
-		so.On("admin:disconnect", func(playerID string) {
-			log.Println("admin:disconnect", playerID)
-			if conn := h.sessions.Get(playerID); conn != nil {
-				conn.Close()
-			} else {
-				player := &Player{ID: playerID}
-				h.removePlayer(player, channel)
-			}
-		})
-	})
-
-	return h
+		so.On("player:request-list", h.onPlayerRequestList(so))
+		so.On("player:update", h.onPlayerUpdate(player, channel, so))
+		so.On("disconnection", h.onPlayerDisconnect(player, channel))
+		so.On("admin:disconnect", h.onDisconnectByID(channel))
+		so.On("admin:clear", h.onClear())
+	}
 }
 
-func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.server.ServeHTTP(w, r)
+func (h *EventHandler) onPlayerDisconnect(player *Player, channel string) func() {
+	return func() {
+		if conn := h.sessions.Get(player.ID); conn != nil {
+			conn.Close()
+		}
+		h.removePlayer(player, channel)
+	}
 }
+
+func (h *EventHandler) onDisconnectByID(channel string) func(id string) {
+	return func(id string) {
+		log.Println("admin:disconnect ", id)
+		callback := h.onPlayerDisconnect(&Player{ID: id}, channel)
+		callback()
+	}
+}
+
+func (h *EventHandler) onPlayerUpdate(player *Player, channel string, so io.Socket) func(msg string) {
+	return func(msg string) {
+		playerID := player.ID
+		if err := json.Unmarshal([]byte(msg), player); err != nil {
+			log.Println("player:update event error: " + err.Error())
+			return
+		}
+		player.ID = playerID
+		h.updatePlayer(player, channel, so)
+	}
+}
+
+func (h *EventHandler) onPlayerRequestList(so io.Socket) func() {
+	return func() {
+		h.sendPlayerList(so)
+	}
+}
+
+func (h *EventHandler) onClear() func() {
+	return func() {
+		h.service.client.FlushDb()
+		h.sessions.CloseAll()
+	}
+}
+
+// Actions
 
 func (h *EventHandler) newPlayer(so io.Socket, channel string) (player *Player, err error) {
 	player = &Player{so.Id(), 0, 0}
@@ -87,7 +107,7 @@ func (h *EventHandler) newPlayer(so io.Socket, channel string) (player *Player, 
 	return player, nil
 }
 
-func (h *EventHandler) updatePlayer(so io.Socket, player *Player, channel string) {
+func (h *EventHandler) updatePlayer(player *Player, channel string, so io.Socket) {
 	// go log.Println("player:updated", player)
 	so.Emit("player:updated", player)
 	so.BroadcastTo(channel, "remote-player:updated", player)
