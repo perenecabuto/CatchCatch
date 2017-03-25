@@ -94,8 +94,8 @@
         player: { x: 0, y: 0 },
 
         onRemotePlayerList: function (list) {
-            var connectionsEl = document.getElementById("connections");
-            connectionsEl.innerHTML = "";
+            document.getElementById("connections").innerHTML = "";
+            source.clear(true);
             for (let i in list.players) {
                 updatePlayer(list.players[i]);
             }
