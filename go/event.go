@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -26,7 +27,13 @@ func NewEventHandler(server *io.Server, service *PlayerLocationService) *EventHa
 func (h *EventHandler) bindEvents() *EventHandler {
 	h.server.On("connection", func(so io.Socket) {
 		channel := "main"
-		player := h.newPlayer(so, channel)
+		player, err := h.newPlayer(so, channel)
+		if err != nil {
+			log.Println("error to create player", err)
+			h.sessions.Get(so.Id()).Close()
+			return
+		}
+		log.Println("new player connected", player)
 
 		go h.sendPlayerList(so)
 
@@ -36,7 +43,7 @@ func (h *EventHandler) bindEvents() *EventHandler {
 		so.On("player:update", func(msg string) {
 			playerID := player.ID
 			if err := json.Unmarshal([]byte(msg), player); err != nil {
-				log.Panicln("player:update event error", err.Error())
+				log.Println("player:update event error: " + err.Error())
 				return
 			}
 			player.ID = playerID
@@ -52,8 +59,7 @@ func (h *EventHandler) bindEvents() *EventHandler {
 		})
 		so.On("admin:disconnect", func(playerID string) {
 			log.Println("admin:disconnect", playerID)
-			conn := h.sessions.Get(playerID)
-			if conn != nil {
+			if conn := h.sessions.Get(playerID); conn != nil {
 				conn.Close()
 			} else {
 				player := &Player{ID: playerID}
@@ -69,16 +75,16 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.server.ServeHTTP(w, r)
 }
 
-func (h *EventHandler) newPlayer(so io.Socket, channel string) *Player {
-	player := &Player{so.Id(), 0, 0}
-	so.Join(channel)
+func (h *EventHandler) newPlayer(so io.Socket, channel string) (player *Player, err error) {
+	player = &Player{so.Id(), 0, 0}
 	if err := h.service.Register(player); err != nil {
-		log.Fatal("could not register:", err)
+		return nil, errors.New("could not register: " + err.Error())
 	}
+
+	so.Join(channel)
 	so.Emit("player:registred", player)
 	so.BroadcastTo(channel, "remote-player:new", player)
-	go log.Println("new player connected", player)
-	return player
+	return player, nil
 }
 
 func (h *EventHandler) updatePlayer(so io.Socket, player *Player, channel string) {
@@ -94,10 +100,10 @@ func (h *EventHandler) removePlayer(player *Player, channel string) {
 	go log.Println("--> diconnected", player)
 }
 
-func (h *EventHandler) sendPlayerList(so io.Socket) {
-	if players, err := h.service.All(); err == nil {
-		so.Emit("remote-player:list", players)
-	} else {
-		go log.Println("--> error to get players: ", err)
+func (h *EventHandler) sendPlayerList(so io.Socket) error {
+	players, err := h.service.All()
+	if err != nil {
+		return err
 	}
+	return so.Emit("remote-player:list", players)
 }
