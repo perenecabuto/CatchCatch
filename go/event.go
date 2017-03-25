@@ -47,6 +47,7 @@ func (h *EventHandler) onConnection() func(so io.Socket) {
 		so.On("player:update", h.onPlayerUpdate(player, channel, so))
 		so.On("disconnection", h.onPlayerDisconnect(player, channel))
 		so.On("admin:disconnect", h.onDisconnectByID(channel))
+		so.On("admin:add-geofence", h.onAddGeofence())
 		so.On("admin:clear", h.onClear())
 	}
 }
@@ -90,6 +91,17 @@ func (h *EventHandler) onClear() func() {
 	return func() {
 		h.service.client.FlushDb()
 		h.sessions.CloseAll()
+	}
+}
+
+// Map events
+
+func (h *EventHandler) onAddGeofence() func(name, geojson string) {
+	return func(name, geojson string) {
+		log.Println("Add geofence: ", name, geojson)
+		if err := h.service.AddGeofence(name, geojson); err != nil {
+			log.Println("Error to create geofence: ", err)
+		}
 	}
 }
 

@@ -149,6 +149,12 @@
         var view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
         var map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
         var draw = new ol.interaction.Draw({ source: source, type: "Polygon" });
+        draw.on("drawend", function (evt) {
+            var g = evt.feature.getGeometry();
+            var geojson = new ol.format.GeoJSON().writeGeometry(g);
+            var name = prompt("What is this geofence name?");
+            socket.emit('admin:add-geofence', name, geojson);
+        });
         map.addInteraction(draw);
     });
 
