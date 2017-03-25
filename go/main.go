@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 
+	"time"
+
 	io "github.com/googollee/go-socket.io"
 	redis "gopkg.in/redis.v5"
 )
@@ -35,7 +37,7 @@ func main() {
 }
 
 func mustRedisConnect() *redis.Client {
-	client := redis.NewClient(&redis.Options{Addr: *redisAddress, PoolSize: 1000})
+	client := redis.NewClient(&redis.Options{Addr: *redisAddress, PoolSize: 1000, DialTimeout: 1 * time.Second})
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Kill, os.Interrupt)
