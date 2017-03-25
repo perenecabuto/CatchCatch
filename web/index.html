@@ -109,9 +109,9 @@
         },
         onPlayerRegistred: function (player) {
             var playerWithoutDefinedPos = player.x == 0 && player.y == 0;
-            var hasCachedPosition = lastPos.coords.latitude != 0 &&  lastPos.coords.longitude != 0;
+            var hasCachedPosition = lastPos.coords.latitude != 0 && lastPos.coords.longitude != 0;
             if (playerWithoutDefinedPos && hasCachedPosition) {
-                console.log("update from cached position", lastPos);                
+                console.log("update from cached position", lastPos);
                 updatePosition(lastPos);
             }
             EventHandler.player = player;
