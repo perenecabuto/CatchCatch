@@ -98,7 +98,6 @@ func (h *EventHandler) onClear() func() {
 
 func (h *EventHandler) onAddGeofence() func(name, geojson string) {
 	return func(name, geojson string) {
-		log.Println("Add geofence: ", name, geojson)
 		if err := h.service.AddGeofence(name, geojson); err != nil {
 			log.Println("Error to create geofence: ", err)
 		}
