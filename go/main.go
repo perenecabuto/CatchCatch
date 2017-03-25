@@ -19,8 +19,15 @@ var (
 )
 
 func main() {
-	pool := mustRedisConnect()
-	service := &PlayerLocationService{pool}
+	client := mustRedisConnect()
+	service := &PlayerLocationService{client}
+	client.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
+		return func(cmd redis.Cmder) error {
+			log.Println("REDIS DEBUG:", cmd.String())
+			return oldProcess(cmd)
+		}
+	})
+
 	server, err := io.NewServer(nil)
 	if err != nil {
 		log.Fatal(err)
