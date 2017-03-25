@@ -25,8 +25,11 @@
         socket.emit('admin:disconnect', playerId);
     }
 
+    var lastPos = { coords: { latitude: 0, longitude: 0 } };
+
     function updatePosition(pos) {
         var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
+        lastPos = pos;
         socket.emit('player:update', JSON.stringify(coords));
     }
 
@@ -89,18 +92,28 @@
         }, 100);
     }
 
+    function resetInterface() {
+        document.getElementById("connections").innerHTML = "";
+        source.clear(true);
+    }
+
     var socket = io('//' + location.host);
     var EventHandler = {
         player: { x: 0, y: 0 },
 
         onRemotePlayerList: function (list) {
-            document.getElementById("connections").innerHTML = "";
-            source.clear(true);
+            resetInterface();
             for (let i in list.players) {
                 updatePlayer(list.players[i]);
             }
         },
         onPlayerRegistred: function (player) {
+            var playerWithoutDefinedPos = player.x == 0 && player.y == 0;
+            var hasCachedPosition = lastPos.coords.latitude != 0 &&  lastPos.coords.longitude != 0;
+            if (playerWithoutDefinedPos && hasCachedPosition) {
+                console.log("update from cached position", lastPos);                
+                updatePosition(lastPos);
+            }
             EventHandler.player = player;
             let logEl = document.getElementById("log");
             logEl.innerHTML = "connected as \n" + EventHandler.player.id;
@@ -126,6 +139,7 @@
         onDisconnected: function () {
             let logEl = document.getElementById("log");
             logEl.innerHTML = "disconnected";
+            resetInterface();
             removePlayer(EventHandler.player);
         }
     };
