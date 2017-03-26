@@ -1,1 +1,1 @@
-web: find .
+web: go/go

@@ -1,0 +1,71 @@
+{
+	"ImportPath": "github.com/perenecabuto/CatchCatch/catchcatch-server",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "github.com/googollee/go-engine.io",
+			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
+		},
+		{
+			"ImportPath": "github.com/googollee/go-engine.io/message",
+			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
+		},
+		{
+			"ImportPath": "github.com/googollee/go-engine.io/parser",
+			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
+		},
+		{
+			"ImportPath": "github.com/googollee/go-engine.io/polling",
+			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
+		},
+		{
+			"ImportPath": "github.com/googollee/go-engine.io/transport",
+			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
+		},
+		{
+			"ImportPath": "github.com/googollee/go-engine.io/websocket",
+			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
+		},
+		{
+			"ImportPath": "github.com/googollee/go-socket.io",
+			"Comment": "0.9.x-63-ge9f0a9b",
+			"Rev": "e9f0a9b7a61267e1476f9f0a0429337813c39edd"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Comment": "v1.1.0-27-gb258b4f",
+			"Rev": "b258b4fadb573ac412f187b9f31974ea99d32f50"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/consistenthash",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/hashtag",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/pool",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/proto",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		}
+	]
+}
