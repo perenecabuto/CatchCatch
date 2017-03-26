@@ -1,1 +1,1 @@
-web: go/go
+web: catchcatch-server
