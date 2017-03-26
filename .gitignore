@@ -1,6 +1,6 @@
 # Bin
-go/go
-go/debug
+catchcatch-server/catchcatch-server
+catchcatch-server/debug
 
 # Android
 *.iml
