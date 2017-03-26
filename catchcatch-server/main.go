@@ -21,6 +21,8 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	client := mustRedisConnect()
 	service := &PlayerLocationService{client}
 	client.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
