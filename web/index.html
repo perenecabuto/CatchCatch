@@ -27,6 +27,13 @@
 
     var lastPos = { coords: { latitude: 0, longitude: 0 } };
 
+    function recoverPosition() {
+        var hasCachedPosition = lastPos.coords.latitude != 0 && lastPos.coords.longitude != 0;
+        if (hasCachedPosition) {
+            updatePosition(lastPos);
+        }
+    }
+
     function updatePosition(pos) {
         var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
         lastPos = pos;
@@ -97,30 +104,40 @@
         source.clear(true);
     }
 
+    function log(msg) {
+        let logEl = document.getElementById("log");
+        logEl.innerHTML = msg;
+    }
+
+
     var socket = io('//' + location.host);
     var EventHandler = {
         player: { x: 0, y: 0 },
 
+        onConnect: function (so) {
+            log("connected");
+            navigator.geolocation.getCurrentPosition(updatePosition)
+        },
+        onDisconnected: function () {
+            log("disconnected");
+            resetInterface();
+            removePlayer(EventHandler.player);
+        },
+        onPlayerRegistred: function (player) {
+            if (player.x == 0 && player.y == 0) recoverPosition();
+            EventHandler.player = player;
+            log("connected as \n" + player.id);
+            requestGeofences();
+        },
+        onPlayerUpdated: function (player) {
+            EventHandler.player = player;
+            updatePlayer(player);
+        },
         onRemotePlayerList: function (list) {
             resetInterface();
             for (let i in list.players) {
                 updatePlayer(list.players[i]);
             }
-        },
-        onPlayerRegistred: function (player) {
-            var playerWithoutDefinedPos = player.x == 0 && player.y == 0;
-            var hasCachedPosition = lastPos.coords.latitude != 0 && lastPos.coords.longitude != 0;
-            if (playerWithoutDefinedPos && hasCachedPosition) {
-                console.log("update from cached position", lastPos);
-                updatePosition(lastPos);
-            }
-            EventHandler.player = player;
-            let logEl = document.getElementById("log");
-            logEl.innerHTML = "connected as \n" + EventHandler.player.id;
-        },
-        onPlayerUpdated: function (player) {
-            EventHandler.player = player;
-            updatePlayer(player);
         },
         onRemotePlayerUpdated: function (player) {
             updatePlayer(player);
@@ -131,16 +148,6 @@
         onRemotePlayerDestroy: function (player) {
             removePlayer(player);
         },
-        onConnect: function (so) {
-            let logEl = document.getElementById("log");
-            logEl.innerHTML = "connected";
-            navigator.geolocation.getCurrentPosition(updatePosition)
-        },
-        onDisconnected: function () {
-            let logEl = document.getElementById("log");
-            logEl.innerHTML = "disconnected";
-            resetInterface();
-            removePlayer(EventHandler.player);
         }
     };
 
