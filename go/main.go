@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 
 	"time"
 
@@ -16,6 +17,7 @@ import (
 var (
 	redisAddress   = flag.String("redis-addr", "localhost:9851", "redis address")
 	maxConnections = flag.Int("redis-connections", 100, "redis address")
+	port           = flag.Int("port", 8888, "server port")
 )
 
 func main() {
@@ -48,8 +50,8 @@ func main() {
 
 	http.Handle("/socket.io/", eventH)
 	http.Handle("/", http.FileServer(http.Dir("../web")))
-	log.Println("Serving at localhost: 5000...")
-	log.Fatal(http.ListenAndServe(":5000", nil))
+	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
 func mustRedisConnect() *redis.Client {
