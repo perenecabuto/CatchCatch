@@ -77,6 +77,11 @@ func (s *PlayerLocationService) AddGeofence(name string, geojson string) error {
 	return cmd.Err()
 }
 
+// Geofences ...
+func (s *PlayerLocationService) Geofences() ([]*Feature, error) {
+	return s.listFeature("mapfences")
+}
+
 // Feature wraps geofence name and its geojeson
 type Feature struct {
 	ID          string `json:"id"`

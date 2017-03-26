@@ -25,6 +25,10 @@
         socket.emit('admin:disconnect', playerId);
     }
 
+    function requestGeofences() {
+        socket.emit("admin:request-geofences");
+    }
+
     var lastPos = { coords: { latitude: 0, longitude: 0 } };
 
     function recoverPosition() {
@@ -110,6 +114,7 @@
     }
 
 
+    var source = new ol.source.Vector({ wrapX: false });
     var socket = io('//' + location.host);
     var EventHandler = {
         player: { x: 0, y: 0 },
@@ -148,6 +153,14 @@
         onRemotePlayerDestroy: function (player) {
             removePlayer(player);
         },
+
+        onGeofences: function (geofences) {
+            for (var i in geofences) {
+                var jsonF = geofences[i];
+                var f = new ol.format.GeoJSON().readFeature(jsonF.coords);
+                source.addFeature(f);
+                f.setId(jsonF.id);
+            }
         }
     };
 
@@ -161,11 +174,11 @@
         socket.on('remote-player:updated', EventHandler.onRemotePlayerUpdated)
         socket.on('remote-player:new', EventHandler.onRemotePlayerNew);
         socket.on("remote-player:destroy", EventHandler.onRemotePlayerDestroy);
+        socket.on("admin:geofences", EventHandler.onGeofences);
 
         navigator.geolocation.watchPosition(updatePosition);
 
         var raster = new ol.layer.Tile({ source: new ol.source.OSM() });
-        source = new ol.source.Vector({ wrapX: false });
         var vector = new ol.layer.Vector({ source: source });
         var view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
         var map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });

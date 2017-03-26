@@ -48,6 +48,7 @@ func (h *EventHandler) onConnection() func(so io.Socket) {
 		so.On("disconnection", h.onPlayerDisconnect(player, channel))
 		so.On("admin:disconnect", h.onDisconnectByID(channel))
 		so.On("admin:add-geofence", h.onAddGeofence())
+		so.On("admin:request-geofences", h.onRequestGeofences(so))
 		so.On("admin:clear", h.onClear())
 	}
 }
@@ -104,6 +105,14 @@ func (h *EventHandler) onAddGeofence() func(name, geojson string) {
 	}
 }
 
+func (h *EventHandler) onRequestGeofences(so io.Socket) func(string) {
+	return func(string) {
+		if err := h.sendGeofences(so); err != nil {
+			log.Println("Error on sendGeofences:", err)
+		}
+	}
+}
+
 // Actions
 
 func (h *EventHandler) newPlayer(so io.Socket, channel string) (player *Player, err error) {
@@ -137,4 +146,12 @@ func (h *EventHandler) sendPlayerList(so io.Socket) error {
 		return err
 	}
 	return so.Emit("remote-player:list", players)
+}
+
+func (h *EventHandler) sendGeofences(so io.Socket) error {
+	geofences, err := h.service.Geofences()
+	if err != nil {
+		return err
+	}
+	return so.Emit("admin:geofences", geofences)
 }
