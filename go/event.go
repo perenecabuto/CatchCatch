@@ -53,8 +53,8 @@ func (h *EventHandler) onConnection() func(so io.Socket) {
 	}
 }
 
-func (h *EventHandler) onPlayerDisconnect(player *Player, channel string) func() {
-	return func() {
+func (h *EventHandler) onPlayerDisconnect(player *Player, channel string) func(string) {
+	return func(string) {
 		log.Println("player:disconnect", player.ID)
 		if conn := h.sessions.Get(player.ID); conn != nil {
 			conn.Close()
@@ -67,7 +67,7 @@ func (h *EventHandler) onDisconnectByID(channel string) func(string) {
 	return func(id string) {
 		log.Println("admin:disconnect ", id)
 		callback := h.onPlayerDisconnect(&Player{ID: id}, channel)
-		callback()
+		callback("")
 	}
 }
 
