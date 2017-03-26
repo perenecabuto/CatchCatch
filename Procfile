@@ -1,1 +1,1 @@
-web: pwd .
+web: sh -c 'ls'
