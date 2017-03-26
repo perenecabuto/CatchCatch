@@ -51,6 +51,29 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 	return cmd.Err()
 }
 
+// Feature wraps geofence name and its geojeson
+type Feature struct {
+	ID          string `json:"id"`
+	Coordinates string `json:"coords"`
+}
+
+func (s *PlayerLocationService) listFeature(ftype string) ([]*Feature, error) {
+	cmd := redis.NewSliceCmd("SCAN", "mapfences")
+	s.client.Process(cmd)
+	res, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+
+	payload, _ := redis.NewSliceResult(res[1].([]interface{}), err).Result()
+	features := make([]*Feature, len(payload))
+	for i, item := range payload {
+		itemRes, _ := redis.NewSliceResult(item.([]interface{}), nil).Result()
+		features[i] = &Feature{itemRes[0].(string), itemRes[1].(string)}
+	}
+	return features, nil
+}
+
 type pointCoords struct {
 	Coords [2]float32 `json:"coordinates"`
 }
@@ -80,29 +103,6 @@ func (s *PlayerLocationService) AddGeofence(name string, geojson string) error {
 // Geofences ...
 func (s *PlayerLocationService) Geofences() ([]*Feature, error) {
 	return s.listFeature("mapfences")
-}
-
-// Feature wraps geofence name and its geojeson
-type Feature struct {
-	ID          string `json:"id"`
-	Coordinates string `json:"coords"`
-}
-
-func (s *PlayerLocationService) listFeature(ftype string) ([]*Feature, error) {
-	cmd := redis.NewSliceCmd("SCAN", "mapfences")
-	s.client.Process(cmd)
-	res, err := cmd.Result()
-	if err != nil {
-		return nil, err
-	}
-
-	payload, _ := redis.NewSliceResult(res[1].([]interface{}), err).Result()
-	features := make([]*Feature, len(payload))
-	for i, item := range payload {
-		itemRes, _ := redis.NewSliceResult(item.([]interface{}), nil).Result()
-		features[i] = &Feature{itemRes[0].(string), itemRes[1].(string)}
-	}
-	return features, nil
 }
 
 // StreamGeofenceEvents ...
