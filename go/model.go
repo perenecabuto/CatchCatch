@@ -51,30 +51,23 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 	return cmd.Err()
 }
 
-type position struct {
+type pointCoords struct {
 	Coords [2]float32 `json:"coordinates"`
 }
 
-// All return all registred players
-func (s *PlayerLocationService) All() (*PlayerList, error) {
-	cmd := redis.NewSliceCmd("SCAN", "player")
-	s.client.Process(cmd)
-	res, err := cmd.Result()
+// Players return all registred players
+func (s *PlayerLocationService) Players() (*PlayerList, error) {
+	features, err := s.listFeature("player")
 	if err != nil {
 		return nil, err
 	}
-
-	payload, _ := redis.NewSliceResult(res[1].([]interface{}), err).Result()
-	list := make([]*Player, len(payload))
-	for i, item := range payload {
-		itemRes, _ := redis.NewSliceResult(item.([]interface{}), nil).Result()
-		id, data, geo := itemRes[0].(string), []byte(itemRes[1].(string)), &position{}
-		json.Unmarshal(data, geo)
-
-		list[i] = &Player{ID: id, X: geo.Coords[1], Y: geo.Coords[0]}
+	list := &PlayerList{make([]*Player, len(features))}
+	for i, f := range features {
+		var geo pointCoords
+		json.Unmarshal([]byte(f.Coordinates), &geo)
+		list.Players[i] = &Player{ID: f.ID, X: geo.Coords[1], Y: geo.Coords[0]}
 	}
-
-	return &PlayerList{list}, nil
+	return list, nil
 }
 
 // AddGeofence persist geofence
@@ -82,6 +75,29 @@ func (s *PlayerLocationService) AddGeofence(name string, geojson string) error {
 	cmd := redis.NewStringCmd("SET", "mapfences", name, "OBJECT", geojson)
 	s.client.Process(cmd)
 	return cmd.Err()
+}
+
+// Feature wraps geofence name and its geojeson
+type Feature struct {
+	ID          string `json:"id"`
+	Coordinates string `json:"coords"`
+}
+
+func (s *PlayerLocationService) listFeature(ftype string) ([]*Feature, error) {
+	cmd := redis.NewSliceCmd("SCAN", "mapfences")
+	s.client.Process(cmd)
+	res, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+
+	payload, _ := redis.NewSliceResult(res[1].([]interface{}), err).Result()
+	features := make([]*Feature, len(payload))
+	for i, item := range payload {
+		itemRes, _ := redis.NewSliceResult(item.([]interface{}), nil).Result()
+		features[i] = &Feature{itemRes[0].(string), itemRes[1].(string)}
+	}
+	return features, nil
 }
 
 // StreamGeofenceEvents ...

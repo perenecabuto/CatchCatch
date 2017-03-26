@@ -61,7 +61,7 @@ func (h *EventHandler) onPlayerDisconnect(player *Player, channel string) func()
 	}
 }
 
-func (h *EventHandler) onDisconnectByID(channel string) func(id string) {
+func (h *EventHandler) onDisconnectByID(channel string) func(string) {
 	return func(id string) {
 		log.Println("admin:disconnect ", id)
 		callback := h.onPlayerDisconnect(&Player{ID: id}, channel)
@@ -69,7 +69,7 @@ func (h *EventHandler) onDisconnectByID(channel string) func(id string) {
 	}
 }
 
-func (h *EventHandler) onPlayerUpdate(player *Player, channel string, so io.Socket) func(msg string) {
+func (h *EventHandler) onPlayerUpdate(player *Player, channel string, so io.Socket) func(string) {
 	return func(msg string) {
 		playerID := player.ID
 		if err := json.Unmarshal([]byte(msg), player); err != nil {
@@ -81,14 +81,14 @@ func (h *EventHandler) onPlayerUpdate(player *Player, channel string, so io.Sock
 	}
 }
 
-func (h *EventHandler) onPlayerRequestList(so io.Socket) func() {
-	return func() {
+func (h *EventHandler) onPlayerRequestList(so io.Socket) func(string) {
+	return func(string) {
 		h.sendPlayerList(so)
 	}
 }
 
-func (h *EventHandler) onClear() func() {
-	return func() {
+func (h *EventHandler) onClear() func(string) {
+	return func(string) {
 		h.service.client.FlushDb()
 		h.sessions.CloseAll()
 	}
@@ -132,7 +132,7 @@ func (h *EventHandler) removePlayer(player *Player, channel string) {
 }
 
 func (h *EventHandler) sendPlayerList(so io.Socket) error {
-	players, err := h.service.All()
+	players, err := h.service.Players()
 	if err != nil {
 		return err
 	}
