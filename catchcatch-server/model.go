@@ -87,8 +87,8 @@ func (s *PlayerLocationService) Geofences() ([]*Feature, error) {
 }
 
 // StreamGeofenceEvents ...
-func (s *PlayerLocationService) StreamGeofenceEvents(callback func(msg string)) error {
-	conn, err := net.Dial("tcp", ":9851")
+func (s *PlayerLocationService) StreamGeofenceEvents(addr string, callback func(msg string)) error {
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err
 	}

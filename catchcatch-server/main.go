@@ -33,7 +33,7 @@ func main() {
 	})
 
 	go func() {
-		err := service.StreamGeofenceEvents(func(msg string) {
+		err := service.StreamGeofenceEvents(addr, func(msg string) {
 			log.Println("geofence:event", msg)
 		})
 		if err != nil {
