@@ -1,1 +1,1 @@
-web: catchcatch-server -port 5000 -tile38-addr 172.17.0.2:9851 -web-dir /app/web
+web: catchcatch-server -port 5000 -tile38-addr $TILE38_ADDR -web-dir /app/web
