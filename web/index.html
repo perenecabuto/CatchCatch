@@ -123,7 +123,8 @@
         player: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'marker.png' })) })
     }
 
-    function bindDrawGroupButton(group, map, draw) {
+    function bindDrawGroupButton(group, map, type) {
+        var draw = new ol.interaction.Draw({ source: source, type: type, style: groupStyles[group] });
         draw.on("drawend", function (evt) {
             var g = evt.feature.getGeometry();
             var geojson = new ol.format.GeoJSON().writeGeometry(g);
@@ -224,10 +225,8 @@
         var view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
         map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
 
-        bindDrawGroupButton("geofences", map,
-            new ol.interaction.Draw({ source: source, type: "Polygon" }));
-        bindDrawGroupButton("checkpoint", map,
-            new ol.interaction.Draw({ source: source, type: "Point", style: groupStyles.checkpoint }));
+        bindDrawGroupButton("geofences", map, "Polygon");
+        bindDrawGroupButton("checkpoint", map, "Point");
     });
 
 </script>
