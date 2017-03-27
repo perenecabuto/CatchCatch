@@ -17,7 +17,7 @@ import (
 var (
 	tile38Addr     = flag.String("tile38-addr", "localhost:9851", "redis address")
 	maxConnections = flag.Int("tile38-connections", 100, "tile38 address")
-	port           = flag.Int("port", 8888, "server port")
+	port           = flag.Int("port", 5000, "server port")
 	webDir         = flag.String("web-dir", "../web", "web files dir")
 )
 
