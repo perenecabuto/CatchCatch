@@ -13,3 +13,12 @@ run-tile38:
 	else \
 		docker run --rm --name $(INSTANCE_NAME) -v $$PWD:/data -p $(PORT):$(PORT) -P $(TEMPLATE);\
 	fi
+
+.PHONY=deploy-digitalocean
+deploy-digitalocean:
+	git push dokku@192.34.56.53:catchcatch master
+
+
+.PHONY=deploy-linode
+deploy-linode:
+	git push dokku@50.116.10.21:catchcatch master
