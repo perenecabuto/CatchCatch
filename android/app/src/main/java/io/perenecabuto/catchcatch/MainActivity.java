@@ -40,7 +40,7 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int LOCATION_PERMISSION_REQUEST_CODE = (int) (Math.random() * 10000);
 
-    private String serverAddress = "http://li456-21.members.linode.com:5000";
+    private String serverAddress = "http://192.168.23.102:5000";
 
     private MapFragment mapFragment;
     private GoogleMap map;
