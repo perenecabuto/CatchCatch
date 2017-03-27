@@ -47,6 +47,7 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     private ConnectionManager manager;
     private HashMap<String, Marker> markers = new HashMap<>();
     private Player player = new Player("", 0, 0);
+    private boolean focusedOnPlayer = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,7 +133,10 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             }
             player.updateLocation(l);
             showPlayerOnMap(player);
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(player.getPoint(), 15));
+            if (!focusedOnPlayer) {
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(player.getPoint(), 15));
+                focusedOnPlayer = true;
+            }
         });
 
         locationManager.requestLocationUpdates(NETWORK_PROVIDER, 0, 0, listener);
