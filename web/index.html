@@ -25,8 +25,9 @@
         socket.emit('admin:disconnect', playerId);
     }
 
-    function requestGeofences() {
-        socket.emit("admin:request-geofences");
+    function requestFeatures() {
+        socket.emit("admin:feature:request-list", "checkpoint");
+        socket.emit("admin:feature:request-list", "geofences");
     }
 
     var lastPos = { coords: { latitude: 0, longitude: 0 } };
@@ -132,7 +133,7 @@
             if (player.x == 0 && player.y == 0) recoverPosition();
             EventHandler.player = player;
             log("connected as \n" + player.id);
-            requestGeofences();
+            requestFeatures();
         },
         onPlayerUpdated: function (player) {
             EventHandler.player = player;
@@ -154,15 +155,18 @@
             removePlayer(player);
         },
 
-        onGeofences: function (geofences) {
-            for (var i in geofences) {
-                var jsonF = geofences[i];
-                var f = new ol.format.GeoJSON().readFeature(jsonF.coords);
-                source.addFeature(f);
-                f.setId(jsonF.id);
+        onFeatureAdded: function (jsonF) {
+            var feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
+            source.addFeature(feat);
+            feat.setId(jsonF.id);
+        },
+        onFeatureList: function (features) {
+            for (var i in features) {
+                EventHandler.onFeatureAdded(features[i]);
             }
         }
     };
+
 
     window.addEventListener("DOMContentLoaded", function () {
         socket.on('connect', EventHandler.onConnect);
@@ -174,7 +178,9 @@
         socket.on('remote-player:updated', EventHandler.onRemotePlayerUpdated)
         socket.on('remote-player:new', EventHandler.onRemotePlayerNew);
         socket.on("remote-player:destroy", EventHandler.onRemotePlayerDestroy);
-        socket.on("admin:geofences", EventHandler.onGeofences);
+
+        socket.on("admin:feature:list", EventHandler.onFeatureList);
+        socket.on("admin:feature:added", EventHandler.onFeatureAdded);
 
         navigator.geolocation.watchPosition(updatePosition);
 

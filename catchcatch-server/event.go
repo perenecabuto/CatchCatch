@@ -46,9 +46,10 @@ func (h *EventHandler) onConnection() func(so io.Socket) {
 		so.On("player:request-list", h.onPlayerRequestList(so))
 		so.On("player:update", h.onPlayerUpdate(player, channel, so))
 		so.On("disconnection", h.onPlayerDisconnect(player, channel))
+
 		so.On("admin:disconnect", h.onDisconnectByID(channel))
-		so.On("admin:add-geofence", h.onAddGeofence())
-		so.On("admin:request-geofences", h.onRequestGeofences(so))
+		so.On("admin:feature:add", h.onAddFeature(channel))
+		so.On("admin:feature:request-list", h.onRequestFeatures(so))
 		so.On("admin:clear", h.onClear())
 	}
 }
@@ -98,18 +99,18 @@ func (h *EventHandler) onClear() func(string) {
 
 // Map events
 
-func (h *EventHandler) onAddGeofence() func(name, geojson string) {
-	return func(name, geojson string) {
-		if err := h.service.AddGeofence(name, geojson); err != nil {
+func (h *EventHandler) onAddFeature(channel string) func(group, name, geojson string) {
+	return func(group, name, geojson string) {
+		if err := h.addFeature(channel, group, name, geojson); err != nil {
 			log.Println("Error to create geofence: ", err)
 		}
 	}
 }
 
-func (h *EventHandler) onRequestGeofences(so io.Socket) func(string) {
-	return func(string) {
-		if err := h.sendGeofences(so); err != nil {
-			log.Println("Error on sendGeofences:", err)
+func (h *EventHandler) onRequestFeatures(so io.Socket) func(string) {
+	return func(group string) {
+		if err := h.sendFeatures(group, so); err != nil {
+			log.Println("Error on sendFeatures:", err)
 		}
 	}
 }
@@ -149,10 +150,20 @@ func (h *EventHandler) sendPlayerList(so io.Socket) error {
 	return so.Emit("remote-player:list", players)
 }
 
-func (h *EventHandler) sendGeofences(so io.Socket) error {
-	geofences, err := h.service.Geofences()
+func (h *EventHandler) sendFeatures(group string, so io.Socket) error {
+	features, err := h.service.Features(group)
 	if err != nil {
 		return err
 	}
-	return so.Emit("admin:geofences", geofences)
+	return so.Emit("admin:feature:list", features)
+}
+
+func (h *EventHandler) addFeature(channel, group, name, geojson string) error {
+	feature, err := h.service.AddFeature(group, name, geojson)
+	if err != nil {
+		return err
+	}
+	log.Println("Added feature", feature)
+	h.server.BroadcastTo(channel, "admin:feature:added", feature)
+	return nil
 }
