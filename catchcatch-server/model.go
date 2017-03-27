@@ -98,7 +98,7 @@ func (s *PlayerLocationService) StreamGeofenceEvents(addr string, callback func(
 	}
 	defer conn.Close()
 
-	cmd := "NEARBY player FENCE ROAM mapfences * 0\r\n"
+	cmd := "NEARBY player FENCE ROAM geofences * 0\r\n"
 	log.Println("REDIS DEBUG:", cmd)
 	if _, err = fmt.Fprintf(conn, cmd); err != nil {
 		return err
