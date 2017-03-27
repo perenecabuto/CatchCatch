@@ -81,7 +81,7 @@
         if (feat === null) {
             feat = new ol.Feature({ name: player.id, geometry: new ol.geom.Point(coords, 'XY') });
             feat.setId(player.id);
-            feat.setStyle(new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'marker.png' })) }));
+            feat.setStyle(groupStyles.player);
             source.addFeature(feat);
         }
 
@@ -114,8 +114,35 @@
         logEl.innerHTML = msg;
     }
 
+    var groupStyles = {
+        checkpoint: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'checkpoint.png' })) }),
+        player: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'marker.png' })) })
+    }
+
+    function bindDrawGroupButton(group, map, draw) {
+        draw.on("drawend", function (evt) {
+            var g = evt.feature.getGeometry();
+            var geojson = new ol.format.GeoJSON().writeGeometry(g);
+            var name = prompt("What is this " + group + " name?");
+            socket.emit('admin:feature:add', group, name, geojson);
+            setTimeout(function () {
+                map.removeInteraction(draw);
+                source.removeFeature(evt.feature);
+            });
+        });
+        document.getElementById("draw-" + group).addEventListener("click", function () {
+            map.addInteraction(draw);
+        });
+        document.addEventListener("keydown", function (e) {
+            if (e.key.toLowerCase() == "escape") {
+                map.removeInteraction(draw);
+            }
+        });
+    }
+
 
     var source = new ol.source.Vector({ wrapX: false });
+
     var socket = io('//' + location.host);
     var EventHandler = {
         player: { x: 0, y: 0 },
@@ -158,6 +185,10 @@
         onFeatureAdded: function (jsonF) {
             var feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
             source.addFeature(feat);
+
+            if (groupStyles[jsonF.group] !== undefined) {
+                feat.setStyle(groupStyles[jsonF.group]);
+            }
             feat.setId(jsonF.id);
         },
         onFeatureList: function (features) {
@@ -187,15 +218,12 @@
         var raster = new ol.layer.Tile({ source: new ol.source.OSM() });
         var vector = new ol.layer.Vector({ source: source });
         var view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
-        var map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
-        var draw = new ol.interaction.Draw({ source: source, type: "Polygon" });
-        draw.on("drawend", function (evt) {
-            var g = evt.feature.getGeometry();
-            var geojson = new ol.format.GeoJSON().writeGeometry(g);
-            var name = prompt("What is this geofence name?");
-            socket.emit('admin:add-geofence', name, geojson);
-        });
-        map.addInteraction(draw);
+        map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
+
+        bindDrawGroupButton("geofences", map,
+            new ol.interaction.Draw({ source: source, type: "Polygon" }));
+        bindDrawGroupButton("checkpoint", map,
+            new ol.interaction.Draw({ source: source, type: "Point", style: groupStyles.checkpoint }));
     });
 
 </script>
@@ -217,7 +245,10 @@
         </div>
 
         <div class="col-xs-8">
-            <strong class="lead" style="margin-bottom: 7px; display: block;">Map</strong>
+            <strong class="lead">Map</strong>
+            <button id="draw-geofences" type="button" class="btn btn-link">draw fence</button>
+            <button id="draw-checkpoint" type="button" class="btn btn-link">draw checkpoint</button>
+
             <div id="map" style="height: 70%"></div>
         </div>
     </div>
