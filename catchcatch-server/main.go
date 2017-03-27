@@ -11,6 +11,7 @@ import (
 	"time"
 
 	io "github.com/googollee/go-socket.io"
+	gjson "github.com/tidwall/gjson"
 	redis "gopkg.in/redis.v5"
 )
 
@@ -33,15 +34,6 @@ func main() {
 		}
 	})
 
-	go func() {
-		err := service.StreamGeofenceEvents(*tile38Addr, func(msg string) {
-			log.Println("geofence:event", msg)
-		})
-		if err != nil {
-			log.Println("Error to stream geofence:event", err)
-		}
-	}()
-
 	server, err := io.NewServer(nil)
 	if err != nil {
 		log.Fatal(err)
@@ -49,6 +41,23 @@ func main() {
 	server.On("error", func(so io.Socket, err error) {
 		log.Println("error:", err)
 	})
+
+	go func() {
+		err := service.StreamGeofenceEvents(*tile38Addr, func(msg string) {
+			featID, coords := gjson.Get(msg, "id").String(), gjson.Get(msg, "object.coordinates").Array()
+			if len(coords) != 2 {
+				return
+			}
+			lon, lat := coords[0].Float(), coords[1].Float()
+			checkpointID, distance := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
+			log.Println("EVENT admin:feature:checkpoint", featID, checkpointID, lon, lat, distance)
+			server.BroadcastTo("main", "admin:feature:checkpoint", featID, checkpointID, lon, lat, distance)
+		})
+		if err != nil {
+			log.Println("Error to stream geofence:event", err)
+		}
+	}()
+
 	eventH := NewEventHandler(server, service)
 
 	http.Handle("/socket.io/", eventH)
