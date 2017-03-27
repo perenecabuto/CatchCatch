@@ -250,7 +250,7 @@
         var raster = new ol.layer.Tile({ source: new ol.source.OSM() });
         var vector = new ol.layer.Vector({ source: source });
         var view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
-        map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
+        var map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
 
         bindDrawGroupButton("geofences", map, "Polygon");
         bindDrawGroupButton("checkpoint", map, "Point");
