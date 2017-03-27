@@ -76,8 +76,8 @@
             '<div class="glyphicon glyphicon-map-marker" aria-hidden="true"> (' + player.x + ', ' + player.y + ')</div>';
         playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
 
-        var feat = source.getFeatureById(player.id);
         var coords = [player.y, player.x];
+        var feat = source.getFeatureById(player.id);
         if (feat === null) {
             feat = new ol.Feature({ name: player.id, geometry: new ol.geom.Point(coords, 'XY') });
             feat.setId(player.id);
@@ -86,6 +86,25 @@
         }
 
         feat.getGeometry().setCoordinates(coords);
+    }
+
+    function showCircle(id, center, distanceInMeters) {
+        var id = "circle-" + id;
+        var feat = source.getFeatureById(id);
+        if (feat !== null && distanceInMeters >= 900) {
+            source.removeFeature(feat);
+        }
+
+        var distance = (distanceInMeters / 100000);
+        if (feat !== null) {
+            feat.getGeometry().setCenterAndRadius(center, distance);
+            return;
+        }
+
+        feat = new ol.Feature({ name: id, geometry: new ol.geom.Circle(center, distance, 'XY') })
+        feat.setId(id);
+        feat.setStyle(groupStyles.circle);
+        source.addFeature(feat);
     }
 
     function toggleRun(btn) {
@@ -115,6 +134,7 @@
     }
 
     var groupStyles = {
+        circle: new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(239, 21, 9, 0.53)', width: 1 }) }),
         geofences: new ol.style.Style({
             stroke: new ol.style.Stroke({ color: 'black', width: 2 }),
             fill: new ol.style.Fill({ color: 'rgba(0, 0, 255, 0.1)' })
@@ -200,6 +220,11 @@
             for (var i in features) {
                 EventHandler.onFeatureAdded(features[i]);
             }
+        },
+
+        onFeatureCheckpoint: function (featID, checkPointID, lon, lat, distance) {
+            console.log(checkPointID + "" + featID, [lon, lat], distance);
+            showCircle(checkPointID + "" + featID, [lon, lat], distance);
         }
     };
 
@@ -217,6 +242,8 @@
 
         socket.on("admin:feature:list", EventHandler.onFeatureList);
         socket.on("admin:feature:added", EventHandler.onFeatureAdded);
+
+        socket.on("admin:feature:checkpoint", EventHandler.onFeatureCheckpoint)
 
         navigator.geolocation.watchPosition(updatePosition);
 
