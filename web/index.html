@@ -91,7 +91,7 @@
     function showCircle(id, center, distanceInMeters) {
         var id = "circle-" + id;
         var feat = source.getFeatureById(id);
-        if (feat !== null && distanceInMeters >= 900) {
+        if (feat !== null && distanceInMeters >= 800) {
             source.removeFeature(feat);
         }
 
