@@ -207,6 +207,7 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     public void onDiconnected() {
         Log.d(TAG, "diconnected " + player + " " + markers.get(player.getId()));
         cleanMarkers();
+        focusedOnPlayer = false;
     }
 
     private void cleanMarkers() {
