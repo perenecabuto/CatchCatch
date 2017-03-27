@@ -115,6 +115,10 @@
     }
 
     var groupStyles = {
+        geofences: new ol.style.Style({
+            stroke: new ol.style.Stroke({ color: 'black', width: 2 }),
+            fill: new ol.style.Fill({ color: 'rgba(0, 0, 255, 0.1)' })
+        }),
         checkpoint: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'checkpoint.png' })) }),
         player: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'marker.png' })) })
     }
