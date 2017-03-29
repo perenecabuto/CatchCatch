@@ -2,6 +2,7 @@ var groupStyles = {
     circle: new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(239, 21, 9, 0.53)', width: 1 }) }),
     checkpoint: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.4, 1], src: 'checkpoint.png' })) }),
     player: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'marker.png' })) }),
+    fakePlayer: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'blue-marker.png' })) }),
     geofences: new ol.style.Style({
         stroke: new ol.style.Stroke({ color: 'black', width: 2 }),
         fill: new ol.style.Fill({ color: 'rgba(0, 0, 255, 0.1)' })
@@ -21,9 +22,18 @@ window.addEventListener("DOMContentLoaded", function () {
     controller.bindDrawGroupButton("checkpoint", map, "Point");
     document.getElementById("reset").addEventListener("click", controller.reset);
 
-    var evtHandler = new EventHandler(socket, controller);
-    document.getElementById("toggle-run").addEventListener("click", evtHandler.toggleRun);
+    controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player,
+        function (feat) {
+            var coords = feat.getGeometry().getCoordinates();
+            var p = new Player(coords[1], coords[0]);
+            p.connect(function (id) {
+                var playerFeat = source.getFeatureById(id);
+                playerFeat.setStyle(groupStyles.fakePlayer);
+            });
+            map.addInteraction(p.getInteraction());
+        });
 
+    var evtHandler = new EventHandler(controller);
     socket.on('connect', evtHandler.onConnect);
     socket.on('player:registred', evtHandler.onPlayerRegistred)
     socket.on('player:updated', evtHandler.onPlayerUpdated)
@@ -45,8 +55,86 @@ function log(msg) {
     logEl.innerHTML = msg;
 };
 
+var Player = function (x, y) {
+    var socket;
+    var player = { id: undefined, x: 0, y: 0 };
+
+    function onConnect() {
+    }
+    function onDisconnected() {
+        log("disconnected " + player.id);
+    }
+    function onPlayerRegistred(p) {
+        player = p;
+        updatePosition(x, y);
+        if (registredCallback !== undefined) {
+            registredCallback(p.id);
+        }
+    }
+    function onPlayerUpdated(p) {
+        player = p;
+    }
+
+    function updatePosition(x, y) {
+        console.log('player:update', JSON.stringify({ x: x, y: y }));
+        socket.emit('player:update', JSON.stringify({ x: x, y: y }));
+    }
+
+    function coords() {
+        return { x: player.x, y: player.y };
+    }
+
+    function disconnect() {
+        socket.close();
+        if (disconnectedCallback !== undefined) {
+            disconnectedCallback();
+        }
+    }
+
+    var registredCallback = function () { }, disconnectedCallback = function () { };
+    function connect(registredFn, disconnectedFn) {
+        registredCallback = registredFn;
+        disconnectedCallback = disconnectedFn;
+        socket = io(location.host, { reconnection: false });
+        socket.on('connect', onConnect);
+        socket.on('player:registred', onPlayerRegistred)
+        socket.on('player:updated', onPlayerUpdated)
+        socket.on('disconnect', onDisconnected)
+    }
+
+    var feature;
+    var interaction = new ol.interaction.Pointer({
+        handleDownEvent: function (evt) {
+            var map = evt.map;
+            feature = map.forEachFeatureAtPixel(evt.pixel, function (feature, layer) {
+                if (feature.getId() == player.id) {
+                    return feature;
+                }
+            });
+            return !!feature;
+        },
+        handleDragEvent: function (evt) {
+            feature.getGeometry().setCoordinates(evt.coordinate);
+            updatePosition(evt.coordinate[1], evt.coordinate[0])
+        },
+        handleUpEvent: function () {
+            feature = null;
+            console.log("handleUpEvent")
+        }
+    });
+
+    this.getInteraction = function () {
+        return interaction;
+    }
+
+    this.updatePosition = updatePosition;
+    this.coords = coords;
+    this.disconnect = disconnect;
+    this.connect = connect;
+}
+
 var AdminController = function (socket, sourceLayer) {
-    var lastPos = { coords: { latitude: 0, longitude: 0 } };
+    var playerHTML = document.getElementById("player-template").innerText;
 
     this.reset = function () {
         console.log("admin:clear");
@@ -63,21 +151,8 @@ var AdminController = function (socket, sourceLayer) {
         socket.emit("admin:feature:request-list", "geofences");
     };
 
-    this.recoverPosition = function () {
-        var hasCachedPosition = lastPos.coords.latitude != 0 && lastPos.coords.longitude != 0;
-        if (hasCachedPosition) {
-            this.updatePosition(lastPos);
-        }
-    };
-
-    this.updatePosition = function (pos) {
-        var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
-        lastPos = pos;
-        socket.emit('player:update', JSON.stringify(coords));
-    };
-
     this.removePlayer = function (player) {
-        var playerEl = document.getElementById("d-" + player.id);
+        var playerEl = document.getElementById("conn-" + player.id);
         if (playerEl !== null) playerEl.remove();
 
         var feat = sourceLayer.getFeatureById(player.id);
@@ -87,39 +162,37 @@ var AdminController = function (socket, sourceLayer) {
     };
 
     this.updatePlayer = function (player) {
-        var playerEl = document.getElementById("d-" + player.id);
+        var elId = "conn-" + player.id;
+        var playerEl = document.getElementById(elId);
         if (playerEl === null) {
-            var playerHTML = '<div>' +
-                '<span class="player-data"></span>' +
-                '<a href="javascript:void(0)"class="pull-right" onclick="disconnectPlayer(\'' + player.id + '\')">X</a>' +
-                '</div>';
-
-            playerHTML = '<div class="panel panel-default">' +
-                '<div class="panel-body">' + playerHTML + '</div>' +
-                '</div>';
-
-            document.getElementById("connections").innerHTML +=
-                '<div id="d-' + player.id + '">' + playerHTML + '</div>';
+            playerEl = document.createElement("div");
+            playerEl.innerHTML = playerHTML;
+            playerEl.id = elId;
+            playerEl.getElementsByClassName("disconnect-btn")[0]
+                .addEventListener("click", () => this.disconnectPlayer(player.id));
+            document.getElementById("connections").appendChild(playerEl);
         }
 
-        var playerEl = document.getElementById("d-" + player.id);
-        var playerData = player.id + '<br/>' +
+        playerEl.getElementsByClassName("player-data")[0].innerHTML = player.id + '<br/>' +
             '<div class="glyphicon glyphicon-map-marker" aria-hidden="true"> (' + player.x + ', ' + player.y + ')</div>';
-        playerEl.getElementsByClassName("player-data")[0].innerHTML = playerData;
 
-        var coords = [player.y, player.x];
-        var feat = sourceLayer.getFeatureById(player.id);
-        if (feat === null) {
-            feat = new ol.Feature({ name: player.id, geometry: new ol.geom.Point(coords, 'XY') });
-            feat.setId(player.id);
-            feat.setStyle(groupStyles.player);
-            sourceLayer.addFeature(feat);
-        }
-
-        feat.getGeometry().setCoordinates(coords);
+        this.showPlayerOnMap(player);
     };
 
-    this.showCircle = function (id, center, distanceInMeters) {
+    this.showPlayerOnMap = function (player) {
+        var coords = [player.y, player.x];
+        var feat = sourceLayer.getFeatureById(player.id);
+        if (feat !== null) {
+            feat.getGeometry().setCoordinates(coords);
+            return;
+        }
+        feat = new ol.Feature({ name: player.id, geometry: new ol.geom.Point(coords, 'XY') });
+        feat.setId(player.id);
+        feat.setStyle(groupStyles.player);
+        sourceLayer.addFeature(feat);
+    }
+
+    this.showCircleOnMap = function (id, center, distanceInMeters) {
         var id = "circle-" + id;
         var feat = sourceLayer.getFeatureById(id);
         if (distanceInMeters >= 800) {
@@ -137,6 +210,9 @@ var AdminController = function (socket, sourceLayer) {
         feat.setId(id);
         feat.setStyle(groupStyles.circle);
         sourceLayer.addFeature(feat);
+        setTimeout(function () {
+            sourceLayer.removeFeature(feat);
+        }, 1000);
     };
 
     this.resetInterface = function () {
@@ -144,19 +220,16 @@ var AdminController = function (socket, sourceLayer) {
         sourceLayer.clear(true);
     };
 
-    this.bindDrawGroupButton = function (group, map, type) {
-        var draw = new ol.interaction.Draw({ source: sourceLayer, type: type, style: groupStyles[group] });
+    this.bindDrawFeatureButton = function (elID, map, type, style, drawendCalback) {
+        var draw = new ol.interaction.Draw({ source: sourceLayer, type: type, style: style });
         draw.on("drawend", function (evt) {
-            var g = evt.feature.getGeometry();
-            var geojson = new ol.format.GeoJSON().writeGeometry(g);
-            var name = prompt("What is this " + group + " name?");
-            socket.emit('admin:feature:add', group, name, geojson);
+            drawendCalback(evt.feature);
             setTimeout(function () {
                 map.removeInteraction(draw);
                 sourceLayer.removeFeature(evt.feature);
             });
         });
-        document.getElementById("draw-" + group).addEventListener("click", function () {
+        document.getElementById(elID).addEventListener("click", function () {
             map.addInteraction(draw);
         });
         document.addEventListener("keydown", function (e) {
@@ -166,14 +239,17 @@ var AdminController = function (socket, sourceLayer) {
         });
     };
 
-    this.bindGeolocation = function () {
-        navigator.geolocation.watchPosition(this.updatePosition);
-        navigator.geolocation.getCurrentPosition(this.updatePosition);
+    this.bindDrawGroupButton = function (group, map, type) {
+        this.bindDrawFeatureButton("draw-" + group, map, type, groupStyles[group],
+            function (feat) {
+                var geojson = new ol.format.GeoJSON().writeGeometry(feat.getGeometry());
+                var name = prompt("What is this " + group + " name?");
+                socket.emit('admin:feature:add', group, name, geojson);
+            }
+        );
     };
 
     this.addFeature = function (id, group, feat) {
-        sourceLayer.addFeature(feat.clone());
-
         if (groupStyles[group] !== undefined) {
             feat.setStyle(groupStyles[group]);
         }
@@ -182,45 +258,42 @@ var AdminController = function (socket, sourceLayer) {
     };
 };
 
-var EventHandler = function (socket, controller) {
+var EventHandler = function (controller) {
     var player = { x: 0, y: 0 };
+    var lastPos = { coords: { latitude: 0, longitude: 0 } };
 
-    this.toggleRun = function (e) {
-        var btn = e.target;
-        if (this.interval !== undefined) {
-            clearInterval(this.interval);
-            this.interval = undefined;
-            btn.innerText = btn.originalText;
-            return;
+    function recoverPosition() {
+        var hasCachedPosition = lastPos.coords.latitude != 0 && lastPos.coords.longitude != 0;
+        if (hasCachedPosition) {
+            updatePosition(lastPos);
         }
-        btn.originalText = btn.innerText;
-        btn.innerText = "stop";
-        this.interval = setInterval(function () {
-            player.y += 0.00005;
-            player.x += 0.00005;
-            socket.emit('player:update', JSON.stringify(player));
-        }, 100);
+    };
+
+    function updatePosition(pos) {
+        lastPos = pos;
+        var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
+        socket.emit('player:update', JSON.stringify(coords));
     };
 
     this.onConnect = function (so) {
         log("connected");
-        controller.bindGeolocation();
+        navigator.geolocation.getCurrentPosition(updatePosition);
+        navigator.geolocation.watchPosition(updatePosition);
     };
     this.onDisconnected = function () {
         log("disconnected");
         controller.resetInterface();
-        controller.removePlayer(player);
     };
     this.onPlayerRegistred = function (p) {
-        if (p.x == 0 && p.y == 0) controller.recoverPosition();
+        if (p.x == 0 && p.y == 0) recoverPosition();
         player = p;
         log("connected as \n" + player.id);
         controller.requestFeatures();
     };
     this.onPlayerUpdated = function (p) {
         player = p;
-        controller.updatePlayer(player);
     };
+
     this.onRemotePlayerList = function (list) {
         controller.resetInterface();
         for (let i in list.players) {
@@ -236,11 +309,11 @@ var EventHandler = function (socket, controller) {
     this.onRemotePlayerDestroy = function (player) {
         controller.removePlayer(player);
     };
-
     this.onFeatureAdded = function (jsonF) {
         var feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
         controller.addFeature(jsonF.id, jsonF.group, feat);
     };
+
     var that = this;
     this.onFeatureList = function (features) {
         for (var i in features) {
@@ -249,6 +322,7 @@ var EventHandler = function (socket, controller) {
     };
 
     this.onFeatureCheckpoint = function (featID, checkPointID, lon, lat, distance) {
-        controller.showCircle(checkPointID + "" + featID, [lon, lat], distance);
+        controller.showCircleOnMap
+            (checkPointID + "" + featID, [lon, lat], distance);
     }
 };
