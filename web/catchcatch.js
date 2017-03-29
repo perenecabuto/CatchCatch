@@ -160,8 +160,9 @@ var AdminController = function (socket, sourceLayer) {
     };
 
     this.requestFeatures = function () {
-        socket.emit("admin:feature:request-list", "checkpoint");
-        socket.emit("admin:feature:request-list", "geofences");
+        socket.emit("admin:feature:request-list", "checkpoint", function() {
+            socket.emit("admin:feature:request-list", "geofences");
+        });
     };
 
     this.removePlayer = function (player) {
