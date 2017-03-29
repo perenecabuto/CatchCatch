@@ -28,14 +28,23 @@ func (sm *SessionManager) Get(id string) engineio.Conn {
 
 // Set engineio.Conn for session id
 func (sm *SessionManager) Set(id string, conn engineio.Conn) {
-	conns := sm.connections.Load().(connStore)
+	conns := sm.copyConns()
 	conns[id] = conn
 	sm.connections.Store(conns)
 }
 
+func (sm *SessionManager) copyConns() connStore {
+	conns := sm.connections.Load().(connStore)
+	newConns := make(connStore)
+	for k, v := range conns {
+		newConns[k] = v
+	}
+	return newConns
+}
+
 // Remove engineio.Conn by session id
 func (sm *SessionManager) Remove(id string) {
-	conns := sm.connections.Load().(connStore)
+	conns := sm.copyConns()
 	delete(conns, id)
 	sm.connections.Store(conns)
 }
@@ -46,5 +55,4 @@ func (sm *SessionManager) CloseAll() {
 	for _, c := range conns {
 		c.Close()
 	}
-	sm.connections.Store(conns)
 }
