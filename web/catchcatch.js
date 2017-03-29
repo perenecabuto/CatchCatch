@@ -31,6 +31,9 @@ window.addEventListener("DOMContentLoaded", function () {
             p.connect(function (id) {
                 var playerFeat = source.getFeatureById(id);
                 playerFeat.setStyle(groupStyles.fakePlayer);
+            }, function () {
+                map.removeInteraction(p.getInteraction());
+                p = null;
             });
             map.addInteraction(p.getInteraction());
         });
@@ -61,10 +64,10 @@ var Player = function (x, y) {
     var socket;
     var player = { id: undefined, x: 0, y: 0 };
 
-    function onConnect() {
-    }
     function onDisconnected() {
-        log("disconnected " + player.id);
+        if (disconnectedCallback !== undefined) {
+            disconnectedCallback();
+        }
     }
     function onPlayerRegistred(p) {
         player = p;
@@ -76,21 +79,14 @@ var Player = function (x, y) {
     function onPlayerUpdated(p) {
         player = p;
     }
-
     function updatePosition(x, y) {
-        console.log('player:update', JSON.stringify({ x: x, y: y }));
         socket.emit('player:update', JSON.stringify({ x: x, y: y }));
     }
-
     function coords() {
         return { x: player.x, y: player.y };
     }
-
     function disconnect() {
         socket.close();
-        if (disconnectedCallback !== undefined) {
-            disconnectedCallback();
-        }
     }
 
     var registredCallback = function () { }, disconnectedCallback = function () { };
@@ -98,7 +94,6 @@ var Player = function (x, y) {
         registredCallback = registredFn;
         disconnectedCallback = disconnectedFn;
         socket = io(location.host, { reconnection: false });
-        socket.on('connect', onConnect);
         socket.on('player:registred', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
         socket.on('disconnect', onDisconnected)
@@ -121,11 +116,10 @@ var Player = function (x, y) {
         },
         handleUpEvent: function () {
             feature = null;
-            console.log("handleUpEvent")
         }
     });
 
-    this.getInteraction = function () {
+    function getInteraction() {
         return interaction;
     }
 
