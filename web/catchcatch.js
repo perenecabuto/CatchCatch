@@ -22,6 +22,8 @@ window.addEventListener("DOMContentLoaded", function () {
     controller.bindDrawGroupButton("checkpoint", map, "Point");
     document.getElementById("reset").addEventListener("click", controller.reset);
 
+    controller.bindPosition();
+
     controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player,
         function (feat) {
             var coords = feat.getGeometry().getCoordinates();
@@ -131,10 +133,27 @@ var Player = function (x, y) {
     this.coords = coords;
     this.disconnect = disconnect;
     this.connect = connect;
+    this.getInteraction = getInteraction;
 }
 
 var AdminController = function (socket, sourceLayer) {
     var playerHTML = document.getElementById("player-template").innerText;
+
+    var lastPos = { coords: { latitude: 0, longitude: 0 } };
+
+    this.updatePosition = function (pos) {
+        if (pos.coords.latitude == 0 && pos.coords.longitude == 0) {
+            pos = lastPos;
+        }
+        var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
+        socket.emit('player:update', JSON.stringify(coords));
+        lastPos = pos;
+    };
+
+    this.bindPosition = function () {
+        navigator.geolocation.getCurrentPosition(this.updatePosition);
+        navigator.geolocation.watchPosition(this.updatePosition);
+    }
 
     this.reset = function () {
         console.log("admin:clear");
@@ -260,38 +279,23 @@ var AdminController = function (socket, sourceLayer) {
 
 var EventHandler = function (controller) {
     var player = { x: 0, y: 0 };
-    var lastPos = { coords: { latitude: 0, longitude: 0 } };
 
-    function recoverPosition() {
-        var hasCachedPosition = lastPos.coords.latitude != 0 && lastPos.coords.longitude != 0;
-        if (hasCachedPosition) {
-            updatePosition(lastPos);
-        }
-    };
-
-    function updatePosition(pos) {
-        lastPos = pos;
-        var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
-        socket.emit('player:update', JSON.stringify(coords));
-    };
-
-    this.onConnect = function (so) {
+    this.onConnect = function () {
         log("connected");
-        navigator.geolocation.getCurrentPosition(updatePosition);
-        navigator.geolocation.watchPosition(updatePosition);
     };
     this.onDisconnected = function () {
         log("disconnected");
         controller.resetInterface();
     };
     this.onPlayerRegistred = function (p) {
-        if (p.x == 0 && p.y == 0) recoverPosition();
         player = p;
         log("connected as \n" + player.id);
+        controller.updatePosition({ coords: { longitude: p.x, latitude: player.y } })
         controller.requestFeatures();
     };
     this.onPlayerUpdated = function (p) {
         player = p;
+        controller.updatePlayer(player);
     };
 
     this.onRemotePlayerList = function (list) {
