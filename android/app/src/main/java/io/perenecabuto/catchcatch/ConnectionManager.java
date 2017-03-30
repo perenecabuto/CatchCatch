@@ -29,56 +29,72 @@ class ConnectionManager {
 
     void connect() throws URISyntaxException, NoConnectionException {
         socket
-            .on(Socket.EVENT_CONNECT, (Object... args) -> Log.d(TAG, "connect: " + Arrays.toString(args)))
-            .on("player:registred", args -> {
-                try {
-                    Player player = getPlayerFromJson(args[0].toString());
-                    callback.onRegistred(player);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            })
-            .on("remote-player:list", args -> {
-                List<Player> players = new ArrayList<>();
-                try {
-                    JSONObject arg = new JSONObject(args[0].toString());
-                    JSONArray pList = arg.getJSONArray("players");
-                    for (int i = 0; i < pList.length(); i++) {
-                        Player player = getPlayerFromJson(pList.getString(i));
-                        players.add(player);
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                callback.onPlayerList(players);
-            })
-            .on("remote-player:updated", args -> {
-                try {
-                    Player player = getPlayerFromJson(args[0].toString());
-                    callback.onRemotePlayerUpdate(player);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            })
-            .on("remote-player:new", args -> {
-                try {
-                    Player player = getPlayerFromJson(args[0].toString());
-                    callback.onRemoteNewPlayer(player);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            })
-            .on("remote-player:destroy", args -> {
-                try {
-                    Player player = getPlayerFromJson(args[0].toString());
-                    callback.onRemotePlayerDestroy(player);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            })
+            .on(Socket.EVENT_CONNECT, this::onConnect)
+            .on("remote-player:list", this::onRemotePlayerList)
+            .on("player:registred", this::onPlayerRegistred)
+            .on("remote-player:new", this::onRemotePlayerNew)
+            .on("remote-player:updated", this::onRemotePlayerUpdate)
+            .on("checkpoint:destroy", this::onRemotePlayerDestroy)
+            .on("remote-player:destroy", this::onRemotePlayerDestroy)
+            .on("remote-player:destroy", this::onRemotePlayerDestroy)
             .on(Socket.EVENT_DISCONNECT, args -> callback.onDiconnected());
 
         socket.connect();
+    }
+
+    private void onConnect(Object[] args) {
+        Log.d(TAG, "connect: " + Arrays.toString(args));
+    }
+
+    private void onRemotePlayerDestroy(Object[] args) {
+        try {
+            Player player = getPlayerFromJson(args[0].toString());
+            callback.onRemotePlayerDestroy(player);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void onRemotePlayerNew(Object[] args) {
+        try {
+            Player player = getPlayerFromJson(args[0].toString());
+            callback.onRemoteNewPlayer(player);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void onRemotePlayerUpdate(Object[] args) {
+        try {
+            Player player = getPlayerFromJson(args[0].toString());
+            callback.onRemotePlayerUpdate(player);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void onRemotePlayerList(Object[] args) {
+        List<Player> players = new ArrayList<>();
+        try {
+            JSONObject arg = new JSONObject(args[0].toString());
+            JSONArray pList = arg.getJSONArray("players");
+            for (int i = 0; i < pList.length(); i++) {
+                Player player = getPlayerFromJson(pList.getString(i));
+                players.add(player);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        callback.onPlayerList(players);
+    }
+
+    private void onPlayerRegistred(Object[] args) {
+        try {
+            Player player = getPlayerFromJson(args[0].toString());
+            callback.onRegistred(player);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     @NonNull
