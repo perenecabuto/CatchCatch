@@ -11,7 +11,7 @@ import (
 	"time"
 
 	io "github.com/googollee/go-socket.io"
-	"github.com/grandcat/zeroconf"
+	zconf "github.com/grandcat/zeroconf"
 	gjson "github.com/tidwall/gjson"
 	redis "gopkg.in/redis.v5"
 )
@@ -28,7 +28,7 @@ func main() {
 	flag.Parse()
 
 	if *zconfEnabled {
-		zcServer, _ := zeroconf.Register("CatchCatch", "_catchcatch._tcp", "", *port, nil, nil)
+		zcServer, _ := zconf.Register("CatchCatch", "_catchcatch._tcp", "", *port, nil, nil)
 		defer zcServer.Shutdown()
 	}
 
