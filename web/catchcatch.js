@@ -16,6 +16,27 @@ window.addEventListener("DOMContentLoaded", function () {
     let vector = new ol.layer.Vector({ source: source });
     let view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
     let map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
+
+    let popup = new ol.Overlay({ element: document.getElementById("map-info") });
+    var el = popup.getElement();
+    map.addOverlay(popup);
+
+    map.on('click', function(evt) {
+        let feature = map.forEachFeatureAtPixel(evt.pixel, function (feat, layer) {
+            return feat;
+        });
+
+        if (feature === undefined || feature.getId() === undefined) {
+            el.style.display = "none";
+            return;
+        }
+
+        el.style.display = "block";
+        popup.setPosition(evt.coordinate);
+        view.setCenter(evt.coordinate);
+        el.getElementsByClassName("panel-body")[0].innerText = feature.getId();
+    });
+
     let controller = new AdminController(socket, source);
     controller.bindDrawGroupButton("geofences", map, "Polygon");
     controller.bindDrawGroupButton("checkpoint", map, "Point");
