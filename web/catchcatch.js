@@ -1,4 +1,4 @@
-var groupStyles = {
+let groupStyles = {
     circle: new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(239, 21, 9, 0.53)', width: 1 }) }),
     checkpoint: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.4, 1], src: 'checkpoint.png' })) }),
     player: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.5, 0.9], src: 'marker.png' })) }),
@@ -10,14 +10,13 @@ var groupStyles = {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
-    var socket = io(location.host, {path: "/ws"});
-    var source = new ol.source.Vector({ wrapX: false });
-    var raster = new ol.layer.Tile({ source: new ol.source.OSM() });
-    var vector = new ol.layer.Vector({ source: source });
-    var view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
-    var map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
-
-    var controller = new AdminController(socket, source);
+    let socket = io(location.host, {path: "/ws"});
+    let source = new ol.source.Vector({ wrapX: false });
+    let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
+    let vector = new ol.layer.Vector({ source: source });
+    let view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
+    let map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
+    let controller = new AdminController(socket, source);
     controller.bindDrawGroupButton("geofences", map, "Polygon");
     controller.bindDrawGroupButton("checkpoint", map, "Point");
     document.getElementById("reset").addEventListener("click", controller.reset);
@@ -26,10 +25,10 @@ window.addEventListener("DOMContentLoaded", function () {
 
     controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player,
         function (feat) {
-            var coords = feat.getGeometry().getCoordinates();
-            var p = new Player(coords[1], coords[0]);
+            let coords = feat.getGeometry().getCoordinates();
+            let p = new Player(coords[1], coords[0]);
             p.connect(function (id) {
-                var playerFeat = source.getFeatureById(id);
+                let playerFeat = source.getFeatureById(id);
                 playerFeat.setStyle(groupStyles.fakePlayer);
             }, function () {
                 map.removeInteraction(p.getInteraction());
@@ -38,21 +37,21 @@ window.addEventListener("DOMContentLoaded", function () {
             map.addInteraction(p.getInteraction());
         });
 
-    var evtHandler = new EventHandler(controller);
-    socket.on('connect', evtHandler.onConnect);
-    socket.on('player:registred', evtHandler.onPlayerRegistred)
-    socket.on('player:updated', evtHandler.onPlayerUpdated)
-    socket.on('disconnect', evtHandler.onDisconnected)
+        let evtHandler = new EventHandler(controller);
+        socket.on('connect', evtHandler.onConnect);
+        socket.on('player:registred', evtHandler.onPlayerRegistred)
+        socket.on('player:updated', evtHandler.onPlayerUpdated)
+        socket.on('disconnect', evtHandler.onDisconnected)
 
-    socket.on('remote-player:list', evtHandler.onRemotePlayerList);
-    socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
-    socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
-    socket.on("remote-player:destroy", evtHandler.onRemotePlayerDestroy);
+        socket.on('remote-player:list', evtHandler.onRemotePlayerList);
+        socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
+        socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
+        socket.on("remote-player:destroy", evtHandler.onRemotePlayerDestroy);
 
-    socket.on("admin:feature:list", evtHandler.onFeatureList);
-    socket.on("admin:feature:added", evtHandler.onFeatureAdded);
+        socket.on("admin:feature:list", evtHandler.onFeatureList);
+        socket.on("admin:feature:added", evtHandler.onFeatureAdded);
 
-    socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
+        socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
 });
 
 function log(msg) {
@@ -60,9 +59,9 @@ function log(msg) {
     logEl.innerHTML = msg;
 };
 
-var Player = function (x, y) {
-    var socket;
-    var player = { id: undefined, x: 0, y: 0 };
+let Player = function (x, y) {
+    let socket;
+    let player = { id: undefined, x: 0, y: 0 };
 
     function onDisconnected() {
         if (disconnectedCallback !== undefined) {
@@ -89,7 +88,7 @@ var Player = function (x, y) {
         socket.close();
     }
 
-    var registredCallback = function () { }, disconnectedCallback = function () { };
+    let registredCallback = function () { }, disconnectedCallback = function () { };
     function connect(registredFn, disconnectedFn) {
         registredCallback = registredFn;
         disconnectedCallback = disconnectedFn;
@@ -99,10 +98,10 @@ var Player = function (x, y) {
         socket.on('disconnect', onDisconnected)
     }
 
-    var feature;
-    var interaction = new ol.interaction.Pointer({
+    let feature;
+    let interaction = new ol.interaction.Pointer({
         handleDownEvent: function (evt) {
-            var map = evt.map;
+            let map = evt.map;
             feature = map.forEachFeatureAtPixel(evt.pixel, function (feature, layer) {
                 if (feature.getId() == player.id) {
                     return feature;
@@ -130,16 +129,16 @@ var Player = function (x, y) {
     this.getInteraction = getInteraction;
 }
 
-var AdminController = function (socket, sourceLayer) {
-    var playerHTML = document.getElementById("player-template").innerText;
+let AdminController = function (socket, sourceLayer) {
+    let playerHTML = document.getElementById("player-template").innerText;
 
-    var lastPos = { coords: { latitude: 0, longitude: 0 } };
+    let lastPos = { coords: { latitude: 0, longitude: 0 } };
 
     this.updatePosition = function (pos) {
         if (pos.coords.latitude == 0 && pos.coords.longitude == 0) {
             pos = lastPos;
         }
-        var coords = { x: pos.coords.latitude, y: pos.coords.longitude };
+        let coords = { x: pos.coords.latitude, y: pos.coords.longitude };
         socket.emit('player:update', JSON.stringify(coords));
         lastPos = pos;
     };
@@ -166,24 +165,24 @@ var AdminController = function (socket, sourceLayer) {
     };
 
     this.removePlayer = function (player) {
-        var playerEl = document.getElementById("conn-" + player.id);
+        let playerEl = document.getElementById("conn-" + player.id);
         if (playerEl !== null) playerEl.remove();
 
-        var feat = sourceLayer.getFeatureById(player.id);
+        let feat = sourceLayer.getFeatureById(player.id);
         if (feat !== null) {
             sourceLayer.removeFeature(feat);
         }
     };
 
     this.updatePlayer = function (player) {
-        var elId = "conn-" + player.id;
-        var playerEl = document.getElementById(elId);
+        let elId = "conn-" + player.id;
+        let playerEl = document.getElementById(elId);
         if (playerEl === null) {
             playerEl = document.createElement("div");
             playerEl.innerHTML = playerHTML;
             playerEl.id = elId;
             playerEl.getElementsByClassName("disconnect-btn")[0]
-                .addEventListener("click", () => this.disconnectPlayer(player.id));
+            .addEventListener("click", () => this.disconnectPlayer(player.id));
             document.getElementById("connections").appendChild(playerEl);
         }
 
@@ -194,8 +193,8 @@ var AdminController = function (socket, sourceLayer) {
     };
 
     this.showPlayerOnMap = function (player) {
-        var coords = [player.y, player.x];
-        var feat = sourceLayer.getFeatureById(player.id);
+        let coords = [player.y, player.x];
+        let feat = sourceLayer.getFeatureById(player.id);
         if (feat !== null) {
             feat.getGeometry().setCoordinates(coords);
             return;
@@ -206,15 +205,15 @@ var AdminController = function (socket, sourceLayer) {
         sourceLayer.addFeature(feat);
     }
 
-    this.showCircleOnMap = function (id, center, distanceInMeters) {
-        var id = "circle-" + id;
-        var feat = sourceLayer.getFeatureById(id);
+    this.showCircleOnMap = function (featId, center, distanceInMeters) {
+        let id = "circle-" + featId;
+        let feat = sourceLayer.getFeatureById(id);
         if (distanceInMeters >= 800) {
             if (feat !== null) sourceLayer.removeFeature(feat);
             return;
         }
 
-        var distance = (distanceInMeters / 100000);
+        let distance = (distanceInMeters / 100000);
         if (feat !== null) {
             feat.getGeometry().setCenterAndRadius(center, distance);
             return;
@@ -235,7 +234,7 @@ var AdminController = function (socket, sourceLayer) {
     };
 
     this.bindDrawFeatureButton = function (elID, map, type, style, drawendCalback) {
-        var draw = new ol.interaction.Draw({ source: sourceLayer, type: type, style: style });
+        let draw = new ol.interaction.Draw({ source: sourceLayer, type: type, style: style });
         draw.on("drawend", function (evt) {
             drawendCalback(evt.feature);
             setTimeout(function () {
@@ -256,8 +255,8 @@ var AdminController = function (socket, sourceLayer) {
     this.bindDrawGroupButton = function (group, map, type) {
         this.bindDrawFeatureButton("draw-" + group, map, type, groupStyles[group],
             function (feat) {
-                var geojson = new ol.format.GeoJSON().writeGeometry(feat.getGeometry());
-                var name = prompt("What is this " + group + " name?");
+                let geojson = new ol.format.GeoJSON().writeGeometry(feat.getGeometry());
+                let name = prompt("What is this " + group + " name?");
                 socket.emit('admin:feature:add', group, name, geojson);
             }
         );
@@ -272,8 +271,8 @@ var AdminController = function (socket, sourceLayer) {
     };
 };
 
-var EventHandler = function (controller) {
-    var player = { x: 0, y: 0 };
+let EventHandler = function (controller) {
+    let player = { x: 0, y: 0 };
 
     this.onConnect = function () {
         log("connected");
@@ -309,19 +308,19 @@ var EventHandler = function (controller) {
         controller.removePlayer(player);
     };
     this.onFeatureAdded = function (jsonF) {
-        var feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
+        let feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
         controller.addFeature(jsonF.id, jsonF.group, feat);
     };
 
-    var that = this;
+    let that = this;
     this.onFeatureList = function (features) {
-        for (var i in features) {
+        for (let i in features) {
             that.onFeatureAdded(features[i]);
         }
     };
 
     this.onFeatureCheckpoint = function (featID, checkPointID, lon, lat, distance) {
         controller.showCircleOnMap
-            (checkPointID + "" + featID, [lon, lat], distance);
+        (checkPointID + "" + featID, [lon, lat], distance);
     }
 };
