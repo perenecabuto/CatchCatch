@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -68,7 +67,7 @@ func main() {
 
 	eventH := NewEventHandler(server, service)
 
-	http.Handle("/socket.io/", eventH)
+	http.Handle("/ws/", eventH)
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))

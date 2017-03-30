@@ -111,7 +111,9 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             if (manager != null) {
                 manager.disconnect();
             }
-            Socket socket = IO.socket(address);
+            Socket socket = IO.socket(address, new IO.Options() {{
+                path = "/ws";
+            }});
             manager = new ConnectionManager(socket, this);
             manager.connect();
         } catch (URISyntaxException | ConnectionManager.NoConnectionException e) {

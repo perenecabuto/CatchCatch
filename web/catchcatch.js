@@ -10,7 +10,7 @@ var groupStyles = {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
-    var socket = io(location.host);
+    var socket = io(location.host, {path: "/ws"});
     var source = new ol.source.Vector({ wrapX: false });
     var raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     var vector = new ol.layer.Vector({ source: source });
@@ -93,7 +93,7 @@ var Player = function (x, y) {
     function connect(registredFn, disconnectedFn) {
         registredCallback = registredFn;
         disconnectedCallback = disconnectedFn;
-        socket = io(location.host, { reconnection: false });
+        socket = io(location.host, { reconnection: false, path: "/ws" });
         socket.on('player:registred', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
         socket.on('disconnect', onDisconnected)
