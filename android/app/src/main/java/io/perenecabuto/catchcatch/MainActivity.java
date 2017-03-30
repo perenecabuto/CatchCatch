@@ -21,8 +21,6 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import org.json.JSONException;
-
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
