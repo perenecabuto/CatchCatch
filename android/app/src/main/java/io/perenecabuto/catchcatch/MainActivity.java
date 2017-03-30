@@ -133,25 +133,22 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     }
 
     private void setupLocation() {
-        if (checkCallingOrSelfPermission(ACCESS_FINE_LOCATION) == PERMISSION_GRANTED) {
+        if (checkCallingOrSelfPermission(ACCESS_FINE_LOCATION) != PERMISSION_GRANTED) {
             requestPermission();
             return;
         }
         LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         LocationUpdateListener listener = new LocationUpdateListener((Location l) -> {
-            Log.d(TAG, "location updated to " + l.getLatitude() + ", " + l.getLatitude());
-            try {
-                manager.sendPosition(l);
-            } catch (JSONException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Error to send position", Toast.LENGTH_SHORT).show();
+            if (manager == null) {
+                return;
             }
-            player.updateLocation(l);
-            showPlayerOnMap(player);
+            manager.sendPosition(l);
+            showPlayerOnMap(player.updateLocation(l));
             if (!focusedOnPlayer) {
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(player.getPoint(), 15));
                 focusedOnPlayer = true;
             }
+            Log.d(TAG, "location updated to " + l.getLatitude() + ", " + l.getLatitude());
         });
 
         locationManager.requestLocationUpdates(NETWORK_PROVIDER, 0, 0, listener);
@@ -178,7 +175,6 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             m.setPosition(p.getPoint());
         }
         m.setVisible(true);
-        m.showInfoWindow();
     }
 
     @Override

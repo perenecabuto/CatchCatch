@@ -103,10 +103,14 @@ class ConnectionManager {
         return new Player(pJson.getString("id"), pJson.getDouble("x"), pJson.getDouble("y"));
     }
 
-    void sendPosition(Location l) throws JSONException {
+    void sendPosition(Location l) {
         JSONObject coords = new JSONObject();
-        coords.put("x", l.getLatitude());
-        coords.put("y", l.getLongitude());
+        try {
+            coords.put("x", l.getLatitude());
+            coords.put("y", l.getLongitude());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         socket.emit("player:update", coords.toString());
     }
 
