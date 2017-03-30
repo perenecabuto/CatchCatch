@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	io "github.com/googollee/go-socket.io"
+	"github.com/grandcat/zeroconf"
 	gjson "github.com/tidwall/gjson"
 	redis "gopkg.in/redis.v5"
 )
@@ -20,10 +22,16 @@ var (
 	maxConnections = flag.Int("tile38-connections", 100, "tile38 address")
 	port           = flag.Int("port", 5000, "server port")
 	webDir         = flag.String("web-dir", "../web", "web files dir")
+	zconfEnabled   = flag.Bool("zconf", false, "start zeroconf server")
 )
 
 func main() {
 	flag.Parse()
+
+	if *zconfEnabled {
+		zcServer, _ := zeroconf.Register("CatchCatch", "_catchcatch._tcp", "", *port, nil, nil)
+		defer zcServer.Shutdown()
+	}
 
 	client := mustConnectTile38()
 	service := &PlayerLocationService{client}

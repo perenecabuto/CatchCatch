@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.nsd.NsdManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -60,12 +61,19 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
         mapFragment.getMapAsync(this::onMapSync);
 
         prefs = getSharedPreferences(getClass().getName(), MODE_PRIVATE);
-        String serverAddress = prefs.getString(PREFS_SERVER_ADDRESS, "http://192.168.23.102:5000");
+        String serverAddress = prefs.getString(PREFS_SERVER_ADDRESS, null);
 
         EditText addressText = (EditText) findViewById(R.id.activity_main_address);
         addressText.setText(serverAddress);
         addressText.setOnKeyListener(this::onChangeServerAddress);
         connect(serverAddress);
+
+        NsdManager nsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
+        NsdManager.DiscoveryListener mdnsListener = new ServerDiscoveryListener(nsdManager, info -> {
+            String disoveredAddress = "http://" + info.getHost().getHostAddress() + ":" + info.getPort();
+            connect(disoveredAddress);
+        });
+        nsdManager.discoverServices("_catchcatch._tcp", NsdManager.PROTOCOL_DNS_SD, mdnsListener);
 
         setupLocation();
     }
@@ -227,4 +235,5 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             markers.clear();
         });
     }
+
 }

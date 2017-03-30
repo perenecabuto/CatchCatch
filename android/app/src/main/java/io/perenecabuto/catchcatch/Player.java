@@ -37,9 +37,10 @@ class Player {
         return y;
     }
 
-    void updateLocation(Location l) {
+    Player updateLocation(Location l) {
         x = l.getLatitude();
         y = l.getLongitude();
+        return this;
     }
 
     LatLng getPoint() {
