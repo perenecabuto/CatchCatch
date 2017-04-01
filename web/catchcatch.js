@@ -19,7 +19,7 @@ let groupStyles = {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
-    let socket = io(location.host, {path: "/ws"});
+    let socket = io(location.host, { path: "/ws" });
     let source = new ol.source.Vector({ wrapX: false });
     let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     let vector = new ol.layer.Vector({ source: source });
@@ -30,7 +30,7 @@ window.addEventListener("DOMContentLoaded", function () {
     var el = popup.getElement();
     map.addOverlay(popup);
 
-    map.on('click', function(evt) {
+    map.on('click', function (evt) {
         let feature = map.forEachFeatureAtPixel(evt.pixel, function (feat, layer) {
             return feat;
         });
@@ -68,21 +68,21 @@ window.addEventListener("DOMContentLoaded", function () {
             map.addInteraction(p.getInteraction());
         });
 
-        let evtHandler = new EventHandler(controller);
-        socket.on('connect', evtHandler.onConnect);
-        socket.on('player:registred', evtHandler.onPlayerRegistred)
-        socket.on('player:updated', evtHandler.onPlayerUpdated)
-        socket.on('disconnect', evtHandler.onDisconnected)
+    let evtHandler = new EventHandler(controller);
+    socket.on('connect', evtHandler.onConnect);
+    socket.on('player:registred', evtHandler.onPlayerRegistred)
+    socket.on('player:updated', evtHandler.onPlayerUpdated)
+    socket.on('disconnect', evtHandler.onDisconnected)
 
-        socket.on('remote-player:list', evtHandler.onRemotePlayerList);
-        socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
-        socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
-        socket.on("remote-player:destroy", evtHandler.onRemotePlayerDestroy);
+    socket.on('remote-player:list', evtHandler.onRemotePlayerList);
+    socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
+    socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
+    socket.on("remote-player:destroy", evtHandler.onRemotePlayerDestroy);
 
-        socket.on("admin:feature:list", evtHandler.onFeatureList);
-        socket.on("admin:feature:added", evtHandler.onFeatureAdded);
+    socket.on("admin:feature:list", evtHandler.onFeatureList);
+    socket.on("admin:feature:added", evtHandler.onFeatureAdded);
 
-        socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
+    socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
 });
 
 function log(msg) {
@@ -190,7 +190,7 @@ let AdminController = function (socket, sourceLayer) {
     };
 
     this.requestFeatures = function () {
-        socket.emit("admin:feature:request-list", "checkpoint", function() {
+        socket.emit("admin:feature:request-list", "checkpoint", function () {
             socket.emit("admin:feature:request-list", "geofences");
         });
     };
@@ -213,7 +213,7 @@ let AdminController = function (socket, sourceLayer) {
             playerEl.innerHTML = playerHTML;
             playerEl.id = elId;
             playerEl.getElementsByClassName("disconnect-btn")[0]
-            .addEventListener("click", () => this.disconnectPlayer(player.id));
+                .addEventListener("click", () => this.disconnectPlayer(player.id));
             document.getElementById("connections").appendChild(playerEl);
         }
 
@@ -354,6 +354,6 @@ let EventHandler = function (controller) {
 
     this.onFeatureCheckpoint = function (featID, checkPointID, lon, lat, distance) {
         controller.showCircleOnMap
-        (checkPointID + "" + featID, [lon, lat], distance);
+            (checkPointID + "" + featID, [lon, lat], distance);
     }
 };
