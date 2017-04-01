@@ -233,7 +233,7 @@ let AdminController = function (socket, sourceLayer) {
         feat = new ol.Feature({ name: player.id, geometry: new ol.geom.Point(coords, 'XY') });
         feat.setId(player.id);
         feat.setStyle(groupStyles.player.clone());
-        feat.getStyle().setText(makeText(feat, player.id));        
+        feat.getStyle().setText(makeText(feat, player.id));
         sourceLayer.addFeature(feat);
     }
 
