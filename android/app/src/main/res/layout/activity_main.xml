@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="io.perenecabuto.catchcatch.MainActivity">
 
-    <fragment
-        android:id="@+id/activity_main_map"
-        android:name="com.google.android.gms.maps.MapFragment"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+
+    <EditText
+        android:id="@+id/activity_main_address"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:background="@android:color/white"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text=""
         />
 
     <TextView
@@ -23,16 +22,21 @@
         android:layout_height="wrap_content"
         android:labelFor="@+id/activity_main_address"
         android:text="Server address"
+        tools:ignore="HardcodedText"
         />
 
-    <EditText
-        android:id="@+id/activity_main_address"
+
+    <fragment
+        android:id="@+id/activity_main_map"
+        android:name="com.google.android.gms.maps.MapFragment"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/white"
-        android:ems="10"
-        android:inputType="textPersonName"
-        android:text=""
+        android:layout_height="match_parent"
+        android:background="@mipmap/launcher"
+        android:baselineAligned="false"
         />
+    <!--android:layout_width="200dp"-->
+    <!--android:layout_height="200dp"-->
+    <!--android:layout_alignParentBottom="true"-->
+    <!--android:layout_alignParentEnd="true"-->
 
-</android.support.constraint.ConstraintLayout>
+</RelativeLayout>
