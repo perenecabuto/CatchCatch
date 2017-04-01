@@ -105,6 +105,10 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     }
 
     private void connect(String address) {
+        if (TextUtils.isEmpty(address)) {
+            Toast.makeText(this, "Can't connect. Address is empty", Toast.LENGTH_LONG).show();
+            return;
+        }
         prefs.edit().putString(PREFS_SERVER_ADDRESS, address).apply();
 
         try {
@@ -116,7 +120,7 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             }});
             manager = new ConnectionManager(socket, this);
             manager.connect();
-        } catch (URISyntaxException | ConnectionManager.NoConnectionException e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             Log.e(TAG, e.getMessage(), e);
             Toast.makeText(this, "Error to connect to " + address, Toast.LENGTH_LONG).show();
