@@ -57,6 +57,10 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
     private boolean focusedOnPlayer = false;
     private SharedPreferences prefs;
 
+    private IO.Options socketOpts = new IO.Options() {{
+        path = "/ws";
+    }};
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,9 +127,7 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
             if (manager != null) {
                 manager.disconnect();
             }
-            Socket socket = IO.socket(address, new IO.Options() {{
-                path = "/ws";
-            }});
+            Socket socket = IO.socket(address, socketOpts);
             manager = new ConnectionManager(socket, this);
             manager.connect();
         } catch (Throwable e) {
