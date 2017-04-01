@@ -4,7 +4,7 @@ PORT := 9851
 
 .PHONY=run
 run:
-	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server"
+	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
 
 .PHONY=run-tile38
 run-tile38:
