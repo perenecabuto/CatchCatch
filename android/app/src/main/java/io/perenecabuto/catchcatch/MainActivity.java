@@ -6,9 +6,11 @@ import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -22,7 +24,6 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,13 +70,15 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
         connect(serverAddress);
 
         NsdManager nsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
-        NsdManager.DiscoveryListener mdnsListener = new ServerDiscoveryListener(nsdManager, info -> {
-            String disoveredAddress = "http://" + info.getHost().getHostAddress() + ":" + info.getPort();
-            connect(disoveredAddress);
-        });
+        NsdManager.DiscoveryListener mdnsListener = new ServerDiscoveryListener(nsdManager, this::onServerDiscover);
         nsdManager.discoverServices("_catchcatch._tcp", NsdManager.PROTOCOL_DNS_SD, mdnsListener);
 
         setupLocation();
+    }
+
+    private void onServerDiscover(NsdServiceInfo info) {
+        String disoveredAddress = "http://" + info.getHost().getHostAddress() + ":" + info.getPort();
+        connect(disoveredAddress);
     }
 
     private void onMapSync(GoogleMap m) {
