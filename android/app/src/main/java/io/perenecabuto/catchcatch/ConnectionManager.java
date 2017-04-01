@@ -114,8 +114,8 @@ class ConnectionManager {
     }
 
     @NonNull
-    private Player getPlayerFromJson(String arg) throws JSONException {
-        JSONObject pJson = new JSONObject(arg);
+    private Player getPlayerFromJson(String json) throws JSONException {
+        JSONObject pJson = new JSONObject(json);
         return new Player(pJson.getString("id"), pJson.getDouble("x"), pJson.getDouble("y"));
     }
 
