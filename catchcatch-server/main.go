@@ -49,6 +49,8 @@ func main() {
 		log.Println("error:", err)
 	})
 
+	sessions := NewSessionManager()
+
 	go func() {
 		err := service.StreamGeofenceEvents(*tile38Addr, func(msg string) {
 			featID, coords := gjson.Get(msg, "id").String(), gjson.Get(msg, "object.coordinates").Array()
@@ -65,7 +67,7 @@ func main() {
 		}
 	}()
 
-	eventH := NewEventHandler(server, service)
+	eventH := NewEventHandler(server, service, sessions)
 
 	http.Handle("/ws/", eventH)
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))

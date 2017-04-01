@@ -17,8 +17,7 @@ type EventHandler struct {
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *io.Server, service *PlayerLocationService) *EventHandler {
-	sessions := NewSessionManager()
+func NewEventHandler(server *io.Server, service *PlayerLocationService, sessions *SessionManager) *EventHandler {
 	server.SetSessionManager(sessions)
 	handler := &EventHandler{server, service, sessions}
 	server.On("connection", handler.onConnection())
