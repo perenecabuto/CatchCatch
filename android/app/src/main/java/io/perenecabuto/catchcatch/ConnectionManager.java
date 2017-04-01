@@ -18,6 +18,13 @@ import io.socket.client.Socket;
 
 class ConnectionManager {
 
+    static final String REMOTE_PLAYER_LIST = "remote-player:list";
+    static final String PLAYER_REGISTRED = "player:registred";
+    static final String REMOTE_PLAYER_NEW = "remote-player:new";
+    static final String REMOTE_PLAYER_UPDATED = "remote-player:updated";
+    static final String CHECKPOINT_DESTROY = "checkpoint:destroy";
+    static final String REMOTE_PLAYER_DESTROY = "remote-player:destroy";
+
     private static final String TAG = ConnectionManager.class.getName();
     private Socket socket;
     private EventCallback callback;
@@ -30,13 +37,12 @@ class ConnectionManager {
     void connect() throws URISyntaxException, NoConnectionException {
         socket
             .on(Socket.EVENT_CONNECT, this::onConnect)
-            .on("remote-player:list", this::onRemotePlayerList)
-            .on("player:registred", this::onPlayerRegistred)
-            .on("remote-player:new", this::onRemotePlayerNew)
-            .on("remote-player:updated", this::onRemotePlayerUpdate)
-            .on("checkpoint:destroy", this::onRemotePlayerDestroy)
-            .on("remote-player:destroy", this::onRemotePlayerDestroy)
-            .on("remote-player:destroy", this::onRemotePlayerDestroy)
+            .on(REMOTE_PLAYER_LIST, this::onRemotePlayerList)
+            .on(PLAYER_REGISTRED, this::onPlayerRegistred)
+            .on(REMOTE_PLAYER_NEW, this::onRemotePlayerNew)
+            .on(REMOTE_PLAYER_UPDATED, this::onRemotePlayerUpdate)
+            .on(CHECKPOINT_DESTROY, this::onRemotePlayerDestroy)
+            .on(REMOTE_PLAYER_DESTROY, this::onRemotePlayerDestroy)
             .on(Socket.EVENT_DISCONNECT, args -> callback.onDiconnected());
 
         socket.connect();
