@@ -16,15 +16,15 @@ import java.util.List;
 
 import io.socket.client.Socket;
 
+@SuppressWarnings("WeakerAccess")
 class ConnectionManager {
-
     static final String REMOTE_PLAYER_LIST = "remote-player:list";
     static final String PLAYER_REGISTRED = "player:registred";
     static final String REMOTE_PLAYER_NEW = "remote-player:new";
     static final String REMOTE_PLAYER_UPDATED = "remote-player:updated";
     static final String CHECKPOINT_DESTROY = "checkpoint:destroy";
     static final String REMOTE_PLAYER_DESTROY = "remote-player:destroy";
-
+    static final String DETECT_CHECKPOINT = "checkpoint:detect";
     private static final String TAG = ConnectionManager.class.getName();
     private Socket socket;
     private EventCallback callback;
@@ -43,9 +43,19 @@ class ConnectionManager {
             .on(REMOTE_PLAYER_UPDATED, this::onRemotePlayerUpdate)
             .on(CHECKPOINT_DESTROY, this::onRemotePlayerDestroy)
             .on(REMOTE_PLAYER_DESTROY, this::onRemotePlayerDestroy)
+            .on(DETECT_CHECKPOINT, this::onDetectCheckpoint)
             .on(Socket.EVENT_DISCONNECT, args -> callback.onDiconnected());
 
         socket.connect();
+    }
+
+    private void onDetectCheckpoint(Object[] args) {
+        try {
+            Detection detection = getDetectionFronJSON(args[0].toString());
+            callback.onDetectCheckpoint(detection);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     private void onConnect(Object[] args) {
@@ -109,6 +119,13 @@ class ConnectionManager {
         return new Player(pJson.getString("id"), pJson.getDouble("x"), pJson.getDouble("y"));
     }
 
+    @NonNull
+    private Detection getDetectionFronJSON(String json) throws JSONException {
+        JSONObject pJson = new JSONObject(json);
+        return new Detection(pJson.getString("checkpoint_id"),
+            pJson.getDouble("lon"), pJson.getDouble("lat"), pJson.getDouble("distance"));
+    }
+
     void sendPosition(Location l) {
         JSONObject coords = new JSONObject();
         try {
@@ -136,6 +153,8 @@ class ConnectionManager {
         void onRemotePlayerDestroy(Player player);
 
         void onDiconnected();
+
+        void onDetectCheckpoint(Detection detection);
     }
 
     class NoConnectionException extends Exception {

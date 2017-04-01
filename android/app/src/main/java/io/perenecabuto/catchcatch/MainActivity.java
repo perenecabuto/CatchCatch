@@ -236,6 +236,10 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
         focusedOnPlayer = false;
     }
 
+    @Override
+    public void onDetectCheckpoint(Detection d) {
+    }
+
     private void cleanMarkers() {
         runOnUiThread(() -> {
             for (Map.Entry<String, Marker> m : markers.entrySet()) {
