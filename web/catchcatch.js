@@ -126,6 +126,9 @@ let Player = function (x, y) {
         socket = io(location.host, { reconnection: false, path: "/ws" });
         socket.on('player:registred', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
+        socket.on('checkpoint:detected', function(detected) {
+            console.log('checkpoint:detected', detected);
+        })
         socket.on('disconnect', onDisconnected)
     }
 
