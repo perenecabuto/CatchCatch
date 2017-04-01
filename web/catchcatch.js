@@ -27,7 +27,6 @@ window.addEventListener("DOMContentLoaded", function () {
     let map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
 
     let popup = new ol.Overlay({ element: document.getElementById("map-info") });
-    var el = popup.getElement();
     map.addOverlay(popup);
 
     map.on('click', function (evt) {
@@ -35,6 +34,7 @@ window.addEventListener("DOMContentLoaded", function () {
             return feat;
         });
 
+        var el = popup.getElement();
         if (feature === undefined || feature.getId() === undefined) {
             el.style.display = "none";
             return;
