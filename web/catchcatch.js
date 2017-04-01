@@ -1,3 +1,12 @@
+function makeText(feat, text) {
+    return new ol.style.Text({
+        text: text,
+        offsetX: 0, offsetY: -35,
+        fill: new ol.style.Fill({ color: '#330' }),
+        stroke: new ol.style.Stroke({ color: '#fff', width: 4 })
+    })
+}
+
 let groupStyles = {
     circle: new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(239, 21, 9, 0.53)', width: 1 }) }),
     checkpoint: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.4, 1], src: 'checkpoint.png' })) }),
@@ -44,13 +53,14 @@ window.addEventListener("DOMContentLoaded", function () {
 
     controller.bindPosition();
 
-    controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player,
+    controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player.clone(),
         function (feat) {
             let coords = feat.getGeometry().getCoordinates();
             let p = new Player(coords[1], coords[0]);
             p.connect(function (id) {
                 let playerFeat = source.getFeatureById(id);
-                playerFeat.setStyle(groupStyles.fakePlayer);
+                playerFeat.setStyle(groupStyles.fakePlayer.clone());
+                playerFeat.getStyle().setText(makeText(playerFeat, id));
             }, function () {
                 map.removeInteraction(p.getInteraction());
                 p = null;
@@ -222,7 +232,8 @@ let AdminController = function (socket, sourceLayer) {
         }
         feat = new ol.Feature({ name: player.id, geometry: new ol.geom.Point(coords, 'XY') });
         feat.setId(player.id);
-        feat.setStyle(groupStyles.player);
+        feat.setStyle(groupStyles.player.clone());
+        feat.getStyle().setText(makeText(feat, player.id));        
         sourceLayer.addFeature(feat);
     }
 
@@ -255,7 +266,7 @@ let AdminController = function (socket, sourceLayer) {
     };
 
     this.bindDrawFeatureButton = function (elID, map, type, style, drawendCalback) {
-        let draw = new ol.interaction.Draw({ source: sourceLayer, type: type, style: style });
+        let draw = new ol.interaction.Draw({ source: sourceLayer, type: type, style: style.clone() });
         draw.on("drawend", function (evt) {
             drawendCalback(evt.feature);
             setTimeout(function () {
@@ -274,7 +285,7 @@ let AdminController = function (socket, sourceLayer) {
     };
 
     this.bindDrawGroupButton = function (group, map, type) {
-        this.bindDrawFeatureButton("draw-" + group, map, type, groupStyles[group],
+        this.bindDrawFeatureButton("draw-" + group, map, type, groupStyles[group].clone(),
             function (feat) {
                 let geojson = new ol.format.GeoJSON().writeGeometry(feat.getGeometry());
                 let name = prompt("What is this " + group + " name?");
@@ -285,9 +296,10 @@ let AdminController = function (socket, sourceLayer) {
 
     this.addFeature = function (id, group, feat) {
         if (groupStyles[group] !== undefined) {
-            feat.setStyle(groupStyles[group]);
+            feat.setStyle(groupStyles[group].clone());
         }
         feat.setId(id);
+        feat.getStyle().setText(makeText(feat, id));
         sourceLayer.addFeature(feat);
     };
 };
