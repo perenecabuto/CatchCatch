@@ -3,11 +3,13 @@ package io.perenecabuto.catchcatch;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.text.TextUtils;
@@ -21,6 +23,9 @@ import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -238,6 +243,27 @@ public class MainActivity extends Activity implements ConnectionManager.EventCal
 
     @Override
     public void onDetectCheckpoint(Detection d) {
+        runOnUiThread(() -> {
+            Log.d(TAG, "onDetectCheckpoint: " + d);
+            int color = Color.GRAY;
+            float zindex = 1;
+            if (d.getDistance() < 100) {
+                color = Color.RED;
+                zindex = 2;
+            } else if (d.getDistance() < 500) {
+                color = Color.YELLOW;
+            }
+
+            Circle circle = map.addCircle(new CircleOptions()
+                .center(new LatLng(d.getLat(), d.getLon()))
+                .radius(d.getDistance())
+                .strokeWidth(1.0f)
+                .strokeColor(color)
+                .zIndex(zindex)
+                .fillColor(color));
+
+            new Handler().postDelayed(circle::remove, 2000);
+        });
     }
 
     private void cleanMarkers() {
