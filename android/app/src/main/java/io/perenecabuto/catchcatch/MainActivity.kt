@@ -38,6 +38,12 @@ import java.util.*
 
 class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverListener {
 
+    companion object {
+        private val TAG = MainActivity::class.java.simpleName
+        private val PREFS_SERVER_ADDRESS = "server-address"
+        private val LOCATION_PERMISSION_REQUEST_CODE = (Math.random() * 10000).toInt()
+    }
+
     private var map: GoogleMap? = null
     private var prefs: SharedPreferences? = null
     private var manager: ConnectionManager? = null
@@ -147,20 +153,18 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             return
         }
         val locationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val listener = LocationUpdateListener(object: LocationUpdateListener.Callback {
-            override fun onUpdate(l: Location) {
-                if (l.longitude == 0.0 && l.latitude == 0.0) {
-                    return
-                }
-                manager!!.sendPosition(l)
-                showPlayerOnMap(player.updateLocation(l))
-                if (!focusedOnPlayer) {
-                    map!!.moveCamera(CameraUpdateFactory.newLatLngZoom(player.point(), 15f))
-                    focusedOnPlayer = true
-                }
-                Log.d(TAG, "location updated to " + l.latitude + ", " + l.latitude)
+        val listener = LocationUpdateListener finish@ { l: Location ->
+            if (l.longitude == 0.0 && l.latitude == 0.0) {
+                return@finish
             }
-        })
+            manager!!.sendPosition(l)
+            showPlayerOnMap(player.updateLocation(l))
+            if (!focusedOnPlayer) {
+                map!!.moveCamera(CameraUpdateFactory.newLatLngZoom(player.point(), 15f))
+                focusedOnPlayer = true
+            }
+            Log.d(TAG, "location updated to " + l.latitude + ", " + l.latitude)
+        }
 
         locationManager.requestLocationUpdates(NETWORK_PROVIDER, 0, 0f, listener)
         locationManager.requestLocationUpdates(GPS_PROVIDER, 0, 0f, listener)
@@ -236,10 +240,8 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             }
 
             val circle = map!!.addCircle(CircleOptions()
-                .center(LatLng(detection.lat, detection.lon))
-                .radius(detection.distance)
-                .strokeWidth(1.0f)
-                .strokeColor(color)
+                .center(LatLng(detection.lat, detection.lon)).radius(detection.distance)
+                .strokeWidth(1.0f).strokeColor(color)
                 .fillColor(color)
                 .zIndex(zindex)
             )
@@ -256,11 +258,4 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             markers.clear()
         }
     }
-
-    companion object {
-        val PREFS_SERVER_ADDRESS = "server-address"
-        private val TAG = MainActivity::class.java.simpleName
-        private val LOCATION_PERMISSION_REQUEST_CODE = (Math.random() * 10000).toInt()
-    }
-
 }

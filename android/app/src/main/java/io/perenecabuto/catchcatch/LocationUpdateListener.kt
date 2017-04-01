@@ -5,10 +5,10 @@ import android.location.LocationListener
 import android.os.Bundle
 
 
-internal class LocationUpdateListener(private val callback: Callback) : LocationListener {
+internal class LocationUpdateListener(val callback: (l: Location) -> Unit) : LocationListener {
 
     override fun onLocationChanged(location: Location) {
-        callback.onUpdate(location)
+        callback(location)
     }
 
     override fun onStatusChanged(s: String, i: Int, bundle: Bundle) {
@@ -18,9 +18,5 @@ internal class LocationUpdateListener(private val callback: Callback) : Location
     }
 
     override fun onProviderDisabled(s: String) {
-    }
-
-    interface Callback {
-        fun onUpdate(l: Location)
     }
 }
