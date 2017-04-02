@@ -3,10 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"net"
-	"strings"
-	"time"
 
 	redis "gopkg.in/redis.v5"
 )
@@ -88,42 +84,6 @@ func (s *PlayerLocationService) AddFeature(group, id, geojson string) (*Feature,
 // Features ...
 func (s *PlayerLocationService) Features(group string) ([]*Feature, error) {
 	return scanFeature(s.client, group)
-}
-
-// StreamGeofenceEvents ...
-func (s *PlayerLocationService) StreamGeofenceEvents(addr string, callback func(msg string)) error {
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	cmd := "NEARBY player FENCE ROAM checkpoint * 1000\r\n"
-	log.Println("REDIS DEBUG:", cmd)
-	if _, err = fmt.Fprintf(conn, cmd); err != nil {
-		return err
-	}
-	buf := make([]byte, 4096)
-	n, err := conn.Read(buf)
-	res := string(buf[:n])
-	if res != "+OK\r\n" {
-		return fmt.Errorf("expected OK, got '%v'", res)
-	}
-
-	t := time.NewTicker(100 * time.Microsecond)
-	for range t.C {
-		if n, err = conn.Read(buf); err != nil {
-			return err
-		}
-		for _, line := range strings.Split(string(buf[:n]), "\n") {
-			if len(line) == 0 || line[0] != '{' {
-				continue
-			}
-			callback(line)
-		}
-	}
-
-	return nil
 }
 
 func scanFeature(client *redis.Client, group string) ([]*Feature, error) {

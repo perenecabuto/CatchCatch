@@ -1,21 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
-
 	"time"
 
-	"encoding/json"
-
-	engineio "github.com/googollee/go-engine.io"
 	io "github.com/googollee/go-socket.io"
 	zconf "github.com/grandcat/zeroconf"
-	gjson "github.com/tidwall/gjson"
 	redis "gopkg.in/redis.v5"
 )
 
@@ -53,34 +49,15 @@ func main() {
 	})
 
 	sessions := NewSessionManager()
+	stream := NewEventStream(*tile38Addr)
 
 	go func() {
-		err := service.StreamGeofenceEvents(*tile38Addr, func(msg string) {
-			featID, coords := gjson.Get(msg, "id").String(), gjson.Get(msg, "object.coordinates").Array()
-			if len(coords) != 2 {
-				return
+		err := stream.StreamNearByEvents("player", "checkpoint", func(d *Detection) {
+			payload, _ := json.Marshal(d)
+			if err := sessions.Emit(d.FeatID, "checkpoint:detected", string(payload)); err != nil {
+				log.Println("Error to notify player", d.FeatID, err)
 			}
-			lon, lat := coords[0].Float(), coords[1].Float()
-			checkpointID, distance := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
-			conn := sessions.Get(featID)
-			log.Println("Send event to", featID, conn)
-			if conn != nil {
-				writer, err := conn.NextWriter(engineio.MessageText)
-				if err != nil {
-					log.Println("error sent message to ", featID, err)
-				}
-				detected := struct {
-					CheckpointID string  `json:"checkpoint_id"`
-					Lon          float64 `json:"lon"`
-					Lat          float64 `json:"lat"`
-					Distance     float64 `json:"distance"`
-				}{checkpointID, lon, lat, distance}
-				payload, _ := json.Marshal(detected)
-				writer.Write([]byte(`2["checkpoint:detected",` + string(payload) + "]"))
-				writer.Close()
-			}
-			log.Println("EVENT admin:feature:checkpoint", featID, checkpointID, lon, lat, distance)
-			server.BroadcastTo("main", "admin:feature:checkpoint", featID, checkpointID, lon, lat, distance)
+			server.BroadcastTo("main", "admin:feature:checkpoint", d)
 		})
 		if err != nil {
 			log.Println("Error to stream geofence:event", err)
