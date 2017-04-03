@@ -1,18 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
-
 	"time"
 
 	io "github.com/googollee/go-socket.io"
 	zconf "github.com/grandcat/zeroconf"
-	gjson "github.com/tidwall/gjson"
 	redis "gopkg.in/redis.v5"
 )
 
@@ -49,23 +48,23 @@ func main() {
 		log.Println("error:", err)
 	})
 
+	sessions := NewSessionManager()
+	stream := NewEventStream(*tile38Addr)
+
 	go func() {
-		err := service.StreamGeofenceEvents(*tile38Addr, func(msg string) {
-			featID, coords := gjson.Get(msg, "id").String(), gjson.Get(msg, "object.coordinates").Array()
-			if len(coords) != 2 {
-				return
+		err := stream.StreamNearByEvents("player", "checkpoint", func(d *Detection) {
+			payload, _ := json.Marshal(d)
+			if err := sessions.Emit(d.FeatID, "checkpoint:detected", string(payload)); err != nil {
+				log.Println("Error to notify player", d.FeatID, err)
 			}
-			lon, lat := coords[0].Float(), coords[1].Float()
-			checkpointID, distance := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
-			log.Println("EVENT admin:feature:checkpoint", featID, checkpointID, lon, lat, distance)
-			server.BroadcastTo("main", "admin:feature:checkpoint", featID, checkpointID, lon, lat, distance)
+			server.BroadcastTo("main", "admin:feature:checkpoint", d)
 		})
 		if err != nil {
 			log.Println("Error to stream geofence:event", err)
 		}
 	}()
 
-	eventH := NewEventHandler(server, service)
+	eventH := NewEventHandler(server, service, sessions)
 
 	http.Handle("/ws/", eventH)
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))

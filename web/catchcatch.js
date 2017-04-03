@@ -27,7 +27,6 @@ window.addEventListener("DOMContentLoaded", function () {
     let map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
 
     let popup = new ol.Overlay({ element: document.getElementById("map-info") });
-    var el = popup.getElement();
     map.addOverlay(popup);
 
     map.on('click', function (evt) {
@@ -35,6 +34,7 @@ window.addEventListener("DOMContentLoaded", function () {
             return feat;
         });
 
+        var el = popup.getElement();
         if (feature === undefined || feature.getId() === undefined) {
             el.style.display = "none";
             return;
@@ -90,6 +90,7 @@ function log(msg) {
     logEl.innerHTML = msg;
 };
 
+
 let Player = function (x, y) {
     let socket;
     let player = { id: undefined, x: 0, y: 0 };
@@ -126,6 +127,9 @@ let Player = function (x, y) {
         socket = io(location.host, { reconnection: false, path: "/ws" });
         socket.on('player:registred', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
+        socket.on('checkpoint:detected', function (detected) {
+            console.log('checkpoint:detected', detected);
+        })
         socket.on('disconnect', onDisconnected)
     }
 
@@ -352,8 +356,8 @@ let EventHandler = function (controller) {
         }
     };
 
-    this.onFeatureCheckpoint = function (featID, checkPointID, lon, lat, distance) {
-        controller.showCircleOnMap
-            (checkPointID + "" + featID, [lon, lat], distance);
+    this.onFeatureCheckpoint = function (detection) {
+        var circleID = detection.checkpoint_id + "-" + detection.feat_id;
+        controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.distance);
     }
 };
