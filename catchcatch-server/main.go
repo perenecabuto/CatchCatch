@@ -51,18 +51,7 @@ func main() {
 	sessions := NewSessionManager()
 	stream := NewEventStream(*tile38Addr)
 
-	go func() {
-		err := stream.StreamNearByEvents("player", "checkpoint", func(d *Detection) {
-			payload, _ := json.Marshal(d)
-			if err := sessions.Emit(d.FeatID, "checkpoint:detected", string(payload)); err != nil {
-				log.Println("Error to notify player", d.FeatID, err)
-			}
-			server.BroadcastTo("main", "admin:feature:checkpoint", d)
-		})
-		if err != nil {
-			log.Println("Error to stream geofence:event", err)
-		}
-	}()
+	go handleCheckointsDetection(stream, sessions, server)
 
 	eventH := NewEventHandler(server, service, sessions)
 
@@ -90,4 +79,17 @@ func tile38Cleanup(conn *redis.Client) {
 	log.Println("Cleaning location DB...")
 	conn.FlushDb()
 	conn.Close()
+}
+
+func handleCheckointsDetection(stream EventStream, sessions *SessionManager, server *io.Server) {
+	err := stream.StreamNearByEvents("player", "checkpoint", 1000, func(d *Detection) {
+		payload, _ := json.Marshal(d)
+		if err := sessions.Emit(d.FeatID, "checkpoint:detected", string(payload)); err != nil {
+			log.Println("Error to notify player", d.FeatID, err)
+		}
+		server.BroadcastTo("main", "admin:feature:checkpoint", d)
+	})
+	if err != nil {
+		log.Println("Error to stream geofence:event", err)
+	}
 }

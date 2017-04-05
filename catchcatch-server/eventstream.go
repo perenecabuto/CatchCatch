@@ -25,14 +25,14 @@ func NewEventStream(addr string) EventStream {
 type DetectionHandler func(*Detection)
 
 // StreamGeofenceEvents ...
-func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, callback DetectionHandler) error {
+func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error {
 	conn, err := net.Dial("tcp", es.addr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	cmd := fmt.Sprintf("NEARBY %s FENCE ROAM %s * 1000\r\n", nearByKey, roamKey)
+	cmd := fmt.Sprintf("NEARBY %s FENCE ROAM %s * %d\r\n", nearByKey, roamKey, meters)
 	log.Println("REDIS DEBUG:", cmd)
 	if _, err = fmt.Fprintf(conn, cmd); err != nil {
 		return err
@@ -67,10 +67,10 @@ func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, callb
 
 type Detection struct {
 	FeatID       string  `json:"feat_id"`
-	CheckpointID string  `json:"checkpoint_id"`
 	Lon          float64 `json:"lon"`
 	Lat          float64 `json:"lat"`
-	Distance     float64 `json:"distance"`
+	NearByFeatID string  `json:"near_by_feat_id"`
+	NearByMeters float64 `json:"near_by_meters"`
 }
 
 type DetectionError string
@@ -85,6 +85,6 @@ func handleDetection(msg string) (*Detection, error) {
 		return nil, DetectionError("invalid coords - msg:\n" + msg)
 	}
 	lon, lat := coords[0].Float(), coords[1].Float()
-	checkpointID, distance := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
-	return &Detection{featID, checkpointID, lon, lat, distance}, nil
+	nearByFeatID, nearByMeters := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
+	return &Detection{featID, lon, lat, nearByFeatID, nearByMeters}, nil
 }

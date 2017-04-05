@@ -357,7 +357,7 @@ let EventHandler = function (controller) {
     };
 
     this.onFeatureCheckpoint = function (detection) {
-        var circleID = detection.checkpoint_id + "-" + detection.feat_id;
-        controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.distance);
+        var circleID = detection.near_by_feat_id + "-" + detection.feat_id;
+        controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.near_by_meters);
     }
 };
