@@ -51,6 +51,7 @@ func main() {
 	sessions := NewSessionManager()
 	stream := NewEventStream(*tile38Addr)
 
+	go handleGames(stream, sessions, service)
 	go handleCheckointsDetection(stream, sessions, server)
 
 	eventH := NewEventHandler(server, service, sessions)
