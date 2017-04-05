@@ -10,11 +10,15 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+type EventStream interface {
+	StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error
+}
+
 type Tile38EventStream struct {
 	addr string
 }
 
-func NewEventStream(addr string) *Tile38EventStream {
+func NewEventStream(addr string) EventStream {
 	return &Tile38EventStream{addr}
 }
 
