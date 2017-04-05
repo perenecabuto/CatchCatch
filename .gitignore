@@ -2,6 +2,9 @@
 catchcatch-server/catchcatch-server
 catchcatch-server/debug
 
+# nohup
+nohup.*
+
 # Android
 *.iml
 .gradle
