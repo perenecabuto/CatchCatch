@@ -260,7 +260,8 @@ let AdminController = function (socket, sourceLayer) {
         feat.setStyle(groupStyles.circle);
         sourceLayer.addFeature(feat);
         setTimeout(function () {
-            sourceLayer.removeFeature(feat);
+            let feat = sourceLayer.getFeatureById(id);
+            if (feat !== null) sourceLayer.removeFeature(feat);
         }, 1000);
     };
 
