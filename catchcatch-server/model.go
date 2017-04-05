@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	redis "gopkg.in/redis.v5"
@@ -54,6 +55,10 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 	return cmd.Err()
 }
 
+type geom struct {
+	Coords [2]float32 `json:"coordinates"`
+}
+
 // Players return all registred players
 func (s *PlayerLocationService) Players() (*PlayerList, error) {
 	features, err := scanFeature(s.client, "player")
@@ -62,13 +67,25 @@ func (s *PlayerLocationService) Players() (*PlayerList, error) {
 	}
 	list := &PlayerList{make([]*Player, len(features))}
 	for i, f := range features {
-		var geo struct {
-			Coords [2]float32 `json:"coordinates"`
-		}
+		var geo geom
 		json.Unmarshal([]byte(f.Coordinates), &geo)
 		list.Players[i] = &Player{ID: f.ID, X: geo.Coords[1], Y: geo.Coords[0]}
 	}
 	return list, nil
+}
+
+func (s *PlayerLocationService) PlayerById(id string) (*Player, error) {
+	cmd := redis.NewStringCmd("GET", "player", id)
+	s.client.Process(cmd)
+	data, err := cmd.Result()
+	if err != nil {
+		return nil, errors.New("PlayerById: " + err.Error())
+	}
+	var geo geom
+	if err := json.Unmarshal([]byte(data), &geo); err != nil {
+		return nil, err
+	}
+	return &Player{ID: id, X: geo.Coords[1], Y: geo.Coords[0]}, nil
 }
 
 // AddFeature persist features
