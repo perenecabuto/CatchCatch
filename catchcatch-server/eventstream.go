@@ -12,6 +12,7 @@ import (
 
 type EventStream interface {
 	StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error
+	StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error
 }
 
 type Tile38EventStream struct {
@@ -27,6 +28,12 @@ type DetectionHandler func(*Detection)
 // StreamGeofenceEvents ...
 func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error {
 	cmd := fmt.Sprintf("NEARBY %s FENCE ROAM %s * %d", nearByKey, roamKey, meters)
+	return es.streamDetection(cmd, callback)
+}
+
+func (es *Tile38EventStream) StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
+	//INTERSECTS player FENCE DETECT inside,enter,exit GET geofences uuu
+	cmd := fmt.Sprintf("INTERSECTS %s FENCE DETECT inside,enter,exit GET %s %s", intersectKey, onKey, onKeyID)
 	return es.streamDetection(cmd, callback)
 }
 
@@ -69,12 +76,23 @@ func (es *Tile38EventStream) streamDetection(cmd string, callback DetectionHandl
 	return nil
 }
 
+type IntersectsEvent string
+
+const (
+	None    IntersectsEvent = ""
+	Inside  IntersectsEvent = "inside"
+	Enter   IntersectsEvent = "enter"
+	Exit    IntersectsEvent = "exit"
+	Outside IntersectsEvent = "outside"
+)
+
 type Detection struct {
-	FeatID       string  `json:"feat_id"`
-	Lon          float64 `json:"lon"`
-	Lat          float64 `json:"lat"`
-	NearByFeatID string  `json:"near_by_feat_id"`
-	NearByMeters float64 `json:"near_by_meters"`
+	FeatID       string          `json:"feat_id"`
+	Lon          float64         `json:"lon"`
+	Lat          float64         `json:"lat"`
+	NearByFeatID string          `json:"near_by_feat_id"`
+	NearByMeters float64         `json:"near_by_meters"`
+	Intersects   IntersectsEvent `json:"intersects"`
 }
 
 type DetectionError string
@@ -90,5 +108,6 @@ func handleDetection(msg string) (*Detection, error) {
 	}
 	lon, lat := coords[0].Float(), coords[1].Float()
 	nearByFeatID, nearByMeters := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
-	return &Detection{featID, lon, lat, nearByFeatID, nearByMeters}, nil
+	detect := gjson.Get(msg, "detect").String()
+	return &Detection{featID, lon, lat, nearByFeatID, nearByMeters, IntersectsEvent(detect)}, nil
 }
