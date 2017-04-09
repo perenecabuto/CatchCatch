@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -59,6 +60,11 @@ type Detection struct {
 	NearByFeatID string          `json:"near_by_feat_id"`
 	NearByMeters float64         `json:"near_by_meters"`
 	Intersects   IntersectsEvent `json:"intersects"`
+}
+
+func (d Detection) String() string {
+	data, _ := json.Marshal(d)
+	return string(data)
 }
 
 // DetectionHandler is called when a an event is detected
