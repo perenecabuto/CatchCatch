@@ -50,7 +50,6 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
 
     private val markers = HashMap<String, Marker>()
     private var player = Player("", 0.0, 0.0)
-    private var focusedOnPlayer = false
 
     private val socketOpts = object : IO.Options() {
         init {
@@ -112,22 +111,19 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
 
     private fun connect(address: String) {
         if (TextUtils.isEmpty(address)) {
-            Toast.makeText(this, "Can't connect. Address is empty", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Can't connect. Address is empty", Toast.LENGTH_SHORT).show()
             return
         }
         prefs!!.edit().putString(PREFS_SERVER_ADDRESS, address).apply()
 
         try {
-            if (manager != null) {
-                manager!!.disconnect()
-            }
+            manager?.disconnect()
             val socket = IO.socket(address, socketOpts)
             manager = ConnectionManager(socket, this)
             manager!!.connect()
         } catch (e: Throwable) {
-            e.printStackTrace()
-            Log.e(TAG, e.message, e)
-            Toast.makeText(this, "Error to connect to " + address, Toast.LENGTH_LONG).show()
+            Log.e(TAG, e.message)
+            Toast.makeText(this, "Error to connect to " + address, Toast.LENGTH_SHORT).show()
         }
 
     }
@@ -153,17 +149,9 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             return
         }
         val locationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val listener = LocationUpdateListener finish@ { l: Location ->
-            if (l.longitude == 0.0 && l.latitude == 0.0) {
-                return@finish
-            }
-            manager!!.sendPosition(l)
-            showPlayerOnMap(player.updateLocation(l))
-            if (!focusedOnPlayer) {
-                map!!.moveCamera(CameraUpdateFactory.newLatLngZoom(player.point(), 15f))
-                focusedOnPlayer = true
-            }
-            Log.d(TAG, "location updated to " + l.latitude + ", " + l.latitude)
+        val listener = LocationUpdateListener { l: Location ->
+            updateLocalPlayer(l)
+            Log.d(TAG, "p:updated:" + player)
         }
 
         locationManager.requestLocationUpdates(NETWORK_PROVIDER, 0, 0f, listener)
@@ -173,22 +161,20 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
     override fun onPlayerList(players: List<Player>) {
         runOnUiThread {
             Log.d(TAG, "remote-player:list " + players)
-            cleanMarkers()
-            for (p in players) {
-                showPlayerOnMap(p)
-            }
+            clearMarkers()
+            showPlayerOnMap(player)
+            players.filter { it.id != player.id }.forEach { showPlayerOnMap(it) }
         }
     }
 
     private fun showPlayerOnMap(p: Player) {
-        var m: Marker? = markers[p.id]
-        if (m == null) {
-            m = map!!.addMarker(MarkerOptions().position(p.point()).title(p.id))
-            markers.put(p.id, m)
-        } else {
-            m.setPosition(p.point())
-        }
-        m!!.isVisible = true
+        Log.d(TAG, "showPlayerOnMap:" + p + "-" + player.id + "- " + (p.id != player.id).toString())
+
+        val m: Marker = markers[p.id] ?: map!!.addMarker(MarkerOptions().position(p.point()).title(p.id))
+        m.isVisible = true
+        m.position = p.point()
+
+        markers.put(p.id, m)
     }
 
     override fun onRemotePlayerUpdate(player: Player) {
@@ -205,26 +191,40 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         }
     }
 
-    override fun onRegistred(player: Player) {
-        this.player = player
+    override fun onConnect() {
         runOnUiThread {
-            Log.d(TAG, "player:registered " + player)
-            showPlayerOnMap(player)
+            Toast.makeText(this, "connected", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onRegistred(p: Player) {
+        runOnUiThread {
+            this.player = p
+            val locationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val l = locationManager.getLastKnownLocation(GPS_PROVIDER)
+            updateLocalPlayer(l)
+            map!!.moveCamera(CameraUpdateFactory.newLatLngZoom(player.point(), 15f))
+            Log.d(TAG, "p:register:" + player)
+            Toast.makeText(this, "registred as " + player.id, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateLocalPlayer(l: Location) {
+        this.player = player.updateLocation(l)
+        manager?.sendPosition(l)
+        showPlayerOnMap(player)
     }
 
     override fun onRemotePlayerDestroy(player: Player) {
         runOnUiThread {
-            val m = markers[player.id]!!
-            m.remove()
+            markers[player.id]?.remove()
             markers.remove(player.id)
         }
     }
 
     override fun onDiconnected() {
         Log.d(TAG, "diconnected " + player + " " + markers[player.id])
-        cleanMarkers()
-        focusedOnPlayer = false
+        clearMarkers()
     }
 
     override fun onDetectCheckpoint(detection: Detection) {
@@ -250,7 +250,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         }
     }
 
-    private fun cleanMarkers() {
+    private fun clearMarkers() {
         runOnUiThread {
             for ((_, value) in markers) {
                 value.remove()

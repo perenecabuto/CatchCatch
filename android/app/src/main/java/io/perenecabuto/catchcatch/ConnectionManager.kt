@@ -59,7 +59,7 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
     }
 
     private fun onConnect(args: Array<Any>) {
-        Log.d(TAG, "connect: " + Arrays.toString(args))
+        callback.onConnect()
     }
 
     private fun onRemotePlayerDestroy(args: Array<Any>) {
@@ -107,6 +107,7 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
 
     private fun onPlayerRegistred(args: Array<Any>) {
         try {
+            Log.d(TAG, "---->" + this)
             val player = playerFromJSON(args[0].toString())
             callback.onRegistred(player)
         } catch (e: JSONException) {
@@ -146,10 +147,11 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
         fun onPlayerList(players: List<Player>)
         fun onRemotePlayerUpdate(player: Player)
         fun onRemoteNewPlayer(player: Player)
-        fun onRegistred(player: Player)
+        fun onRegistred(p: Player)
         fun onRemotePlayerDestroy(player: Player)
         fun onDiconnected()
         fun onDetectCheckpoint(detection: Detection)
+        fun onConnect()
     }
 
     inner class NoConnectionException(msg: String) : Exception(msg)
