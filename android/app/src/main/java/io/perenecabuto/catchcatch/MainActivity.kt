@@ -21,6 +21,8 @@ import android.view.KeyEvent
 import android.view.KeyEvent.ACTION_DOWN
 import android.view.KeyEvent.KEYCODE_ENTER
 import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -33,6 +35,7 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import io.perenecabuto.catchcatch.ServerDiscoveryListener.OnDiscoverListener
 import io.socket.client.IO
+import java.net.MalformedURLException
 import java.util.*
 
 
@@ -72,6 +75,9 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         addressText.setOnKeyListener { v, keyCode, event -> onChangeServerAddress(v, keyCode, event) }
         connect(serverAddress)
 
+        val label = findViewById(R.id.activity_main_address_label)
+        label.visibility = if (TextUtils.isEmpty(addressText.text)) VISIBLE else GONE
+
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         val mdnsListener = ServerDiscoveryListener(nsdManager, this)
         nsdManager.discoverServices("_catchcatch._tcp", NsdManager.PROTOCOL_DNS_SD, mdnsListener)
@@ -94,13 +100,15 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
     }
 
     private fun onChangeServerAddress(v: View, keyCode: Int, event: KeyEvent): Boolean {
-        val addressChanged = event.action == ACTION_DOWN && keyCode == KEYCODE_ENTER
-        if (!addressChanged) {
-            return false
-        }
         val address = (v as TextView).text.toString()
-        Toast.makeText(this, "Address updated to " + address, Toast.LENGTH_LONG).show()
-        connect(address)
+        val label = findViewById(R.id.activity_main_address_label)
+        label.visibility = if (TextUtils.isEmpty(address)) VISIBLE else GONE
+
+        val addressChanged = event.action == ACTION_DOWN && keyCode == KEYCODE_ENTER
+        if (addressChanged) {
+            Toast.makeText(this, "Address updated to " + address, Toast.LENGTH_SHORT).show()
+            connect(address)
+        }
         return true
     }
 

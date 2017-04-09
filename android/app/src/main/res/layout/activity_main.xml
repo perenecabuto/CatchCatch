@@ -26,6 +26,7 @@
         />
 
     <TextView
+        android:id="@+id/activity_main_address_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:labelFor="@+id/activity_main_address"
