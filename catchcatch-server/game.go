@@ -49,17 +49,20 @@ func (g *Game) Start() {
 		g.Stop()
 	}
 
+	log.Println("---------------------------")
+	log.Println("Game:", g.ID, ":start!!!!!!")
+	log.Println("---------------------------")
+	g.sortTargetPlayer()
 	g.started = true
+
 	go func() {
-		log.Println("---------------------------")
-		log.Println("Game:", g.ID, ":start!!!!!!")
-		log.Println("---------------------------")
-
-		g.sortTargetPlayer()
-
 		ctx, cancel := context.WithTimeout(context.Background(), g.duration)
 		g.stopFunc = cancel
+
 		<-ctx.Done()
+		log.Println("---------------------------")
+		log.Println("Game:", g.ID, ":stop!!!!!!")
+		log.Println("---------------------------")
 		g.started = false
 		g.players = map[string]*Player{}
 		g.targetPlayerID = ""
