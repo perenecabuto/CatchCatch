@@ -37,7 +37,14 @@ func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, meter
 func (es *Tile38EventStream) StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
 	//INTERSECTS player FENCE DETECT inside,enter,exit GET geofences uuu
 	cmd := fmt.Sprintf("INTERSECTS %s FENCE DETECT inside,enter,exit GET %s %s", intersectKey, onKey, onKeyID)
-	return streamDetection(es.addr, cmd, callback)
+	return streamDetection(es.addr, cmd, overrideNearByFeatIDWrapper(onKeyID, callback))
+}
+
+func overrideNearByFeatIDWrapper(nearByFeatID string, handler DetectionHandler) DetectionHandler {
+	return func(d *Detection) {
+		d.NearByFeatID = nearByFeatID
+		handler(d)
+	}
 }
 
 // IntersectsEvent ...
