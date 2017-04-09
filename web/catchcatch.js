@@ -127,8 +127,22 @@ let Player = function (x, y) {
         socket = io(location.host, { reconnection: false, path: "/ws" });
         socket.on('player:registred', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
+
+        socket.on('game:start', function (game) {
+            console.log(player.id + ':game:start', game);
+        })
+        socket.on('game:finish', function (rank) {
+            console.log(player.id + ':game:finish', rank);
+        })
+        socket.on('target:near', function (distToTarget) {
+            console.log(player.id + ':targe:near', distToTarget);
+        })
+        socket.on('target:reached', function (data) {
+            console.log(player.id + ':target:reached', 'winner!!!!');
+        })
+
         socket.on('checkpoint:detected', function (detected) {
-            console.log('checkpoint:detected', detected);
+            console.log(player.id + ':checkpoint:detected', detected);
         })
         socket.on('disconnect', onDisconnected)
     }
