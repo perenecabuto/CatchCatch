@@ -100,7 +100,6 @@ func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 				} else {
 					log.Printf("Game:%s:target:move", g.ID)
 				}
-				return
 			}
 		case Exit:
 			g.removePlayer(p)
@@ -118,17 +117,14 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 
 	dist := p.DistTo(targetPlayer)
 	if dist <= 20 {
+		log.Printf("Game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
 		sessions.Emit(p.ID, "target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
-		log.Println("Game:"+g.ID+":detect=winner!!!:player", p)
 		g.Stop()
-		return
-	}
-
-	if dist <= 100 {
+	} else if dist <= 100 {
 		sessions.Emit(p.ID, "target:near", strconv.FormatFloat(dist, 'f', 0, 64))
-		log.Printf("Game:%s:player:%s:near:dist:%f\n", g.ID, p.ID, dist)
+		log.Printf("Game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
 	} else {
-		log.Printf("Game:%s:player:%s:far:dist%f\n", g.ID, p.ID, dist)
+		log.Printf("Game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
 	}
 }
 
@@ -138,24 +134,24 @@ func (g *Game) removePlayer(p *Player) {
 	}
 	delete(g.players, p.ID)
 	if !g.started {
-		log.Println("Game:"+g.ID+":detect=exit:player", p)
+		log.Println("Game:"+g.ID+":detect=exit:", p)
 		return
 	}
 
 	if len(g.players) == 1 {
 		for _, p := range g.players {
-			log.Println("Game:"+g.ID+":detect=winner!!!:player", p)
+			log.Println("Game:"+g.ID+":detect=winner:", p)
 			break
 		}
 		g.Stop()
 	} else if p.ID == g.targetPlayerID {
-		log.Println("Game:"+g.ID+":detect=target-player-exit:", p)
+		log.Println("Game:"+g.ID+":detect=target-loose:", p)
 		g.Stop()
 	} else if len(g.players) == 0 {
-		log.Println("Game:"+g.ID+":detect=no-players:player", p)
+		log.Println("Game:"+g.ID+":detect=no-players:", p)
 		g.Stop()
 	} else {
-		log.Println("Game:"+g.ID+":detect=exit-loose:player", p)
+		log.Println("Game:"+g.ID+":detect=loose:", p)
 	}
 }
 
@@ -164,7 +160,7 @@ func (g *Game) setPlayerUntilReady(p *Player) {
 		return
 	}
 	if _, exists := g.players[p.ID]; !exists {
-		log.Println("Game:"+g.ID+":player enter:", p)
+		log.Println("Game:"+g.ID+":detect=enter:", p)
 	}
 	g.SetPlayer(p)
 	if g.Ready() {
