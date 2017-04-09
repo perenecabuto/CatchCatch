@@ -45,6 +45,14 @@ func (g *Game) WatchPlayers(stream EventStream) {
 	})
 }
 
+func (g *Game) sortTargetPlayer() {
+	ids := make([]string, 0)
+	for id := range g.players {
+		ids = append(ids, id)
+	}
+	g.targetPlayerID = ids[rand.Intn(len(ids))]
+}
+
 func (g *Game) startTimer() {
 	log.Println("startTimer", "start")
 	t := time.NewTimer(g.duration)
