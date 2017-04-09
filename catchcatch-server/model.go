@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	geo "github.com/kellydunn/golang-geo"
+
 	redis "gopkg.in/redis.v5"
 )
 
@@ -24,6 +26,14 @@ type Player struct {
 
 func (p *Player) String() string {
 	return fmt.Sprintln("id:", p.ID, "x:", p.X, "y:", p.Y)
+}
+
+func (p *Player) Point() *geo.Point {
+	return geo.NewPoint(p.X, p.Y)
+}
+
+func (p *Player) DistTo(other *Player) float64 {
+	return p.Point().GreatCircleDistance(other.Point()) * 1000
 }
 
 // PlayerList payload for list of players
