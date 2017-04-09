@@ -78,13 +78,36 @@ func (g Game) Started() bool {
 }
 
 func (g Game) Ready() bool {
-	return len(g.players) >= MinPlayersPerGame
+	return !g.started && len(g.players) >= MinPlayersPerGame
 }
 
 func (g *Game) WatchPlayers(stream EventStream) {
 	go stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
-		log.Println("Game player detected", d, g.targetPlayerID, g.targetPlayerID == d.FeatID)
+		p := &Player{ID: d.FeatID, X: d.Lat, Y: d.Lon}
+		switch d.Intersects {
+		case Enter:
+			if !g.started {
+				log.Println("Game:"+g.ID+":player enter:", p)
+			}
+			g.addUntilReady(p)
+		case Inside:
+			if _, exists := g.players[p.ID]; g.started && exists {
+				log.Printf("Game:%s:player move:target?%v\n", g.ID, g.targetPlayerID == d.FeatID)
+				g.SetPlayer(p)
+				return
+			}
+			g.addUntilReady(p)
 	})
+}
+
+func (g *Game) addUntilReady(p *Player) {
+	if g.started {
+		return
+	}
+	g.SetPlayer(p)
+	if g.Ready() {
+		g.Start()
+	}
 }
 
 func (g *Game) sortTargetPlayer() {
