@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -17,6 +19,8 @@ type Game struct {
 	duration       time.Duration
 	started        bool
 	targetPlayerID string
+
+	stopFunc context.CancelFunc
 }
 
 func NewGame(id string, duration time.Duration) *Game {
@@ -25,21 +29,57 @@ func NewGame(id string, duration time.Duration) *Game {
 	}
 }
 
-func (g Game) SetPlayer(p *Player) {
+func (g Game) String() string {
+	return fmt.Sprintf("%s(%d)started=%v", g.ID, len(g.players), g.started)
+}
+
+func (g *Game) SetPlayer(p *Player) {
 	if player, exists := g.players[p.ID]; exists {
-		log.Println("Update player", p.ID, "to game", g.ID)
+		log.Println("Game:"+g.ID+":update player:", p.ID)
 		player.X = p.X
 		player.Y = p.Y
 	} else {
-		log.Println("AddPlayer", p.ID, "to game", g.ID)
+		log.Println("Game:"+g.ID+":add player:", p.ID)
 		g.players[p.ID] = p
 	}
 }
 
 func (g *Game) Start() {
-	g.started = true
-	g.sortTargetPlayer()
-	go g.startTimer()
+	if g.started {
+		g.Stop()
+	}
+
+	go func() {
+		log.Println("---------------------------")
+		log.Println("Game:", g.ID, ":start!!!!!!")
+		log.Println("---------------------------")
+
+		g.started = true
+		g.sortTargetPlayer()
+
+		ctx, cancel := context.WithTimeout(context.Background(), g.duration)
+		g.stopFunc = cancel
+
+		<-ctx.Done()
+		g.started = false
+		g.players = map[string]*Player{}
+		g.targetPlayerID = ""
+		log.Println("Game:", g.ID, ":stop!")
+	}()
+}
+
+func (g *Game) Stop() {
+	if g.stopFunc != nil {
+		g.stopFunc()
+	}
+}
+
+func (g Game) Started() bool {
+	return g.started
+}
+
+func (g Game) Ready() bool {
+	return len(g.players) >= MinPlayersPerGame
 }
 
 func (g *Game) WatchPlayers(stream EventStream) {
@@ -56,26 +96,6 @@ func (g *Game) sortTargetPlayer() {
 	g.targetPlayerID = ids[rand.Intn(len(ids))]
 }
 
-func (g *Game) startTimer() {
-	log.Println("startTimer", "start")
-	t := time.NewTimer(g.duration)
-	<-t.C
-	g.started = false
-	log.Println("startTimer", "stop")
-}
-
-func (g Game) Started() bool {
-	return g.started
-}
-
-func (g Game) HasPlayer(p *Player) bool {
-	return g.players[p.ID] != nil
-}
-
-func (g Game) Ready() bool {
-	return len(g.players) >= MinPlayersPerGame
-}
-
 var (
 	games = make(map[string]*Game)
 )
@@ -83,11 +103,6 @@ var (
 func handleGames(stream EventStream, sessions *SessionManager, service *PlayerLocationService) {
 	err := stream.StreamNearByEvents("player", "geofences", 0, func(d *Detection) {
 		gameID := d.NearByFeatID
-		p, err := service.PlayerById(d.FeatID)
-		if err != nil {
-			log.Println("Error starting and adding player", d.FeatID, "to game", gameID, err)
-			return
-		}
 		game, exists := games[gameID]
 		if !exists {
 			log.Println("Creating game", gameID)
@@ -95,13 +110,7 @@ func handleGames(stream EventStream, sessions *SessionManager, service *PlayerLo
 			game = NewGame(gameID, gameDuration)
 			games[gameID] = game
 			game.WatchPlayers(stream)
-		} else if !game.Started() {
-			game.SetPlayer(p)
-			if game.Ready() {
-				game.Start()
-			}
 		}
-
 	})
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)
