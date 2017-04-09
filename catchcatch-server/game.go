@@ -35,11 +35,11 @@ func (g Game) String() string {
 
 func (g *Game) SetPlayer(p *Player) {
 	if player, exists := g.players[p.ID]; exists {
-		log.Println("Game:"+g.ID+":update player:", p.ID)
+		// log.Println("Game:"+g.ID+":update player:", p.ID)
 		player.X = p.X
 		player.Y = p.Y
 	} else {
-		log.Println("Game:"+g.ID+":add player:", p.ID)
+		// log.Println("Game:"+g.ID+":add player:", p.ID)
 		g.players[p.ID] = p
 	}
 }
