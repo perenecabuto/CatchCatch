@@ -67,7 +67,6 @@ func (g *Game) Start() {
 		g.started = false
 		g.players = map[string]*Player{}
 		g.targetPlayerID = ""
-		log.Println("Game:", g.ID, ":stop!")
 	}()
 }
 
