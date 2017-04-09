@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	io "github.com/googollee/go-socket.io"
@@ -123,6 +124,20 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 		return
 	}
 
+	dist := p.DistTo(targetPlayer)
+	if dist <= 20 {
+		sessions.Emit(p.ID, "target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
+		log.Println("Game:"+g.ID+":detect=winner!!!:player", p)
+		g.Stop()
+		return
+	}
+
+	if dist <= 100 {
+		sessions.Emit(p.ID, "target:near", strconv.FormatFloat(dist, 'f', 0, 64))
+		log.Printf("Game:%s:player:%s:near:dist:%f\n", g.ID, p.ID, dist)
+	} else {
+		log.Printf("Game:%s:player:%s:far:dist%f\n", g.ID, p.ID, dist)
+	}
 }
 
 func (g *Game) removePlayer(p *Player) {
