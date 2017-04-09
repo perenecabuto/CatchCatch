@@ -18,8 +18,8 @@ type Feature struct {
 // Player payload
 type Player struct {
 	ID string  `json:"id"`
-	X  float32 `json:"x"`
-	Y  float32 `json:"y"`
+	X  float64 `json:"x"`
+	Y  float64 `json:"y"`
 }
 
 func (p *Player) String() string {
@@ -56,7 +56,7 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 }
 
 type geom struct {
-	Coords [2]float32 `json:"coordinates"`
+	Coords [2]float64 `json:"coordinates"`
 }
 
 // Players return all registred players
