@@ -97,6 +97,33 @@ func (g *Game) WatchPlayers(stream EventStream) {
 				return
 			}
 			g.addUntilReady(p)
+		case Exit:
+			if _, exists := g.players[p.ID]; !exists {
+				return
+			}
+
+			delete(g.players, p.ID)
+			if !g.started {
+				log.Println("Game:"+g.ID+":detect=exit:player", p)
+				return
+			}
+
+			if len(g.players) == 1 {
+				for _, p := range g.players {
+					log.Println("Game:"+g.ID+":detect=winner:player", p)
+					break
+				}
+				g.Stop()
+			} else if p.ID == g.targetPlayerID {
+				log.Println("Game:"+g.ID+":detect=target-player-exit:", p)
+				g.Stop()
+			} else if len(g.players) == 0 {
+				log.Println("Game:"+g.ID+":detect=no-players:player", p)
+				g.Stop()
+			} else {
+				log.Println("Game:"+g.ID+":detect=exit-loose:player", p)
+			}
+		}
 	})
 }
 
