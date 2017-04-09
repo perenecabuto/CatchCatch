@@ -89,26 +89,19 @@ func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 		p := &Player{ID: d.FeatID, X: d.Lat, Y: d.Lon}
 		switch d.Intersects {
 		case Enter:
-			if !g.started {
-				log.Println("Game:"+g.ID+":player enter:", p)
-			}
-			g.addUntilReady(p)
+			g.setPlayerUntilReady(p)
 		case Inside:
-			_, exists := g.players[p.ID]
-			if g.started && exists {
+			if !g.started {
+				g.setPlayerUntilReady(p)
+			} else if _, exists := g.players[p.ID]; exists {
 				g.SetPlayer(p)
 				if p.ID != g.targetPlayerID {
 					g.updateAndNofityPlayer(p, sessions)
 				} else {
-					log.Printf("Game:%s:target move", g.ID)
+					log.Printf("Game:%s:target:move", g.ID)
 				}
 				return
 			}
-
-			if !g.started && !exists {
-				log.Println("Game:"+g.ID+":player enter:", p)
-			}
-			g.addUntilReady(p)
 		case Exit:
 			g.removePlayer(p)
 		}
@@ -166,9 +159,12 @@ func (g *Game) removePlayer(p *Player) {
 	}
 }
 
-func (g *Game) addUntilReady(p *Player) {
+func (g *Game) setPlayerUntilReady(p *Player) {
 	if g.started {
 		return
+	}
+	if _, exists := g.players[p.ID]; !exists {
+		log.Println("Game:"+g.ID+":player enter:", p)
 	}
 	g.SetPlayer(p)
 	if g.Ready() {
