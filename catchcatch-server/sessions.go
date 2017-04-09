@@ -35,6 +35,14 @@ func (sm *SessionManager) Set(id string, conn engineio.Conn) {
 	sm.connections.Store(conns)
 }
 
+// Remove engineio.Conn by session id
+func (sm *SessionManager) Remove(id string) {
+	conns := sm.copyConns()
+	delete(conns, id)
+	sm.connections.Store(conns)
+}
+
+// Emit send payload on eventX to socket id
 func (sm *SessionManager) Emit(id, event string, payload string) error {
 	conn := sm.Get(id)
 	if conn == nil {
@@ -52,6 +60,14 @@ func (sm *SessionManager) Emit(id, event string, payload string) error {
 	return writer.Close()
 }
 
+// CloseAll engineio.Conn
+func (sm *SessionManager) CloseAll() {
+	conns := sm.connections.Load().(connStore)
+	for _, c := range conns {
+		c.Close()
+	}
+}
+
 func (sm *SessionManager) copyConns() connStore {
 	conns := sm.connections.Load().(connStore)
 	newConns := make(connStore)
@@ -59,19 +75,4 @@ func (sm *SessionManager) copyConns() connStore {
 		newConns[k] = v
 	}
 	return newConns
-}
-
-// Remove engineio.Conn by session id
-func (sm *SessionManager) Remove(id string) {
-	conns := sm.copyConns()
-	delete(conns, id)
-	sm.connections.Store(conns)
-}
-
-// CloseAll engineio.Conn
-func (sm *SessionManager) CloseAll() {
-	conns := sm.connections.Load().(connStore)
-	for _, c := range conns {
-		c.Close()
-	}
 }
