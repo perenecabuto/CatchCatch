@@ -16,7 +16,7 @@ DOMAIN = catchcatch.pointto.us
 %-linode: DOMAIN=catchcatch.pointto.us
 
 run:
-	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
+	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf -debug"
 
 run-tile38:
 	@if test "`docker ps -a | grep $(INSTANCE_NAME)`"; then \

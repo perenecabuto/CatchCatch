@@ -21,24 +21,18 @@ var (
 	port           = flag.Int("port", 5000, "server port")
 	webDir         = flag.String("web-dir", "../web", "web files dir")
 	zconfEnabled   = flag.Bool("zconf", false, "start zeroconf server")
+	debug          = flag.Bool("debug", false, "debug")
 )
 
 func main() {
 	flag.Parse()
-
 	if *zconfEnabled {
 		zcServer, _ := zconf.Register("CatchCatch", "_catchcatch._tcp", "", *port, nil, nil)
 		defer zcServer.Shutdown()
 	}
 
-	client := mustConnectTile38()
+	client := mustConnectTile38(*debug)
 	service := &PlayerLocationService{client}
-	client.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
-		return func(cmd redis.Cmder) error {
-			log.Println("TILE38 DEBUG:", cmd.String())
-			return oldProcess(cmd)
-		}
-	})
 
 	server, err := io.NewServer(nil)
 	if err != nil {
@@ -62,8 +56,11 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func mustConnectTile38() *redis.Client {
+func mustConnectTile38(debug bool) *redis.Client {
 	client := redis.NewClient(&redis.Options{Addr: *tile38Addr, PoolSize: 1000, DialTimeout: 1 * time.Second})
+	if debug {
+		client.WrapProcess(tile38DebugWrapper)
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Kill, os.Interrupt)
@@ -80,6 +77,13 @@ func tile38Cleanup(conn *redis.Client) {
 	log.Println("Cleaning location DB...")
 	conn.FlushDb()
 	conn.Close()
+}
+
+func tile38DebugWrapper(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
+	return func(cmd redis.Cmder) error {
+		log.Println("TILE38 DEBUG:", cmd.String())
+		return oldProcess(cmd)
+	}
 }
 
 func handleCheckointsDetection(stream EventStream, sessions *SessionManager, server *io.Server) {
