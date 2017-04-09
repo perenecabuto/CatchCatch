@@ -84,7 +84,7 @@ func (g Game) Ready() bool {
 	return !g.started && len(g.players) >= MinPlayersPerGame
 }
 
-func (g *Game) WatchPlayers(stream EventStream) {
+func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 	go stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
 		p := &Player{ID: d.FeatID, X: d.Lat, Y: d.Lon}
 		switch d.Intersects {
@@ -97,6 +97,11 @@ func (g *Game) WatchPlayers(stream EventStream) {
 			_, exists := g.players[p.ID]
 			if g.started && exists {
 				g.SetPlayer(p)
+				if p.ID != g.targetPlayerID {
+					g.updateAndNofityPlayer(p, sessions)
+				} else {
+					log.Printf("Game:%s:target move", g.ID)
+				}
 				return
 			}
 
@@ -110,7 +115,15 @@ func (g *Game) WatchPlayers(stream EventStream) {
 	})
 }
 
+func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
+	targetPlayer, ok := g.players[g.targetPlayerID]
+	if !ok {
+		log.Printf("Game:%s:move error:target player missing\n", g.ID)
+		g.Stop()
+		return
+	}
 
+}
 
 func (g *Game) removePlayer(p *Player) {
 	if _, exists := g.players[p.ID]; !exists {
@@ -170,7 +183,7 @@ func handleGames(stream EventStream, sessions *SessionManager, service *PlayerLo
 			gameDuration := time.Minute
 			game = NewGame(gameID, gameDuration)
 			games[gameID] = game
-			game.WatchPlayers(stream)
+			game.WatchPlayers(stream, sessions)
 		}
 	})
 	if err != nil {
