@@ -1,12 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
 	"time"
+
+	io "github.com/googollee/go-socket.io"
 )
 
-const MIN_PLAYERS_PER_GAME = 2
+const MinPlayersPerGame = 2
 
 type Game struct {
 	ID             string
@@ -70,7 +73,7 @@ func (g Game) HasPlayer(p *Player) bool {
 }
 
 func (g Game) Ready() bool {
-	return len(g.players) >= MIN_PLAYERS_PER_GAME
+	return len(g.players) >= MinPlayersPerGame
 }
 
 var (
@@ -99,6 +102,19 @@ func handleGames(stream EventStream, sessions *SessionManager, service *PlayerLo
 			}
 		}
 
+	})
+	if err != nil {
+		log.Println("Error to stream geofence:event", err)
+	}
+}
+
+func handleCheckointsDetection(stream EventStream, sessions *SessionManager, server *io.Server) {
+	err := stream.StreamNearByEvents("player", "checkpoint", 1000, func(d *Detection) {
+		payload, _ := json.Marshal(d)
+		if err := sessions.Emit(d.FeatID, "checkpoint:detected", string(payload)); err != nil {
+			log.Println("Error to notify player", d.FeatID, err)
+		}
+		server.BroadcastTo("main", "admin:feature:checkpoint", d)
 	})
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)
