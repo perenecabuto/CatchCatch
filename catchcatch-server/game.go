@@ -11,7 +11,7 @@ import (
 	io "github.com/googollee/go-socket.io"
 )
 
-const MinPlayersPerGame = 2
+const MinPlayersPerGame = 3
 
 type Game struct {
 	ID             string
