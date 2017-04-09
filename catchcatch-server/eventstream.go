@@ -10,35 +10,69 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// EventStream listen to geofence events and notifiy detection
 type EventStream interface {
 	StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error
 	StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error
 }
 
+// Tile38EventStream Tile38 implementation of EventStream
 type Tile38EventStream struct {
 	addr string
 }
 
+// NewEventStream creates a Tile38EventStream
 func NewEventStream(addr string) EventStream {
 	return &Tile38EventStream{addr}
 }
 
-type DetectionHandler func(*Detection)
-
-// StreamGeofenceEvents ...
+// StreamNearByEvents stream proximation events
 func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error {
 	cmd := fmt.Sprintf("NEARBY %s FENCE ROAM %s * %d", nearByKey, roamKey, meters)
-	return es.streamDetection(cmd, callback)
+	return streamDetection(es.addr, cmd, callback)
 }
 
+// StreamIntersects stream intersection events
 func (es *Tile38EventStream) StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
 	//INTERSECTS player FENCE DETECT inside,enter,exit GET geofences uuu
 	cmd := fmt.Sprintf("INTERSECTS %s FENCE DETECT inside,enter,exit GET %s %s", intersectKey, onKey, onKeyID)
-	return es.streamDetection(cmd, callback)
+	return streamDetection(es.addr, cmd, callback)
 }
 
-func (es *Tile38EventStream) streamDetection(cmd string, callback DetectionHandler) error {
-	conn, err := net.Dial("tcp", es.addr)
+// IntersectsEvent ...
+type IntersectsEvent string
+
+// IntersectsEvent none,inside,enter,exit,outside
+const (
+	None    IntersectsEvent = ""
+	Inside  IntersectsEvent = "inside"
+	Enter   IntersectsEvent = "enter"
+	Exit    IntersectsEvent = "exit"
+	Outside IntersectsEvent = "outside"
+)
+
+// Detection represents an detected event
+type Detection struct {
+	FeatID       string          `json:"feat_id"`
+	Lon          float64         `json:"lon"`
+	Lat          float64         `json:"lat"`
+	NearByFeatID string          `json:"near_by_feat_id"`
+	NearByMeters float64         `json:"near_by_meters"`
+	Intersects   IntersectsEvent `json:"intersects"`
+}
+
+// DetectionHandler is called when a an event is detected
+type DetectionHandler func(*Detection)
+
+// DetectionError ...
+type DetectionError string
+
+func (err DetectionError) Error() string {
+	return string("DetectionError: " + err)
+}
+
+func streamDetection(addr string, cmd string, callback DetectionHandler) error {
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err
 	}
@@ -74,31 +108,6 @@ func (es *Tile38EventStream) streamDetection(cmd string, callback DetectionHandl
 	}
 
 	return nil
-}
-
-type IntersectsEvent string
-
-const (
-	None    IntersectsEvent = ""
-	Inside  IntersectsEvent = "inside"
-	Enter   IntersectsEvent = "enter"
-	Exit    IntersectsEvent = "exit"
-	Outside IntersectsEvent = "outside"
-)
-
-type Detection struct {
-	FeatID       string          `json:"feat_id"`
-	Lon          float64         `json:"lon"`
-	Lat          float64         `json:"lat"`
-	NearByFeatID string          `json:"near_by_feat_id"`
-	NearByMeters float64         `json:"near_by_meters"`
-	Intersects   IntersectsEvent `json:"intersects"`
-}
-
-type DetectionError string
-
-func (err DetectionError) Error() string {
-	return string("DetectionError: " + err)
 }
 
 func handleDetection(msg string) (*Detection, error) {

@@ -74,12 +74,13 @@ func (s *PlayerLocationService) Players() (*PlayerList, error) {
 	return list, nil
 }
 
-func (s *PlayerLocationService) PlayerById(id string) (*Player, error) {
+// PlayerByID search for a player by id
+func (s *PlayerLocationService) PlayerByID(id string) (*Player, error) {
 	cmd := redis.NewStringCmd("GET", "player", id)
 	s.client.Process(cmd)
 	data, err := cmd.Result()
 	if err != nil {
-		return nil, errors.New("PlayerById: " + err.Error())
+		return nil, errors.New("PlayerByID: " + err.Error())
 	}
 	var geo geom
 	if err := json.Unmarshal([]byte(data), &geo); err != nil {

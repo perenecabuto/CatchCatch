@@ -1,12 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"strconv"
 	"time"
 
@@ -31,27 +28,27 @@ func main() {
 		defer zcServer.Shutdown()
 	}
 
-	client := mustConnectTile38(*debug)
-	service := &PlayerLocationService{client}
-
-	server, err := io.NewServer(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	server.On("error", func(so io.Socket, err error) {
-		log.Println("error:", err)
-	})
-
 	sessions := NewSessionManager()
 	stream := NewEventStream(*tile38Addr)
+	client := mustConnectTile38(*debug)
+	defer client.Close()
+
+	service := &PlayerLocationService{client}
+	server, err := io.NewServer(nil)
+	if err != nil {
+		log.Fatal("Could not start WS server", err)
+	}
+	server.On("error", func(so io.Socket, err error) {
+		log.Println("WS error:", err)
+	})
 
 	go handleGames(stream, sessions, service)
 	go handleCheckointsDetection(stream, sessions, server)
 
 	eventH := NewEventHandler(server, service, sessions)
-
 	http.Handle("/ws/", eventH)
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
+
 	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
@@ -62,21 +59,7 @@ func mustConnectTile38(debug bool) *redis.Client {
 		client.WrapProcess(tile38DebugWrapper)
 	}
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Kill, os.Interrupt)
-	go func() {
-		<-c
-		tile38Cleanup(client)
-		os.Exit(0)
-	}()
-
 	return client
-}
-
-func tile38Cleanup(conn *redis.Client) {
-	log.Println("Cleaning location DB...")
-	conn.FlushDb()
-	conn.Close()
 }
 
 func tile38DebugWrapper(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
