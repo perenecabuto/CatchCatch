@@ -26,15 +26,19 @@ type DetectionHandler func(*Detection)
 
 // StreamGeofenceEvents ...
 func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error {
+	cmd := fmt.Sprintf("NEARBY %s FENCE ROAM %s * %d", nearByKey, roamKey, meters)
+	return es.streamDetection(cmd, callback)
+}
+
+func (es *Tile38EventStream) streamDetection(cmd string, callback DetectionHandler) error {
 	conn, err := net.Dial("tcp", es.addr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	cmd := fmt.Sprintf("NEARBY %s FENCE ROAM %s * %d\r\n", nearByKey, roamKey, meters)
 	log.Println("REDIS DEBUG:", cmd)
-	if _, err = fmt.Fprintf(conn, cmd); err != nil {
+	if _, err = fmt.Fprintf(conn, cmd+"\r\n"); err != nil {
 		return err
 	}
 	buf := make([]byte, 4096)
