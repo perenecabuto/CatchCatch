@@ -42,7 +42,7 @@ func main() {
 		log.Println("WS error:", err)
 	})
 
-	go handleGames(stream, sessions, service)
+	go handleGames(stream, sessions)
 	go handleCheckointsDetection(stream, sessions, server)
 
 	eventH := NewEventHandler(server, service, sessions)

@@ -211,7 +211,7 @@ var (
 	games = make(map[string]*Game)
 )
 
-func handleGames(stream EventStream, sessions *SessionManager, service *PlayerLocationService) {
+func handleGames(stream EventStream, sessions *SessionManager) {
 	err := stream.StreamNearByEvents("player", "geofences", 0, func(d *Detection) {
 		gameID := d.NearByFeatID
 		game, exists := games[gameID]
