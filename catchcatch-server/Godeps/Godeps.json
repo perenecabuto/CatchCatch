@@ -4,9 +4,21 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
+			"ImportPath": "github.com/allegro/bigcache",
+			"Rev": "dedad99b9443f185104674c68892afb22fd464b2"
+		},
+		{
+			"ImportPath": "github.com/allegro/bigcache/queue",
+			"Rev": "dedad99b9443f185104674c68892afb22fd464b2"
+		},
+		{
 			"ImportPath": "github.com/cenkalti/backoff",
 			"Comment": "v1.0.0-7-gcdf48bb",
 			"Rev": "cdf48bbc1eb78d1349cbda326a4a037f7ba565c6"
+		},
+		{
+			"ImportPath": "github.com/erikstmartin/go-testdb",
+			"Rev": "8d10e4a1bae52cd8b81ffdec3445890d6dccab3d"
 		},
 		{
 			"ImportPath": "github.com/googollee/go-engine.io",
@@ -47,6 +59,26 @@
 			"Rev": "e1395f8e5c0468970db03946d74eb7a0d10104ae"
 		},
 		{
+			"ImportPath": "github.com/kellydunn/golang-geo",
+			"Comment": "v0.7.0-4-g6f16b0c",
+			"Rev": "6f16b0ccf2a6ebd1a234daacfb6199510fbd0db4"
+		},
+		{
+			"ImportPath": "github.com/kylelemons/go-gypsy/yaml",
+			"Comment": "go.weekly.2011-11-02-21-g08cad36",
+			"Rev": "08cad365cd28a7fba23bb1e57aa43c5e18ad8bb8"
+		},
+		{
+			"ImportPath": "github.com/lib/pq",
+			"Comment": "go1.0-cutoff-166-g2704adc",
+			"Rev": "2704adc878c21e1329f46f6e56a1c387d788ff94"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/oid",
+			"Comment": "go1.0-cutoff-166-g2704adc",
+			"Rev": "2704adc878c21e1329f46f6e56a1c387d788ff94"
+		},
+		{
 			"ImportPath": "github.com/miekg/dns",
 			"Rev": "767422ac12884e2baed0afd7303cf06cff90fef6"
 		},
@@ -57,6 +89,21 @@
 		{
 			"ImportPath": "github.com/tidwall/match",
 			"Rev": "173748da739a410c5b0b813b956f89ff94730b4c"
+		},
+		{
+			"ImportPath": "github.com/ziutek/mymysql/godrv",
+			"Comment": "v1.5.4-25-g1d19cbf",
+			"Rev": "1d19cbf98d83564cc561192ae7d7183d795f7ac7"
+		},
+		{
+			"ImportPath": "github.com/ziutek/mymysql/mysql",
+			"Comment": "v1.5.4-25-g1d19cbf",
+			"Rev": "1d19cbf98d83564cc561192ae7d7183d795f7ac7"
+		},
+		{
+			"ImportPath": "github.com/ziutek/mymysql/native",
+			"Comment": "v1.5.4-25-g1d19cbf",
+			"Rev": "1d19cbf98d83564cc561192ae7d7183d795f7ac7"
 		},
 		{
 			"ImportPath": "golang.org/x/net/bpf",
