@@ -149,7 +149,7 @@ func (g *Game) getPlayer(id string) (*Player, error) {
 		return nil, err
 	}
 	if player.ID == "" {
-		return nil, errors.New("No player")
+		return nil, errors.New("err:getPlayer:player not found:" + id)
 	}
 	return &player, nil
 }
