@@ -16,8 +16,10 @@ import (
 	io "github.com/googollee/go-socket.io"
 )
 
+// MinPlayersPerGame ...
 const MinPlayersPerGame = 3
 
+// Game controls rounds and players
 type Game struct {
 	ID             string
 	players        *bigcache.BigCache
@@ -28,6 +30,7 @@ type Game struct {
 	stopFunc context.CancelFunc
 }
 
+// NewGame create a game with duration
 func NewGame(id string, duration time.Duration) *Game {
 	cache, _ := bigcache.NewBigCache(bigcache.DefaultConfig(10 * time.Minute))
 	return &Game{ID: id, duration: duration, started: false, players: cache}
@@ -37,6 +40,7 @@ func (g Game) String() string {
 	return fmt.Sprintf("%s(%d)started=%v", g.ID, g.players.Len(), g.started)
 }
 
+// Start the game
 func (g *Game) Start() {
 	if g.started {
 		g.Stop()
@@ -62,20 +66,24 @@ func (g *Game) Start() {
 	}()
 }
 
+// Stop a running game
 func (g *Game) Stop() {
 	if g.stopFunc != nil {
 		g.stopFunc()
 	}
 }
 
+// Started true when game started
 func (g Game) Started() bool {
 	return g.started
 }
 
+// Ready returns true when game is ready to start
 func (g Game) Ready() bool {
 	return !g.started && g.players.Len() >= MinPlayersPerGame
 }
 
+// WatchPlayers events
 func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 	go stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
 		p := &Player{ID: d.FeatID, X: d.Lat, Y: d.Lon}

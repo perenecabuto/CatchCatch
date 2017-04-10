@@ -28,10 +28,12 @@ func (p *Player) String() string {
 	return fmt.Sprintln("id:", p.ID, "x:", p.X, "y:", p.Y)
 }
 
+// Point returns geo.Point with coordinates
 func (p *Player) Point() *geo.Point {
 	return geo.NewPoint(p.X, p.Y)
 }
 
+// DistTo returns the distance to other player
 func (p *Player) DistTo(other *Player) float64 {
 	return p.Point().GreatCircleDistance(other.Point()) * 1000
 }
