@@ -335,7 +335,7 @@ let EventHandler = function (controller) {
     };
     this.onPlayerRegistred = function (p) {
         player = p;
-        log("connected as \n" + player.id);
+        log("connected as " + player.id);
         controller.updatePosition({ coords: { longitude: p.x, latitude: player.y } })
         controller.requestFeatures();
     };
