@@ -128,17 +128,21 @@ let Player = function (x, y) {
         socket.on('player:registred', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
 
-        socket.on('game:start', function (game) {
-            console.log(player.id + ':game:start', game);
+        socket.on('game:started', function (game) {
+            log(player.id + ':game:started:', game);
         })
         socket.on('game:finish', function (rank) {
-            console.log(player.id + ':game:finish', rank);
+            log(player.id + ':game:finish:' + rank);
         })
+        socket.on('game:loose', function () {
+            log(player.id + ':game:loose:')
+        })
+
         socket.on('target:near', function (distToTarget) {
-            console.log(player.id + ':targe:near', distToTarget);
+            log(player.id + ':targe:near:' + distToTarget);
         })
         socket.on('target:reached', function (data) {
-            console.log(player.id + ':target:reached', 'winner!!!!');
+            log(player.id + ':target:reached:winner!!!!');
         })
 
         socket.on('checkpoint:detected', function (detected) {

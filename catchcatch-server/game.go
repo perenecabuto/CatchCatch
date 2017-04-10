@@ -41,7 +41,7 @@ func (g Game) String() string {
 }
 
 // Start the game
-func (g *Game) Start() {
+func (g *Game) Start(sessions *SessionManager) {
 	if g.started {
 		g.Stop()
 	}
@@ -52,6 +52,12 @@ func (g *Game) Start() {
 	g.sortTargetPlayer()
 	g.started = true
 
+	for _, p := range g.playerList() {
+		if err := sessions.Emit(p.ID, "game:started", `"`+g.ID+`"`); err != nil {
+			log.Println("error to emit game:started", p.ID, err)
+		}
+	}
+
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), g.duration)
 		g.stopFunc = cancel
@@ -60,6 +66,12 @@ func (g *Game) Start() {
 		log.Println("---------------------------")
 		log.Println("Game:", g.ID, ":stop!!!!!!")
 		log.Println("---------------------------")
+		for _, p := range g.playerList() {
+			if err := sessions.Emit(p.ID, "game:finish", `"`+g.ID+`"`); err != nil {
+				log.Println("error to emit game:started", p.ID, err)
+			}
+		}
+
 		g.started = false
 		g.players.Reset()
 		g.targetPlayerID = ""
@@ -89,11 +101,13 @@ func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 		p := &Player{ID: d.FeatID, X: d.Lat, Y: d.Lon}
 		switch d.Intersects {
 		case Enter:
-			g.setPlayerUntilReady(p)
+			g.setPlayerUntilReady(p, sessions)
+		case Exit:
+			g.removePlayer(p, sessions)
 		case Inside:
 			if !g.started {
-				g.setPlayerUntilReady(p)
-			} else if g.hasPlayer(p) {
+				g.setPlayerUntilReady(p, sessions)
+			} else if g.hasPlayer(p.ID) {
 				g.setPlayer(p)
 				if p.ID != g.targetPlayerID {
 					g.updateAndNofityPlayer(p, sessions)
@@ -101,22 +115,20 @@ func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 					log.Printf("Game:%s:target:move", g.ID)
 				}
 			}
-		case Exit:
-			g.removePlayer(p)
 		}
 	})
 }
 
-func (g *Game) setPlayerUntilReady(p *Player) {
+func (g *Game) setPlayerUntilReady(p *Player, sessions *SessionManager) {
 	if g.started {
 		return
 	}
-	if !g.hasPlayer(p) {
+	if !g.hasPlayer(p.ID) {
 		log.Println("Game:"+g.ID+":detect=enter:", p)
 	}
 	g.setPlayer(p)
 	if g.Ready() {
-		g.Start()
+		g.Start(sessions)
 	}
 }
 
@@ -142,6 +154,9 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 }
 
 func (g *Game) setPlayer(p *Player) {
+	if p.ID == "" {
+		return
+	}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
 		return
@@ -162,8 +177,8 @@ func (g *Game) getPlayer(id string) (*Player, error) {
 	return &player, nil
 }
 
-func (g *Game) removePlayer(p *Player) {
-	if !g.hasPlayer(p) {
+func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
+	if !g.hasPlayer(p.ID) {
 		return
 	}
 
@@ -173,9 +188,8 @@ func (g *Game) removePlayer(p *Player) {
 		return
 	}
 
-	if g.players.Len() == 1 {
-		g.lastPlayer()
-		log.Println("Game:"+g.ID+":detect=winner:", p)
+	if len(g.playerList()) == 1 {
+		log.Println("Game:"+g.ID+":detect=winner:", g.lastPlayer())
 		g.Stop()
 	} else if p.ID == g.targetPlayerID {
 		log.Println("Game:"+g.ID+":detect=target-loose:", p)
@@ -185,34 +199,39 @@ func (g *Game) removePlayer(p *Player) {
 		g.Stop()
 	} else {
 		log.Println("Game:"+g.ID+":detect=loose:", p)
+		sessions.Emit(p.ID, "game:loose", "{}")
 	}
 }
 
-func (g *Game) hasPlayer(p *Player) bool {
-	player, err := g.getPlayer(p.ID)
+func (g *Game) hasPlayer(id string) bool {
+	player, err := g.getPlayer(id)
 	return err == nil && player != nil
 }
 
+func (g *Game) playerList() []*Player {
+	players, it := make([]*Player, 0), g.players.Iterator()
+	for entry, _ := it.Value(); it.SetNext(); entry, _ = it.Value() {
+		log.Println("->", entry.Key())
+		if p, _ := g.getPlayer(entry.Key()); p != nil {
+			log.Println("->", p)
+			players = append(players, p)
+		}
+	}
+	return players
+}
+
 func (g *Game) lastPlayer() *Player {
-	entry, _ := g.players.Iterator().Value()
-	buf := bytes.NewBuffer(entry.Value())
-	var player Player
-	if err := gob.NewDecoder(buf).Decode(&player); err != nil {
+	players := g.playerList()
+	if len(players) == 0 {
 		return nil
 	}
-	return &player
+	return players[len(players)-1]
 }
 
 func (g *Game) sortTargetPlayer() {
-	ids, it := make([]string, 0), g.players.Iterator()
-	for it.SetNext() {
-		if entry, err := it.Value(); err == nil {
-			ids = append(ids, entry.Key())
-		} else {
-			continue
-		}
-	}
-	g.targetPlayerID = ids[rand.Intn(len(ids))]
+	players := g.playerList()
+	randIdx := rand.Intn(len(players))
+	g.targetPlayerID = players[randIdx].ID
 }
 
 func handleGames(stream EventStream, sessions *SessionManager) {
