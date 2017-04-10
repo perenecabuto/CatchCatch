@@ -37,27 +37,6 @@ func (g Game) String() string {
 	return fmt.Sprintf("%s(%d)started=%v", g.ID, g.players.Len(), g.started)
 }
 
-func (g *Game) SetPlayer(p *Player) {
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
-		return
-	}
-	g.players.Set(p.ID, buf.Bytes())
-}
-
-func (g *Game) getPlayer(id string) (*Player, error) {
-	data, _ := g.players.Get(id)
-	buf := bytes.NewBuffer(data)
-	var player Player
-	if err := gob.NewDecoder(buf).Decode(&player); err != nil {
-		return nil, err
-	}
-	if player.ID == "" {
-		return nil, errors.New("No player")
-	}
-	return &player, nil
-}
-
 func (g *Game) Start() {
 	if g.started {
 		g.Stop()
@@ -107,7 +86,7 @@ func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 			if !g.started {
 				g.setPlayerUntilReady(p)
 			} else if g.hasPlayer(p) {
-				g.SetPlayer(p)
+				g.setPlayer(p)
 				if p.ID != g.targetPlayerID {
 					g.updateAndNofityPlayer(p, sessions)
 				} else {
@@ -118,6 +97,19 @@ func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 			g.removePlayer(p)
 		}
 	})
+}
+
+func (g *Game) setPlayerUntilReady(p *Player) {
+	if g.started {
+		return
+	}
+	if !g.hasPlayer(p) {
+		log.Println("Game:"+g.ID+":detect=enter:", p)
+	}
+	g.setPlayer(p)
+	if g.Ready() {
+		g.Start()
+	}
 }
 
 func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
@@ -139,6 +131,27 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	} else {
 		log.Printf("Game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
 	}
+}
+
+func (g *Game) setPlayer(p *Player) {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
+		return
+	}
+	g.players.Set(p.ID, buf.Bytes())
+}
+
+func (g *Game) getPlayer(id string) (*Player, error) {
+	data, _ := g.players.Get(id)
+	buf := bytes.NewBuffer(data)
+	var player Player
+	if err := gob.NewDecoder(buf).Decode(&player); err != nil {
+		return nil, err
+	}
+	if player.ID == "" {
+		return nil, errors.New("No player")
+	}
+	return &player, nil
 }
 
 func (g *Game) removePlayer(p *Player) {
@@ -180,19 +193,6 @@ func (g *Game) lastPlayer() *Player {
 		return nil
 	}
 	return &player
-}
-
-func (g *Game) setPlayerUntilReady(p *Player) {
-	if g.started {
-		return
-	}
-	if !g.hasPlayer(p) {
-		log.Println("Game:"+g.ID+":detect=enter:", p)
-	}
-	g.SetPlayer(p)
-	if g.Ready() {
-		g.Start()
-	}
 }
 
 func (g *Game) sortTargetPlayer() {
