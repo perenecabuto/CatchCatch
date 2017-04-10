@@ -207,11 +207,8 @@ func (g *Game) sortTargetPlayer() {
 	g.targetPlayerID = ids[rand.Intn(len(ids))]
 }
 
-var (
-	games = make(map[string]*Game)
-)
-
 func handleGames(stream EventStream, sessions *SessionManager) {
+	games := make(map[string]*Game)
 	err := stream.StreamNearByEvents("player", "geofences", 0, func(d *Detection) {
 		gameID := d.NearByFeatID
 		game, exists := games[gameID]
