@@ -183,6 +183,12 @@ let Player = function (x, y) {
 }
 
 let AdminController = function (socket, sourceLayer) {
+    let connectedPlayer = { id: "", x: 0, y: 0 };
+
+    this.setPlayer = function(p) {
+        connectedPlayer = p;
+    }
+
     let playerHTML = document.getElementById("player-template").innerText;
 
     let lastPos = { coords: { latitude: 0, longitude: 0 } };
@@ -234,8 +240,13 @@ let AdminController = function (socket, sourceLayer) {
             playerEl = document.createElement("div");
             playerEl.innerHTML = playerHTML;
             playerEl.id = elId;
-            playerEl.getElementsByClassName("disconnect-btn")[0]
-                .addEventListener("click", () => this.disconnectPlayer(player.id));
+            if (player.id === connectedPlayer.id) {
+                playerEl.getElementsByClassName("btn")[0].className += " btn-primary"
+                playerEl.getElementsByClassName("disconnect-btn")[0].style.display = "none";
+            } else {
+                playerEl.getElementsByClassName("disconnect-btn")[0]
+                    .addEventListener("click", () => this.disconnectPlayer(player.id));
+            }
             document.getElementById("connections").appendChild(playerEl);
         }
 
@@ -328,7 +339,6 @@ let AdminController = function (socket, sourceLayer) {
 };
 
 let EventHandler = function (controller) {
-    let player = { x: 0, y: 0 };
 
     this.onConnect = function () {
         log("connected");
@@ -338,14 +348,14 @@ let EventHandler = function (controller) {
         controller.resetInterface();
     };
     this.onPlayerRegistred = function (p) {
-        player = p;
-        log("connected as " + player.id);
-        controller.updatePosition({ coords: { longitude: p.x, latitude: player.y } })
+        controller.setPlayer(p);
+        log("connected as " + p.id);
+        controller.updatePosition({ coords: { longitude: p.x, latitude: p.y } })
         controller.requestFeatures();
     };
     this.onPlayerUpdated = function (p) {
-        player = p;
-        controller.updatePlayer(player);
+        controller.setPlayer(p);
+        controller.updatePlayer(p);
     };
 
     this.onRemotePlayerList = function (list) {
