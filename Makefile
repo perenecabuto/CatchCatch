@@ -6,6 +6,9 @@ PORT := 9851
 run:
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server"
 
+run-debug:
+	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf -debug"
+
 .PHONY=run-tile38
 run-tile38:
 	@if test "`docker ps -a | grep $(INSTANCE_NAME)`"; then \
