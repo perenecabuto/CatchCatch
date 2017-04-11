@@ -1,12 +1,3 @@
-function makeText(feat, text) {
-    return new ol.style.Text({
-        text: text,
-        offsetX: 0, offsetY: -35,
-        fill: new ol.style.Fill({ color: '#330' }),
-        stroke: new ol.style.Stroke({ color: '#fff', width: 4 })
-    })
-}
-
 let groupStyles = {
     circle: new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(239, 21, 9, 0.53)', width: 1 }) }),
     checkpoint: new ol.style.Style({ image: new ol.style.Icon(({ anchor: [0.4, 1], src: 'checkpoint.png' })) }),
@@ -17,6 +8,21 @@ let groupStyles = {
         fill: new ol.style.Fill({ color: 'rgba(0, 0, 255, 0.1)' })
     })
 }
+
+function makeText(feat, text) {
+    return new ol.style.Text({
+        text: text,
+        offsetX: 0, offsetY: -35,
+        fill: new ol.style.Fill({ color: '#330' }),
+        stroke: new ol.style.Stroke({ color: '#fff', width: 4 })
+    })
+}
+
+function log(msg) {
+    let logEl = document.getElementById("log");
+    logEl.innerHTML = msg;
+};
+
 
 window.addEventListener("DOMContentLoaded", function () {
     let socket = io(location.host, { path: "/ws" });
@@ -84,11 +90,6 @@ window.addEventListener("DOMContentLoaded", function () {
 
     socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
 });
-
-function log(msg) {
-    let logEl = document.getElementById("log");
-    logEl.innerHTML = msg;
-};
 
 
 let Player = function (x, y) {
