@@ -81,7 +81,7 @@ func (s *PlayerLocationService) Players() (*PlayerList, error) {
 	for i, f := range features {
 		var geo geom
 		json.Unmarshal([]byte(f.Coordinates), &geo)
-		list.Players[i] = &Player{ID: f.ID, Lat: geo.Coords[0], Lon: geo.Coords[1]}
+		list.Players[i] = &Player{ID: f.ID, Lat: geo.Coords[1], Lon: geo.Coords[0]}
 	}
 	return list, nil
 }
