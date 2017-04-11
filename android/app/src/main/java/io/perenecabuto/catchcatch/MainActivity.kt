@@ -205,10 +205,13 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
     }
 
     override fun onRegistred(p: Player) {
-        runOnUiThread {
+        runOnUiThread finish@ {
             this.player = p
             val locationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val l = locationManager.getLastKnownLocation(GPS_PROVIDER)
+            val l = locationManager.getLastKnownLocation(GPS_PROVIDER) ?:
+                locationManager.getLastKnownLocation(NETWORK_PROVIDER) ?:
+                return@finish
+
             updateLocalPlayer(l)
             map!!.moveCamera(CameraUpdateFactory.newLatLngZoom(player.point(), 15f))
             Log.d(TAG, "p:register:" + player)
