@@ -16,6 +16,9 @@ DOMAIN = catchcatch.pointto.us
 %-linode: DOMAIN=catchcatch.pointto.us
 
 run:
+	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
+
+run-debug:
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf -debug"
 
 run-tile38:
