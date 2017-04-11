@@ -85,23 +85,13 @@ func (err DetectionError) Error() string {
 }
 
 func streamDetection(addr string, cmd string, callback DetectionHandler) error {
-	conn, err := net.Dial("tcp", addr)
+	conn, err := listenTo(addr, cmd)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	log.Println("REDIS DEBUG:", cmd)
-	if _, err = fmt.Fprintf(conn, cmd+"\r\n"); err != nil {
-		return err
-	}
-	buf := make([]byte, 4096)
-	n, err := conn.Read(buf)
-	res := string(buf[:n])
-	if res != "+OK\r\n" {
-		return fmt.Errorf("expected OK, got '%v'", res)
-	}
-
+	buf, n := make([]byte, 4096), 0
 	t := time.NewTicker(100 * time.Microsecond)
 	for range t.C {
 		if n, err = conn.Read(buf); err != nil {
@@ -131,5 +121,25 @@ func handleDetection(msg string) (*Detection, error) {
 	lon, lat := coords[0].Float(), coords[1].Float()
 	nearByFeatID, nearByMeters := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
 	detect := gjson.Get(msg, "detect").String()
-	return &Detection{featID, lon, lat, nearByFeatID, nearByMeters, IntersectsEvent(detect)}, nil
+	intersects := IntersectsEvent(detect)
+	return &Detection{featID, lon, lat, nearByFeatID, nearByMeters, intersects}, nil
+}
+
+func listenTo(addr, cmd string) (net.Conn, error) {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println("REDIS DEBUG:", cmd)
+	if _, err = fmt.Fprintf(conn, cmd+"\r\n"); err != nil {
+		return nil, err
+	}
+	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
+	res := string(buf[:n])
+	if res != "+OK\r\n" {
+		return nil, fmt.Errorf("expected OK, got '%v'", res)
+	}
+	return conn, nil
 }
