@@ -10,15 +10,15 @@ import java.net.URISyntaxException
 import java.util.*
 
 
-data class Detection(val checkpoint: String, val lon: Double, val lat: Double, val distance: Double)
-data class Player(val id: String, var x: Double, var y: Double) {
+data class Detection(val checkpoint: String, val lat: Double, val lon: Double, val distance: Double)
+data class Player(val id: String, var lat: Double, var lon: Double) {
     fun updateLocation(l: Location): Player {
-        x = l.latitude; y = l.longitude
+        lat = l.latitude; lon = l.longitude
         return this
     }
 
     fun point(): LatLng {
-        return LatLng(x, y)
+        return LatLng(lat, lon)
     }
 }
 
@@ -118,7 +118,7 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
 
     fun sendPosition(l: Location) {
         try {
-            val coords = JSONObject(mapOf("x" to l.latitude, "y" to l.longitude))
+            val coords = JSONObject(mapOf("lat" to l.latitude, "lon" to l.longitude))
             socket.emit("player:update", coords.toString())
         } catch (e: JSONException) {
             e.printStackTrace()
@@ -132,14 +132,14 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
     @Throws(JSONException::class)
     private fun playerFromJSON(json: String): Player {
         val pJson = JSONObject(json)
-        return Player(pJson.getString("id"), pJson.getDouble("x"), pJson.getDouble("y"))
+        return Player(pJson.getString("id"), pJson.getDouble("lat"), pJson.getDouble("lon"))
     }
 
     @Throws(JSONException::class)
     private fun getDetectionFronJSON(json: String): Detection {
         val pJson = JSONObject(json)
         return Detection(pJson.getString("checkpoint_id"),
-            pJson.getDouble("lon"), pJson.getDouble("lat"), pJson.getDouble("distance"))
+            pJson.getDouble("lat"), pJson.getDouble("lon"), pJson.getDouble("distance"))
     }
 
 
