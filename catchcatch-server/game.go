@@ -64,7 +64,7 @@ func (g *Game) Start(sessions *SessionManager) {
 		log.Println("---------------------------")
 		for _, p := range g.players {
 			if err := sessions.Emit(p.ID, "game:finish", `"`+g.ID+`"`); err != nil {
-				log.Println("error to emit game:started", p.ID, err)
+				log.Println("error to emit game:finish", p.ID, err)
 			}
 		}
 
