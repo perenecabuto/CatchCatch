@@ -35,7 +35,6 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import io.perenecabuto.catchcatch.ServerDiscoveryListener.OnDiscoverListener
 import io.socket.client.IO
-import java.net.MalformedURLException
 import java.util.*
 
 
