@@ -62,8 +62,8 @@ const (
 // Detection represents an detected event
 type Detection struct {
 	FeatID       string          `json:"feat_id"`
-	Lon          float64         `json:"lon"`
 	Lat          float64         `json:"lat"`
+	Lon          float64         `json:"lon"`
 	NearByFeatID string          `json:"near_by_feat_id"`
 	NearByMeters float64         `json:"near_by_meters"`
 	Intersects   IntersectsEvent `json:"intersects"`
@@ -118,11 +118,11 @@ func handleDetection(msg string) (*Detection, error) {
 	if len(coords) != 2 {
 		return nil, DetectionError("invalid coords - msg:\n" + msg)
 	}
-	lon, lat := coords[0].Float(), coords[1].Float()
+	lat, lon := coords[0].Float(), coords[1].Float()
 	nearByFeatID, nearByMeters := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
 	detect := gjson.Get(msg, "detect").String()
 	intersects := IntersectsEvent(detect)
-	return &Detection{featID, lon, lat, nearByFeatID, nearByMeters, intersects}, nil
+	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects}, nil
 }
 
 func listenTo(addr, cmd string) (net.Conn, error) {

@@ -19,18 +19,18 @@ type Feature struct {
 
 // Player payload
 type Player struct {
-	ID string  `json:"id"`
-	X  float64 `json:"x"`
-	Y  float64 `json:"y"`
+	ID  string  `json:"id"`
+	Lon float64 `json:"lon"`
+	Lat float64 `json:"lat"`
 }
 
 func (p *Player) String() string {
-	return fmt.Sprintln("id:", p.ID, "x:", p.X, "y:", p.Y)
+	return fmt.Sprintln("id:", p.ID, "lat:", p.Lat, "lon:", p.Lon)
 }
 
 // Point returns geo.Point with coordinates
 func (p *Player) Point() *geo.Point {
-	return geo.NewPoint(p.X, p.Y)
+	return geo.NewPoint(p.Lat, p.Lon)
 }
 
 // DistTo returns the distance to other player
@@ -55,7 +55,7 @@ func (s *PlayerLocationService) Register(p *Player) error {
 
 // Update player data
 func (s *PlayerLocationService) Update(p *Player) error {
-	cmd := redis.NewStringCmd("SET", "player", p.ID, "POINT", p.X, p.Y)
+	cmd := redis.NewStringCmd("SET", "player", p.ID, "POINT", p.Lat, p.Lon)
 	s.client.Process(cmd)
 	return cmd.Err()
 }
@@ -81,7 +81,7 @@ func (s *PlayerLocationService) Players() (*PlayerList, error) {
 	for i, f := range features {
 		var geo geom
 		json.Unmarshal([]byte(f.Coordinates), &geo)
-		list.Players[i] = &Player{ID: f.ID, X: geo.Coords[1], Y: geo.Coords[0]}
+		list.Players[i] = &Player{ID: f.ID, Lat: geo.Coords[0], Lon: geo.Coords[1]}
 	}
 	return list, nil
 }
@@ -98,7 +98,7 @@ func (s *PlayerLocationService) PlayerByID(id string) (*Player, error) {
 	if err := json.Unmarshal([]byte(data), &geo); err != nil {
 		return nil, err
 	}
-	return &Player{ID: id, X: geo.Coords[1], Y: geo.Coords[0]}, nil
+	return &Player{ID: id, Lat: geo.Coords[0], Lon: geo.Coords[1]}, nil
 }
 
 // AddFeature persist features

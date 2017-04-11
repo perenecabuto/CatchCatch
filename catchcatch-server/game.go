@@ -94,7 +94,7 @@ func (g Game) Ready() bool {
 // WatchPlayers events
 func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 	go stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
-		p := &Player{ID: d.FeatID, X: d.Lat, Y: d.Lon}
+		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		switch d.Intersects {
 		case Enter:
 			g.setPlayerUntilReady(p, sessions)
@@ -151,8 +151,8 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 
 func (g *Game) setPlayer(p *Player) {
 	if player, exists := g.players[p.ID]; exists {
-		player.X = p.X
-		player.Y = p.Y
+		player.Lon = p.Lon
+		player.Lat = p.Lat
 	} else {
 		g.players[p.ID] = p
 	}

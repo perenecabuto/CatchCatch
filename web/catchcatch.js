@@ -110,11 +110,11 @@ let Player = function (x, y) {
     function onPlayerUpdated(p) {
         player = p;
     }
-    function updatePosition(x, y) {
-        socket.emit('player:update', JSON.stringify({ x: x, y: y }));
+    function updatePosition(lat, lon) {
+        socket.emit('player:update', JSON.stringify({ lat: lat, lon: lon }));
     }
     function coords() {
-        return { x: player.x, y: player.y };
+        return { lat: player.lat, lon: player.lon };
     }
     function disconnect() {
         socket.close();
@@ -197,7 +197,7 @@ let AdminController = function (socket, sourceLayer) {
         if (pos.coords.latitude == 0 && pos.coords.longitude == 0) {
             pos = lastPos;
         }
-        let coords = { x: pos.coords.latitude, y: pos.coords.longitude };
+        let coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         socket.emit('player:update', JSON.stringify(coords));
         lastPos = pos;
     };
@@ -240,24 +240,30 @@ let AdminController = function (socket, sourceLayer) {
             playerEl = document.createElement("div");
             playerEl.innerHTML = playerHTML;
             playerEl.id = elId;
+            playerEl.getElementsByClassName("player-id")[0].innerHTML = player.id;
+
+            let connectionsEl = document.getElementById("connections");
             if (player.id === connectedPlayer.id) {
                 playerEl.getElementsByClassName("btn")[0].className += " btn-primary"
                 playerEl.getElementsByClassName("disconnect-btn")[0].style.display = "none";
+
+                connectionsEl.insertBefore(playerEl, connectionsEl.children[0]);
             } else {
                 playerEl.getElementsByClassName("disconnect-btn")[0]
                     .addEventListener("click", () => this.disconnectPlayer(player.id));
+                connectionsEl.appendChild(playerEl);
             }
-            document.getElementById("connections").appendChild(playerEl);
         }
 
-        playerEl.getElementsByClassName("player-data")[0].innerHTML = player.id + '<br/>' +
-            '<div class="glyphicon glyphicon-map-marker" aria-hidden="true"> (' + player.x + ', ' + player.y + ')</div>';
+        let lon = Number((player.lon).toFixed(5));
+        let lat = Number((player.lat).toFixed(5));
+        playerEl.getElementsByClassName("player-coords")[0].innerHTML = lat + ',' + lon
 
         this.showPlayerOnMap(player);
     };
 
     this.showPlayerOnMap = function (player) {
-        let coords = [player.y, player.x];
+        let coords = [player.lon, player.lat];
         let feat = sourceLayer.getFeatureById(player.id);
         if (feat !== null) {
             feat.getGeometry().setCoordinates(coords);
@@ -350,7 +356,7 @@ let EventHandler = function (controller) {
     this.onPlayerRegistred = function (p) {
         controller.setPlayer(p);
         log("connected as " + p.id);
-        controller.updatePosition({ coords: { longitude: p.x, latitude: p.y } })
+        controller.updatePosition({ coords: { latitude: p.lat, longitude: p.lon } })
         controller.requestFeatures();
     };
     this.onPlayerUpdated = function (p) {
@@ -387,6 +393,6 @@ let EventHandler = function (controller) {
 
     this.onFeatureCheckpoint = function (detection) {
         var circleID = detection.near_by_feat_id + "-" + detection.feat_id;
-        controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.near_by_meters);
+        controller.showCircleOnMap(circleID, [detection.lat, detection.lon], detection.near_by_meters);
     }
 };
