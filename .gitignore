@@ -1,6 +1,7 @@
 # Bin
 catchcatch-server/catchcatch-server
 catchcatch-server/debug
+nohup.*
 
 # Android
 *.iml
