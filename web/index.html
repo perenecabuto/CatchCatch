@@ -37,14 +37,14 @@
     </div>
 
     <div class="row">
-        <div class="col-xs-4">
+        <div class="col-xs-3">
             <strong class="lead">Connections</strong>
             <button id="reset" type="button" class="btn btn-link">reset</button>
 
             <div id="connections" style="height: 70%; overflow-y: auto;"></div>
         </div>
 
-        <div class="col-xs-8">
+        <div class="col-xs-9">
             <strong class="lead">Map</strong>
             <button id="draw-geofences" type="button" class="btn btn-link">draw fence</button>
             <button id="draw-checkpoint" type="button" class="btn btn-link">draw checkpoint</button>
@@ -62,7 +62,12 @@
 
     <script type="text/template" id="player-template">
         <div class="btn btn-default alert" style="overflow:hidden; width: 99%; text-align:left">
-            <div class="player-data pull-left"></div>
+            <div class="pull-left">
+                <p class="player-id"></p>
+                <div class="glyphicon glyphicon-map-marker" aria-hidden="true">
+                    <span class="player-coords" style="font-family:monospace"></span>
+                </div>
+            </div>
             <a href="javascript:void(0)" class="pull-right disconnect-btn">X</a>
         </div>
     </script>
