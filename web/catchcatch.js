@@ -46,7 +46,7 @@ window.addEventListener("DOMContentLoaded", function () {
         el.getElementsByClassName("panel-body")[0].innerText = feature.getId();
     });
 
-    let controller = new AdminController(socket, source);
+    let controller = new AdminController(socket, source, view);
     controller.bindDrawGroupButton("geofences", map, "Polygon");
     controller.bindDrawGroupButton("checkpoint", map, "Point");
     document.getElementById("reset").addEventListener("click", controller.reset);
@@ -182,7 +182,7 @@ let Player = function (x, y) {
     this.getInteraction = getInteraction;
 }
 
-let AdminController = function (socket, sourceLayer) {
+let AdminController = function (socket, sourceLayer, view) {
     let connectedPlayer = { id: "", x: 0, y: 0 };
 
     this.setPlayer = function(p) {
@@ -242,6 +242,8 @@ let AdminController = function (socket, sourceLayer) {
             playerEl.id = elId;
             playerEl.getElementsByClassName("player-id")[0].innerHTML = player.id;
 
+            playerEl.addEventListener("click", this.focusOnPlayer(player));
+
             let connectionsEl = document.getElementById("connections");
             if (player.id === connectedPlayer.id) {
                 playerEl.getElementsByClassName("btn")[0].className += " btn-primary"
@@ -260,6 +262,19 @@ let AdminController = function (socket, sourceLayer) {
         playerEl.getElementsByClassName("player-coords")[0].innerHTML = lat + ',' + lon
 
         this.showPlayerOnMap(player);
+    };
+
+    this.focusOnPlayer = function (player) {
+        return () => {
+            let feat = sourceLayer.getFeatureById(player.id);
+            if (feat === null) {
+                console.log("no feature found for player", player, feat);
+                return;
+            }
+            let coords = feat.getGeometry().getCoordinates();
+            view.setCenter(coords);
+            this.showCircleOnMap("focus-" + player.id, coords, 20);
+        }
     };
 
     this.showPlayerOnMap = function (player) {
