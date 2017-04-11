@@ -20,7 +20,7 @@ type EventHandler struct {
 func NewEventHandler(server *io.Server, service *PlayerLocationService, sessions *SessionManager) *EventHandler {
 	server.SetSessionManager(sessions)
 	handler := &EventHandler{server, service, sessions}
-	server.On("connection", handler.onConnection())
+	server.On("connection", handler.onConnection)
 	return handler
 }
 
@@ -30,27 +30,25 @@ func (h *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Event handlers
 
-func (h *EventHandler) onConnection() func(so io.Socket) {
-	return func(so io.Socket) {
-		channel := "main"
-		player, err := h.newPlayer(so, channel)
-		if err != nil {
-			log.Println("error to create player", err)
-			h.sessions.Get(so.Id()).Close()
-			return
-		}
-		log.Println("new player connected", player)
-		go h.sendPlayerList(so)
-
-		so.On("player:request-list", h.onPlayerRequestList(so))
-		so.On("player:update", h.onPlayerUpdate(player, channel, so))
-		so.On("disconnection", h.onPlayerDisconnect(player, channel))
-
-		so.On("admin:disconnect", h.onDisconnectByID(channel))
-		so.On("admin:feature:add", h.onAddFeature(channel))
-		so.On("admin:feature:request-list", h.onRequestFeatures(so))
-		so.On("admin:clear", h.onClear())
+func (h *EventHandler) onConnection(so io.Socket) {
+	channel := "main"
+	player, err := h.newPlayer(so, channel)
+	if err != nil {
+		log.Println("error to create player", err)
+		h.sessions.Get(so.Id()).Close()
+		return
 	}
+	log.Println("new player connected", player)
+	go h.sendPlayerList(so)
+
+	so.On("player:request-list", h.onPlayerRequestList(so))
+	so.On("player:update", h.onPlayerUpdate(player, channel, so))
+	so.On("disconnection", h.onPlayerDisconnect(player, channel))
+
+	so.On("admin:disconnect", h.onDisconnectByID(channel))
+	so.On("admin:feature:add", h.onAddFeature(channel))
+	so.On("admin:feature:request-list", h.onRequestFeatures(so))
+	so.On("admin:clear", h.onClear())
 }
 
 func (h *EventHandler) onPlayerDisconnect(player *Player, channel string) func(string) {
