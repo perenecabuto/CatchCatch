@@ -23,19 +23,24 @@
 
 <body class="container-fluid">
 
-    <head>
-        <h1 style="overflow: hidden; padding-bottom: 10px">
-            <div class="pull-left" style="font-size: 85%; border-bottom: 1px solid #eee">CatchCatch</div>
-            <div class="pull-left glyphicon glyphicon-map-marker" aria-hidden="true" style="font-size: 95%"></div>
-        </h1>
-    </head>
+    <div class="row">
+        <div class="col-xs-4">
+            <h1 style="overflow: hidden; padding-bottom: 10px">
+                <div class="pull-left" style="font-size: 85%; border-bottom: 1px solid #eee">CatchCatch</div>
+                <div class="pull-left glyphicon glyphicon-map-marker" aria-hidden="true" style="font-size: 95%"></div>
+            </h1>
+        </div>
+
+        <div class="col-xs-8" style="position: relative; min-height: 10%">
+            <pre style="border: none; background: transparent; padding: 0; position: absolute; bottom: 0" id="log"></pre>
+        </div>
+    </div>
 
     <div class="row">
         <div class="col-xs-4">
             <strong class="lead">Connections</strong>
             <button id="reset" type="button" class="btn btn-link">reset</button>
 
-            <pre style="border: none; background: transparent; padding: 0" id="log"></pre>
             <div id="connections" style="height: 70%; overflow-y: auto;"></div>
         </div>
 
