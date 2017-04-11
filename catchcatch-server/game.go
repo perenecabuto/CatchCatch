@@ -1,18 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
 	"time"
 
-	"github.com/allegro/bigcache"
 	io "github.com/googollee/go-socket.io"
 )
 
@@ -22,7 +18,7 @@ const MinPlayersPerGame = 3
 // Game controls rounds and players
 type Game struct {
 	ID             string
-	players        *bigcache.BigCache
+	players        map[string]*Player
 	duration       time.Duration
 	started        bool
 	targetPlayerID string
@@ -32,12 +28,12 @@ type Game struct {
 
 // NewGame create a game with duration
 func NewGame(id string, duration time.Duration) *Game {
-	cache, _ := bigcache.NewBigCache(bigcache.DefaultConfig(10 * time.Minute))
-	return &Game{ID: id, duration: duration, started: false, players: cache}
+	return &Game{ID: id, duration: duration, started: false,
+		players: make(map[string]*Player)}
 }
 
 func (g Game) String() string {
-	return fmt.Sprintf("%s(%d)started=%v", g.ID, g.players.Len(), g.started)
+	return fmt.Sprintf("%s(%d)started=%v", g.ID, len(g.players), g.started)
 }
 
 // Start the game
@@ -52,7 +48,7 @@ func (g *Game) Start(sessions *SessionManager) {
 	g.sortTargetPlayer()
 	g.started = true
 
-	for _, p := range g.playerList() {
+	for _, p := range g.players {
 		if err := sessions.Emit(p.ID, "game:started", `"`+g.ID+`"`); err != nil {
 			log.Println("error to emit game:started", p.ID, err)
 		}
@@ -66,14 +62,14 @@ func (g *Game) Start(sessions *SessionManager) {
 		log.Println("---------------------------")
 		log.Println("Game:", g.ID, ":stop!!!!!!")
 		log.Println("---------------------------")
-		for _, p := range g.playerList() {
+		for _, p := range g.players {
 			if err := sessions.Emit(p.ID, "game:finish", `"`+g.ID+`"`); err != nil {
 				log.Println("error to emit game:started", p.ID, err)
 			}
 		}
 
 		g.started = false
-		g.players.Reset()
+		g.players = make(map[string]*Player)
 		g.targetPlayerID = ""
 	}()
 }
@@ -92,7 +88,7 @@ func (g Game) Started() bool {
 
 // Ready returns true when game is ready to start
 func (g Game) Ready() bool {
-	return !g.started && g.players.Len() >= MinPlayersPerGame
+	return !g.started && len(g.players) >= MinPlayersPerGame
 }
 
 // WatchPlayers events
@@ -133,8 +129,8 @@ func (g *Game) setPlayerUntilReady(p *Player, sessions *SessionManager) {
 }
 
 func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
-	targetPlayer, err := g.getPlayer(g.targetPlayerID)
-	if err != nil || targetPlayer == nil {
+	targetPlayer, exists := g.players[g.targetPlayerID]
+	if !exists {
 		log.Printf("Game:%s:move error:target player missing\n", g.ID)
 		g.Stop()
 		return
@@ -154,27 +150,12 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 }
 
 func (g *Game) setPlayer(p *Player) {
-	if p.ID == "" {
-		return
+	if player, exists := g.players[p.ID]; exists {
+		player.X = p.X
+		player.Y = p.Y
+	} else {
+		g.players[p.ID] = p
 	}
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
-		return
-	}
-	g.players.Set(p.ID, buf.Bytes())
-}
-
-func (g *Game) getPlayer(id string) (*Player, error) {
-	data, _ := g.players.Get(id)
-	buf := bytes.NewBuffer(data)
-	var player Player
-	if err := gob.NewDecoder(buf).Decode(&player); err != nil {
-		return nil, err
-	}
-	if player.ID == "" {
-		return nil, errors.New("err:getPlayer:player not found:" + id)
-	}
-	return &player, nil
 }
 
 func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
@@ -182,19 +163,22 @@ func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
 		return
 	}
 
-	g.players.Set(p.ID, nil)
+	delete(g.players, p.ID)
 	if !g.started {
 		log.Println("Game:"+g.ID+":detect=exit:", p)
 		return
 	}
 
-	if len(g.playerList()) == 1 {
-		log.Println("Game:"+g.ID+":detect=winner:", g.lastPlayer())
+	if len(g.players) == 1 {
+		for id := range g.players {
+			log.Println("Game:"+g.ID+":detect=winner:", id)
+			break
+		}
 		g.Stop()
 	} else if p.ID == g.targetPlayerID {
 		log.Println("Game:"+g.ID+":detect=target-loose:", p)
 		g.Stop()
-	} else if g.players.Len() == 0 {
+	} else if len(g.players) == 0 {
 		log.Println("Game:"+g.ID+":detect=no-players:", p)
 		g.Stop()
 	} else {
@@ -204,34 +188,22 @@ func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
 }
 
 func (g *Game) hasPlayer(id string) bool {
-	player, err := g.getPlayer(id)
-	return err == nil && player != nil
+	_, exists := g.players[id]
+	return exists
 }
 
-func (g *Game) playerList() []*Player {
-	players, it := make([]*Player, 0), g.players.Iterator()
-	for entry, _ := it.Value(); it.SetNext(); entry, _ = it.Value() {
-		log.Println("->", entry.Key())
-		if p, _ := g.getPlayer(entry.Key()); p != nil {
-			log.Println("->", p)
-			players = append(players, p)
-		}
+func (g *Game) playerIDs() []string {
+	ids := make([]string, 0)
+	for id := range g.players {
+		ids = append(ids, id)
 	}
-	return players
-}
-
-func (g *Game) lastPlayer() *Player {
-	players := g.playerList()
-	if len(players) == 0 {
-		return nil
-	}
-	return players[len(players)-1]
+	return ids
 }
 
 func (g *Game) sortTargetPlayer() {
-	players := g.playerList()
-	randIdx := rand.Intn(len(players))
-	g.targetPlayerID = players[randIdx].ID
+	ids := g.playerIDs()
+	randPlayerID := ids[rand.Intn(len(ids))]
+	g.targetPlayerID = g.players[randPlayerID].ID
 }
 
 func handleGames(stream EventStream, sessions *SessionManager) {
