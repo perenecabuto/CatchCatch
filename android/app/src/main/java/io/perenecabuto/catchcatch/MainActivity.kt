@@ -48,10 +48,12 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         private val LOCATION_PERMISSION_REQUEST_CODE = (Math.random() * 10000).toInt()
     }
 
-    private var map: MapView? = null
     private var prefs: SharedPreferences? = null
     private var manager: ConnectionManager? = null
     private var markerOverlay: ItemizedIconOverlay<OverlayItem>? = null
+
+    private var map: MapView? = null
+    private var addressText: EditText? = null
 
     private val markers = HashMap<String, OverlayItem>()
     private var player = Player("", 0.0, 0.0)
@@ -78,13 +80,13 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
 
         prefs = getSharedPreferences(javaClass.name, Context.MODE_PRIVATE)
         val serverAddress = prefs!!.getString(PREFS_SERVER_ADDRESS, "")
-        val addressText = findViewById(R.id.activity_main_address) as EditText
-        addressText.setText(serverAddress)
-        addressText.setOnKeyListener { v, keyCode, event -> onChangeServerAddress(v, keyCode, event) }
+        addressText = findViewById(R.id.activity_main_address) as EditText
+        addressText!!.setText(serverAddress)
+        addressText!!.setOnKeyListener { v, keyCode, event -> onChangeServerAddress(v, keyCode, event) }
         connect(serverAddress)
 
         val label = findViewById(R.id.activity_main_address_label)
-        label.visibility = if (TextUtils.isEmpty(addressText.text)) VISIBLE else GONE
+        label.visibility = if (TextUtils.isEmpty(addressText!!.text)) VISIBLE else GONE
 
         val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         val mdnsListener = ServerDiscoveryListener(nsdManager, this)
@@ -100,6 +102,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
 
     override fun onDiscovered(info: NsdServiceInfo) {
         val disoveredAddress = "http://" + info.host.hostAddress + ":" + info.port
+        addressText!!.setText(disoveredAddress)
         connect(disoveredAddress)
     }
 
