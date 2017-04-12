@@ -266,7 +266,10 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             map!!.overlays.reverse()
             map!!.invalidate()
 
-            Handler().postDelayed({ map!!.overlays.remove(circle) }, 2000)
+            Handler().postDelayed({
+                map!!.overlays.remove(circle)
+                map!!.invalidate()
+            }, 2000)
         }
     }
 
