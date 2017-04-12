@@ -1,6 +1,7 @@
 package io.perenecabuto.catchcatch
 
 import android.Manifest.permission.ACCESS_FINE_LOCATION
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
@@ -14,6 +15,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Bundle
 import android.os.Handler
+import android.preference.PreferenceManager
 import android.support.v4.app.ActivityCompat
 import android.text.TextUtils
 import android.util.Log
@@ -26,16 +28,16 @@ import android.view.View.VISIBLE
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.MapFragment
-import com.google.android.gms.maps.model.CircleOptions
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
 import io.perenecabuto.catchcatch.ServerDiscoveryListener.OnDiscoverListener
 import io.socket.client.IO
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.ItemizedIconOverlay
+import org.osmdroid.views.overlay.OverlayItem
+import org.osmdroid.views.overlay.Polygon
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverListener {
@@ -46,11 +48,12 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         private val LOCATION_PERMISSION_REQUEST_CODE = (Math.random() * 10000).toInt()
     }
 
-    private var map: GoogleMap? = null
+    private var map: MapView? = null
     private var prefs: SharedPreferences? = null
     private var manager: ConnectionManager? = null
+    private var markerOverlay: ItemizedIconOverlay<OverlayItem>? = null
 
-    private val markers = HashMap<String, Marker>()
+    private val markers = HashMap<String, OverlayItem>()
     private var player = Player("", 0.0, 0.0)
 
     private val socketOpts = object : IO.Options() {
@@ -61,14 +64,20 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
+
         setContentView(R.layout.activity_main)
 
-        val mapFragment = fragmentManager.findFragmentById(R.id.activity_main_map) as MapFragment
-        mapFragment.getMapAsync { map -> onMapSync(map) }
+        map = findViewById(R.id.activity_main_map) as MapView
+        map!!.setTileSource(TileSourceFactory.MAPNIK)
+        map!!.setMultiTouchControls(true)
+
+        markerOverlay = ItemizedIconOverlay<OverlayItem>(ArrayList<OverlayItem>(), null, this)
+        map!!.overlays.add(markerOverlay)
 
         prefs = getSharedPreferences(javaClass.name, Context.MODE_PRIVATE)
-        val serverAddress = prefs!!.getString(PREFS_SERVER_ADDRESS, null)
-
+        val serverAddress = prefs!!.getString(PREFS_SERVER_ADDRESS, "")
         val addressText = findViewById(R.id.activity_main_address) as EditText
         addressText.setText(serverAddress)
         addressText.setOnKeyListener { v, keyCode, event -> onChangeServerAddress(v, keyCode, event) }
@@ -84,18 +93,14 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         setupLocation()
     }
 
+    override fun onResume() {
+        super.onResume()
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this));
+    }
+
     override fun onDiscovered(info: NsdServiceInfo) {
         val disoveredAddress = "http://" + info.host.hostAddress + ":" + info.port
         connect(disoveredAddress)
-    }
-
-    private fun onMapSync(m: GoogleMap) {
-        map = m
-        // TODO OnMapCreate get features around and plot them
-        // m.setOnCameraMoveListener(() -> {
-        // TODO OnCameraChange get features around and plot them
-        // Log.d(TAG, "position: " + m.getCameraPosition().target + "zoom: " + m.getCameraPosition().zoom);
-        // });
     }
 
     private fun onChangeServerAddress(v: View, keyCode: Int, event: KeyEvent): Boolean {
@@ -112,8 +117,8 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         manager!!.disconnect()
+        super.onDestroy()
     }
 
     private fun connect(address: String) {
@@ -174,14 +179,20 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         }
     }
 
+
+    @SuppressLint("NewApi")
     private fun showPlayerOnMap(p: Player) {
         Log.d(TAG, "showPlayerOnMap:" + p + "-" + player.id + "- " + (p.id != player.id).toString())
+        val item = OverlayItem(p.id, p.id, p.point())
+        val icon = resources.getDrawable(R.drawable.marker_default, theme)
+        item.setMarker(icon)
+        if (markers.contains(p.id)) {
+            markerOverlay!!.removeItem(markers[p.id])
+        }
+        markers[p.id] = item
+        markerOverlay!!.addItem(item)
 
-        val m: Marker = markers[p.id] ?: map!!.addMarker(MarkerOptions().position(p.point()).title(p.id))
-        m.isVisible = true
-        m.position = p.point()
-
-        markers.put(p.id, m)
+        map!!.invalidate()
     }
 
     override fun onRemotePlayerUpdate(player: Player) {
@@ -213,21 +224,16 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
                 return@finish
 
             updateLocalPlayer(l)
-            map!!.moveCamera(CameraUpdateFactory.newLatLngZoom(player.point(), 15f))
+            map!!.controller.setZoom(20)
+            map!!.controller.setCenter(player.point())
             Log.d(TAG, "p:register:" + player)
             Toast.makeText(this, "registred as " + player.id, Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun updateLocalPlayer(l: Location) {
-        this.player = player.updateLocation(l)
-        manager?.sendPosition(l)
-        showPlayerOnMap(player)
-    }
-
     override fun onRemotePlayerDestroy(player: Player) {
         runOnUiThread {
-            markers[player.id]?.remove()
+            markerOverlay?.removeItem(markers[player.id])
             markers.remove(player.id)
         }
     }
@@ -241,31 +247,37 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         runOnUiThread {
             Log.d(TAG, "onDetectCheckpoint: " + detection)
             var color = Color.GRAY
-            var zindex = 1f
-            if (detection.distance < 100) {
+            if (detection.nearByInMeters < 100) {
                 color = Color.RED
-                zindex = 2f
-            } else if (detection.distance < 500) {
+            } else if (detection.nearByInMeters < 500) {
                 color = Color.YELLOW
             }
 
-            val circle = map!!.addCircle(CircleOptions()
-                .center(LatLng(detection.lat, detection.lon)).radius(detection.distance)
-                .strokeWidth(1.0f).strokeColor(color)
-                .fillColor(color)
-                .zIndex(zindex)
-            )
+            val circle = Polygon()
+            circle.points = Polygon.pointsAsCircle(detection.point(), detection.nearByInMeters);
+            circle.strokeColor = color
+            circle.strokeWidth = 2F
 
-            Handler().postDelayed({ circle.remove() }, 2000)
+            map!!.overlays.add(circle)
+            map!!.overlays.reverse()
+            map!!.invalidate()
+
+            Handler().postDelayed({ map!!.overlays.remove(circle) }, 2000)
         }
+    }
+
+    private fun updateLocalPlayer(l: Location) {
+        this.player = player.updateLocation(l)
+        manager?.sendPosition(l)
+        showPlayerOnMap(player)
     }
 
     private fun clearMarkers() {
         runOnUiThread {
-            for ((_, value) in markers) {
-                value.remove()
-            }
+            markers.forEach { _, value -> markerOverlay?.removeItem(value) }
             markers.clear()
+            map?.invalidate()
+            map?.refreshDrawableState()
         }
     }
 }

@@ -2,23 +2,28 @@ package io.perenecabuto.catchcatch
 
 import android.location.Location
 import android.util.Log
-import com.google.android.gms.maps.model.LatLng
 import io.socket.client.Socket
 import org.json.JSONException
 import org.json.JSONObject
+import org.osmdroid.util.GeoPoint
 import java.net.URISyntaxException
 import java.util.*
 
 
-data class Detection(val checkpoint: String, val lat: Double, val lon: Double, val distance: Double)
+data class Detection(val featID: String, val lat: Double, val lon: Double, val nearByInMeters: Double) {
+    fun point(): GeoPoint {
+        return GeoPoint(lat, lon)
+    }
+}
+
 data class Player(val id: String, var lat: Double, var lon: Double) {
     fun updateLocation(l: Location): Player {
         lat = l.latitude; lon = l.longitude
         return this
     }
 
-    fun point(): LatLng {
-        return LatLng(lat, lon)
+    fun point(): GeoPoint {
+        return GeoPoint(lat, lon)
     }
 }
 

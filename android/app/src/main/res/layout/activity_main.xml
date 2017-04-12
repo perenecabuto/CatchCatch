@@ -6,9 +6,8 @@
     android:layout_height="match_parent"
     tools:context="io.perenecabuto.catchcatch.MainActivity">
 
-    <fragment
+    <org.osmdroid.views.MapView
         android:id="@+id/activity_main_map"
-        android:name="com.google.android.gms.maps.MapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@mipmap/example_map"
