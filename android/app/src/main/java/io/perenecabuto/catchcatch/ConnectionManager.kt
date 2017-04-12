@@ -141,8 +141,9 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
     @Throws(JSONException::class)
     private fun getDetectionFronJSON(json: String): Detection {
         val pJson = JSONObject(json)
-        return Detection(pJson.getString("checkpoint_id"),
-            pJson.getDouble("lat"), pJson.getDouble("lon"), pJson.getDouble("distance"))
+        return Detection(pJson.getString("feat_id"),
+            pJson.getDouble("lat"), pJson.getDouble("lon"),
+            pJson.getDouble("near_by_meters"))
     }
 
 
