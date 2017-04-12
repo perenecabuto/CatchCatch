@@ -400,15 +400,14 @@ let EventHandler = function (controller) {
         controller.addFeature(jsonF.id, jsonF.group, feat);
     };
 
-    let that = this;
-    this.onFeatureList = function (features) {
+    this.onFeatureList = (features) => {
         for (let i in features) {
-            that.onFeatureAdded(features[i]);
+            this.onFeatureAdded(features[i]);
         }
     };
 
     this.onFeatureCheckpoint = function (detection) {
         var circleID = detection.near_by_feat_id + "-" + detection.feat_id;
-        controller.showCircleOnMap(circleID, [detection.lat, detection.lon], detection.near_by_meters);
+        controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.near_by_meters);
     }
 };

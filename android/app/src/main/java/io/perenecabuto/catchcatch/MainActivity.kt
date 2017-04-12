@@ -64,6 +64,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         }
     }
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
@@ -102,7 +103,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
 
     override fun onDiscovered(info: NsdServiceInfo) {
         val disoveredAddress = "http://" + info.host.hostAddress + ":" + info.port
-        addressText!!.setText(disoveredAddress)
+        runOnUiThread { addressText!!.setText(disoveredAddress) }
         connect(disoveredAddress)
     }
 
@@ -259,7 +260,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             val circle = Polygon()
             circle.points = Polygon.pointsAsCircle(detection.point(), detection.nearByInMeters);
             circle.strokeColor = color
-            circle.strokeWidth = 2F
+            circle.strokeWidth = 3F
 
             map!!.overlays.add(circle)
             map!!.overlays.reverse()
