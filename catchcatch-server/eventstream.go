@@ -118,7 +118,7 @@ func handleDetection(msg string) (*Detection, error) {
 	if len(coords) != 2 {
 		return nil, DetectionError("invalid coords - msg:\n" + msg)
 	}
-	lat, lon := coords[0].Float(), coords[1].Float()
+	lat, lon := coords[1].Float(), coords[0].Float()
 	nearByFeatID, nearByMeters := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
 	detect := gjson.Get(msg, "detect").String()
 	intersects := IntersectsEvent(detect)

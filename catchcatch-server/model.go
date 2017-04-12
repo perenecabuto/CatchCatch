@@ -98,7 +98,7 @@ func (s *PlayerLocationService) PlayerByID(id string) (*Player, error) {
 	if err := json.Unmarshal([]byte(data), &geo); err != nil {
 		return nil, err
 	}
-	return &Player{ID: id, Lat: geo.Coords[0], Lon: geo.Coords[1]}, nil
+	return &Player{ID: id, Lat: geo.Coords[1], Lon: geo.Coords[0]}, nil
 }
 
 // AddFeature persist features
