@@ -27,7 +27,6 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
     internal val PLAYER_REGISTRED = "player:registred"
     internal val REMOTE_PLAYER_NEW = "remote-player:new"
     internal val REMOTE_PLAYER_UPDATED = "remote-player:updated"
-    internal val CHECKPOINT_DESTROY = "checkpoint:destroy"
     internal val REMOTE_PLAYER_DESTROY = "remote-player:destroy"
     internal val DETECT_CHECKPOINT = "checkpoint:detected"
     internal val TAG = javaClass.name
@@ -35,12 +34,11 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
     @Throws(URISyntaxException::class, NoConnectionException::class)
     fun connect() {
         socket
-            .on(Socket.EVENT_CONNECT) { onConnect(it) }
+            .on(Socket.EVENT_CONNECT) { onConnect() }
             .on(REMOTE_PLAYER_LIST) { onRemotePlayerList(it) }
             .on(PLAYER_REGISTRED) { onPlayerRegistred(it) }
             .on(REMOTE_PLAYER_NEW) { onRemotePlayerNew(it) }
             .on(REMOTE_PLAYER_UPDATED) { onRemotePlayerUpdate(it) }
-            .on(CHECKPOINT_DESTROY) { onRemotePlayerDestroy(it) }
             .on(REMOTE_PLAYER_DESTROY) { onRemotePlayerDestroy(it) }
             .on(DETECT_CHECKPOINT) { onDetectCheckpoint(it) }
             .on(Socket.EVENT_DISCONNECT) { callback.onDiconnected() }
@@ -58,7 +56,7 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
 
     }
 
-    private fun onConnect(args: Array<Any>) {
+    private fun onConnect() {
         callback.onConnect()
     }
 
