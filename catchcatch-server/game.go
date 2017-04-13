@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 	"time"
+	"sort"
 
 	io "github.com/googollee/go-socket.io"
 )
@@ -62,9 +63,10 @@ func (g *Game) Start(sessions *SessionManager) {
 		log.Println("---------------------------")
 		log.Println("Game:", g.ID, ":stop!!!!!!!")
 		log.Println("---------------------------")
+		rank, _ := json.Marshal(g.rank())
 		for _, p := range g.players {
-			if err := sessions.Emit(p.ID, "game:finish", `"`+g.ID+`"`); err != nil {
-				log.Println("error to emit game:finish", p.ID, err)
+			if err := sessions.Emit(p.ID, "game:finish", string(rank)); err != nil {
+				log.Println("error to emit game:finish", rank, err)
 			}
 		}
 
@@ -72,6 +74,40 @@ func (g *Game) Start(sessions *SessionManager) {
 		g.players = make(map[string]*Player)
 		g.targetPlayer = nil
 	}()
+}
+
+type PlayerPoint struct {
+	Player string `json:"player"`
+	Points int    `json:"points"`
+}
+
+type GameRank struct {
+	Game         string        `json:"game"`
+	PlayerPoints []PlayerPoint `json:"player_points"`
+}
+
+func (g *Game) rank() *GameRank {
+	rank := &GameRank{Game: g.ID, PlayerPoints: make([]PlayerPoint, 0)}
+
+	playersDistToTarget := map[int]*Player{}
+	for _, p := range g.players {
+		dist := p.DistTo(g.targetPlayer)
+		playersDistToTarget[int(dist)] = p
+	}
+	dists := make([]int, 0)
+	for dist := range playersDistToTarget {
+		dists = append(dists, dist)
+	}
+	sort.Ints(dists)
+
+	maxDist := dists[len(dists)-1] + 1
+	for _, dist := range dists {
+		p := playersDistToTarget[dist]
+		points := 100 * (maxDist - dist) / maxDist
+		rank.PlayerPoints = append(rank.PlayerPoints, PlayerPoint{Player: p.ID, Points: points})
+	}
+
+	return rank
 }
 
 // Stop a running game
