@@ -72,11 +72,13 @@ func tile38DebugWrapper(oldProcess func(cmd redis.Cmder) error) func(cmd redis.C
 
 func recoverWrapper(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		withRecover(func() error {
+		err := withRecover(func() error {
 			h.ServeHTTP(w, r)
-			http.Error(w, "", http.StatusInternalServerError)
 			return nil
 		})
+		if err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+		}
 	})
 }
 
