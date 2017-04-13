@@ -132,8 +132,8 @@ let Player = function (x, y) {
         socket.on('game:started', function (game) {
             log(player.id + ':game:started:' + game);
         })
-        socket.on('game:finish', function (game) {
-            log(player.id + ':game:finish:' + game);
+        socket.on('game:finish', function (rank) {
+            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.player_points));
         })
         socket.on('game:loose', function () {
             log(player.id + ':game:loose:')
@@ -186,7 +186,7 @@ let Player = function (x, y) {
 let AdminController = function (socket, sourceLayer, view) {
     let connectedPlayer = { id: "", x: 0, y: 0 };
 
-    this.setPlayer = function(p) {
+    this.setPlayer = function (p) {
         connectedPlayer = p;
     }
 
