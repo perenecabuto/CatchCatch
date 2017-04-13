@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	geo "github.com/kellydunn/golang-geo"
-
 	redis "gopkg.in/redis.v5"
 )
 
