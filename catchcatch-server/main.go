@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -46,7 +47,7 @@ func main() {
 	go handleCheckointsDetection(stream, sessions, server)
 
 	eventH := NewEventHandler(server, service, sessions)
-	http.Handle("/ws/", eventH)
+	http.Handle("/ws/", recoverWrapper(eventH))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
@@ -67,4 +68,25 @@ func tile38DebugWrapper(oldProcess func(cmd redis.Cmder) error) func(cmd redis.C
 		log.Println("TILE38 DEBUG:", cmd.String())
 		return oldProcess(cmd)
 	}
+}
+
+func recoverWrapper(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		withRecover(func() error {
+			h.ServeHTTP(w, r)
+			http.Error(w, "", http.StatusInternalServerError)
+			return nil
+		})
+	})
+}
+
+func withRecover(fn func() error) (err error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			log.Println("panic withRecover:", r)
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	return fn()
 }
