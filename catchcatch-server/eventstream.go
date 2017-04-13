@@ -106,7 +106,10 @@ func streamDetection(addr string, cmd string, callback DetectionHandler) error {
 				log.Println("Failed to handleDetection:", err)
 				continue
 			}
-			callback(detected)
+			withRecover(func() error {
+				callback(detected)
+				return nil
+			})
 		}
 	}
 
