@@ -29,7 +29,7 @@ window.addEventListener("DOMContentLoaded", function () {
     let source = new ol.source.Vector({ wrapX: false });
     let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     let vector = new ol.layer.Vector({ source: source });
-    let view = new ol.View({ center: [-51.21766, -30.034647], zoom: 15, projection: "EPSG:4326" })
+    let view = new ol.View({ center: [0, 0], zoom: 15, projection: "EPSG:4326" })
     let map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
 
     let popup = new ol.Overlay({ element: document.getElementById("map-info") });
@@ -199,6 +199,7 @@ let AdminController = function (socket, sourceLayer, view) {
             pos = lastPos;
         }
         let coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        view.setCenter([coords.lon, coords.lat]);
         socket.emit('player:update', JSON.stringify(coords));
         lastPos = pos;
     };
