@@ -17,11 +17,11 @@ const MinPlayersPerGame = 3
 
 // Game controls rounds and players
 type Game struct {
-	ID             string
-	players        map[string]*Player
-	duration       time.Duration
-	started        bool
-	targetPlayerID string
+	ID           string
+	players      map[string]*Player
+	duration     time.Duration
+	started      bool
+	targetPlayer *Player
 
 	stopFunc context.CancelFunc
 }
@@ -60,7 +60,7 @@ func (g *Game) Start(sessions *SessionManager) {
 
 		<-ctx.Done()
 		log.Println("---------------------------")
-		log.Println("Game:", g.ID, ":stop!!!!!!")
+		log.Println("Game:", g.ID, ":stop!!!!!!!")
 		log.Println("---------------------------")
 		for _, p := range g.players {
 			if err := sessions.Emit(p.ID, "game:finish", `"`+g.ID+`"`); err != nil {
@@ -70,7 +70,7 @@ func (g *Game) Start(sessions *SessionManager) {
 
 		g.started = false
 		g.players = make(map[string]*Player)
-		g.targetPlayerID = ""
+		g.targetPlayer = nil
 	}()
 }
 
@@ -104,12 +104,7 @@ func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
 			if !g.started {
 				g.setPlayerUntilReady(p, sessions)
 			} else if g.hasPlayer(p.ID) {
-				g.setPlayer(p)
-				if p.ID != g.targetPlayerID {
-					g.updateAndNofityPlayer(p, sessions)
-				} else {
-					log.Printf("Game:%s:target:move", g.ID)
-				}
+				g.updateAndNofityPlayer(p, sessions)
 			}
 		}
 	})
@@ -129,15 +124,14 @@ func (g *Game) setPlayerUntilReady(p *Player, sessions *SessionManager) {
 }
 
 func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
-	targetPlayer, exists := g.players[g.targetPlayerID]
-	if !exists {
-		log.Printf("Game:%s:move error:target player missing\n", g.ID)
-		g.Stop()
+	g.setPlayer(p)
+	if p.ID == g.targetPlayer.ID {
+		log.Printf("Game:%s:target:move", g.ID)
 		return
 	}
-
-	dist := p.DistTo(targetPlayer)
+	dist := p.DistTo(g.targetPlayer)
 	if dist <= 20 {
+		delete(g.players, g.targetPlayer.ID)
 		log.Printf("Game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
 		sessions.Emit(p.ID, "target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
 		g.Stop()
@@ -175,10 +169,12 @@ func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
 			break
 		}
 		g.Stop()
-	} else if p.ID == g.targetPlayerID {
+	} else if p.ID == g.targetPlayer.ID {
 		log.Println("Game:"+g.ID+":detect=target-loose:", p)
+		sessions.Emit(p.ID, "game:loose", g.ID)
 		g.Stop()
 	} else if len(g.players) == 0 {
+		sessions.Emit(p.ID, "game:finish", g.ID)
 		log.Println("Game:"+g.ID+":detect=no-players:", p)
 		g.Stop()
 	} else {
@@ -203,7 +199,7 @@ func (g *Game) playerIDs() []string {
 func (g *Game) sortTargetPlayer() {
 	ids := g.playerIDs()
 	randPlayerID := ids[rand.Intn(len(ids))]
-	g.targetPlayerID = g.players[randPlayerID].ID
+	g.targetPlayer = g.players[randPlayerID]
 }
 
 func handleGames(stream EventStream, sessions *SessionManager) {
