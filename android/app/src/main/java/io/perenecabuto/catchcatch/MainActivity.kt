@@ -121,8 +121,10 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
     }
 
     override fun onDestroy() {
-        manager!!.disconnect()
         super.onDestroy()
+        manager?.disconnect()
+        map!!.overlays.clear()
+        markerOverlay = ItemizedIconOverlay<OverlayItem>(ArrayList<OverlayItem>(), null, this)
     }
 
     private fun connect(address: String) {
@@ -183,7 +185,6 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         }
     }
 
-
     @SuppressLint("NewApi")
     private fun showPlayerOnMap(p: Player) {
         Log.d(TAG, "showPlayerOnMap:" + p + "-" + player.id + "- " + (p.id != player.id).toString())
@@ -191,10 +192,10 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         val icon = resources.getDrawable(R.drawable.marker_default, theme)
         item.setMarker(icon)
         if (markers.contains(p.id)) {
-            markerOverlay!!.removeItem(markers[p.id])
+            markerOverlay?.removeItem(markers[p.id])
         }
         markers[p.id] = item
-        markerOverlay!!.addItem(item)
+        markerOverlay?.addItem(item)
 
         map!!.invalidate()
     }
