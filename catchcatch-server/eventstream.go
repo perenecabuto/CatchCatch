@@ -118,18 +118,18 @@ func streamDetection(addr string, cmd string, callback DetectionHandler) error {
 
 func handleDetection(msg string) (*Detection, error) {
 	featID := gjson.Get(msg, "id").String()
-	if gjson.Get(msg, "command").String() == "del" {
-		return &Detection{FeatID: featID, Intersects: Exit}, nil
-	}
-
+	lat, lon := 0.0, 0.0
 	coords := gjson.Get(msg, "object.coordinates").Array()
-	if len(coords) != 2 {
-		return nil, DetectionError("invalid coords - msg:\n" + msg)
+	if len(coords) == 2 {
+		lat, lon = coords[1].Float(), coords[0].Float()
 	}
-	lat, lon := coords[1].Float(), coords[0].Float()
 	nearByFeatID, nearByMeters := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
-	detect := gjson.Get(msg, "detect").String()
-	intersects := IntersectsEvent(detect)
+	intersects := None
+	if gjson.Get(msg, "command").String() == "del" {
+		intersects = Exit
+	} else if detect := gjson.Get(msg, "detect").String(); detect != "" {
+		intersects = IntersectsEvent(detect)
+	}
 	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects}, nil
 }
 
