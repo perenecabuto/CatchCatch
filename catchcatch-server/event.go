@@ -56,9 +56,6 @@ func (h *EventHandler) onConnection(so io.Socket) {
 func (h *EventHandler) onPlayerDisconnect(player *Player, channel string) func(string) {
 	return func(string) {
 		log.Println("player:disconnect", player.ID)
-		if conn := h.sessions.Get(player.ID); conn != nil {
-			conn.Close()
-		}
 		h.server.BroadcastTo(channel, "remote-player:destroy", player)
 		h.service.Remove(player)
 		log.Println("--> diconnected", player)
