@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 
 	io "github.com/googollee/go-socket.io"
+	gjson "github.com/tidwall/gjson"
 )
 
 // EventHandler handle socket.io events
@@ -41,7 +41,7 @@ func (h *EventHandler) onConnection(so io.Socket) {
 	log.Println("new player connected", player)
 	go h.sendPlayerList(so)
 
-	so.On("player:request-list", h.onPlayerRequestList(so))
+	so.On("player:request-remotes", h.onPlayerRequestRemotes(so))
 	so.On("player:update", h.onPlayerUpdate(player, channel, so))
 	so.On("disconnection", h.onPlayerDisconnect(player, channel))
 
@@ -51,39 +51,43 @@ func (h *EventHandler) onConnection(so io.Socket) {
 	so.On("admin:clear", h.onClear())
 }
 
+// Player events
+
 func (h *EventHandler) onPlayerDisconnect(player *Player, channel string) func(string) {
 	return func(string) {
 		log.Println("player:disconnect", player.ID)
 		if conn := h.sessions.Get(player.ID); conn != nil {
 			conn.Close()
 		}
-		h.removePlayer(player, channel)
-	}
-}
-
-func (h *EventHandler) onDisconnectByID(channel string) func(string) {
-	return func(id string) {
-		log.Println("admin:disconnect ", id)
-		callback := h.onPlayerDisconnect(&Player{ID: id}, channel)
-		callback("")
+		h.server.BroadcastTo(channel, "remote-player:destroy", player)
+		h.service.Remove(player)
+		log.Println("--> diconnected", player)
 	}
 }
 
 func (h *EventHandler) onPlayerUpdate(player *Player, channel string, so io.Socket) func(string) {
 	return func(msg string) {
-		playerID := player.ID
-		if err := json.Unmarshal([]byte(msg), player); err != nil {
-			log.Println("player:update event error: " + err.Error())
-			return
-		}
-		player.ID = playerID
-		h.updatePlayer(player, channel, so)
+		coords := gjson.GetMany(msg, "lat", "lon")
+		player.Lat, player.Lon = coords[0].Float(), coords[1].Float()
+		so.Emit("player:updated", player)
+		so.BroadcastTo(channel, "remote-player:updated", player)
+		h.service.Update(player)
 	}
 }
 
-func (h *EventHandler) onPlayerRequestList(so io.Socket) func(string) {
+func (h *EventHandler) onPlayerRequestRemotes(so io.Socket) func(string) {
 	return func(string) {
 		h.sendPlayerList(so)
+	}
+}
+
+// Admin events
+
+func (h *EventHandler) onDisconnectByID(channel string) func(string) {
+	return func(id string) {
+		log.Println("admin:disconnect", id)
+		callback := h.onPlayerDisconnect(&Player{ID: id}, channel)
+		callback("")
 	}
 }
 
@@ -98,17 +102,23 @@ func (h *EventHandler) onClear() func(string) {
 
 func (h *EventHandler) onAddFeature(channel string) func(group, name, geojson string) {
 	return func(group, name, geojson string) {
-		if err := h.addFeature(channel, group, name, geojson); err != nil {
-			log.Println("Error to create geofence: ", err)
+		feature, err := h.service.AddFeature(group, name, geojson)
+		if err != nil {
+			log.Println("Error to create feature:", err)
 		}
+		log.Println("Added feature", feature)
+		h.server.BroadcastTo(channel, "admin:feature:added", feature)
 	}
 }
 
 func (h *EventHandler) onRequestFeatures(so io.Socket) func(string) {
 	return func(group string) {
-		if err := h.sendFeatures(group, so); err != nil {
+		features, err := h.service.Features(group)
+		if err != nil {
 			log.Println("Error on sendFeatures:", err)
+
 		}
+		so.Emit("admin:feature:list", features)
 	}
 }
 
@@ -121,46 +131,15 @@ func (h *EventHandler) newPlayer(so io.Socket, channel string) (player *Player, 
 	}
 
 	so.Join(channel)
-	so.Emit("player:registred", player)
+	so.Emit("player:registered", player)
 	so.BroadcastTo(channel, "remote-player:new", player)
 	return player, nil
 }
 
-func (h *EventHandler) updatePlayer(player *Player, channel string, so io.Socket) {
-	// go log.Println("player:updated", player)
-	so.Emit("player:updated", player)
-	so.BroadcastTo(channel, "remote-player:updated", player)
-	h.service.Update(player)
-}
-
-func (h *EventHandler) removePlayer(player *Player, channel string) {
-	h.server.BroadcastTo(channel, "remote-player:destroy", player)
-	h.service.Remove(player)
-	go log.Println("--> diconnected", player)
-}
-
-func (h *EventHandler) sendPlayerList(so io.Socket) error {
-	players, err := h.service.Players()
-	if err != nil {
-		return err
+func (h *EventHandler) sendPlayerList(so io.Socket) {
+	if players, err := h.service.Players(); err != nil {
+		log.Println("player:request-remotes event error: " + err.Error())
+	} else if err := so.Emit("remote-player:list", players); err != nil {
+		log.Println("player:request-remotes event error: " + err.Error())
 	}
-	return so.Emit("remote-player:list", players)
-}
-
-func (h *EventHandler) sendFeatures(group string, so io.Socket) error {
-	features, err := h.service.Features(group)
-	if err != nil {
-		return err
-	}
-	return so.Emit("admin:feature:list", features)
-}
-
-func (h *EventHandler) addFeature(channel, group, name, geojson string) error {
-	feature, err := h.service.AddFeature(group, name, geojson)
-	if err != nil {
-		return err
-	}
-	log.Println("Added feature", feature)
-	h.server.BroadcastTo(channel, "admin:feature:added", feature)
-	return nil
 }
