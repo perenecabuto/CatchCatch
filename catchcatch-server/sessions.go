@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"sync/atomic"
@@ -43,7 +44,11 @@ func (sm *SessionManager) Remove(id string) {
 }
 
 // Emit send payload on eventX to socket id
-func (sm *SessionManager) Emit(id, event string, payload string) error {
+func (sm *SessionManager) Emit(id, event string, message interface{}) error {
+	payload, err := messagePayload(message)
+	if err != nil {
+		return err
+	}
 	conn := sm.Get(id)
 	if conn == nil {
 		return errors.New("connection not found")
@@ -58,6 +63,14 @@ func (sm *SessionManager) Emit(id, event string, payload string) error {
 		return err
 	}
 	return writer.Close()
+}
+
+func (sm *SessionManager) BroadcastTo(ids []string, event string, message interface{}) {
+	for _, id := range ids {
+		if err := sm.Emit(id, event, message); err != nil {
+			log.Println("error to emit "+event, message, err)
+		}
+	}
 }
 
 // CloseAll engineio.Conn
@@ -75,4 +88,17 @@ func (sm *SessionManager) copyConns() connStore {
 		newConns[k] = v
 	}
 	return newConns
+}
+
+func messagePayload(msg interface{}) (string, error) {
+	switch msg.(type) {
+	case string:
+		return `"` + msg.(string) + `"`, nil
+	default:
+		jPayload, err := json.Marshal(msg)
+		if err != nil {
+			return "", err
+		}
+		return string(jPayload), nil
+	}
 }
