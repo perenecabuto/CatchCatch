@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	geo "github.com/kellydunn/golang-geo"
+	gjson "github.com/tidwall/gjson"
 	redis "gopkg.in/redis.v5"
 )
 
@@ -66,11 +66,7 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 	return cmd.Err()
 }
 
-type geom struct {
-	Coords [2]float64 `json:"coordinates"`
-}
-
-// Players return all registred players
+// Players return all registered players
 func (s *PlayerLocationService) Players() (*PlayerList, error) {
 	features, err := scanFeature(s.client, "player")
 	if err != nil {
@@ -78,9 +74,8 @@ func (s *PlayerLocationService) Players() (*PlayerList, error) {
 	}
 	list := &PlayerList{make([]*Player, len(features))}
 	for i, f := range features {
-		var geo geom
-		json.Unmarshal([]byte(f.Coordinates), &geo)
-		list.Players[i] = &Player{ID: f.ID, Lat: geo.Coords[1], Lon: geo.Coords[0]}
+		coords := gjson.Get(f.Coordinates, "coordinates").Array()
+		list.Players[i] = &Player{ID: f.ID, Lat: coords[1].Float(), Lon: coords[0].Float()}
 	}
 	return list, nil
 }
@@ -93,11 +88,8 @@ func (s *PlayerLocationService) PlayerByID(id string) (*Player, error) {
 	if err != nil {
 		return nil, errors.New("PlayerByID: " + err.Error())
 	}
-	var geo geom
-	if err := json.Unmarshal([]byte(data), &geo); err != nil {
-		return nil, err
-	}
-	return &Player{ID: id, Lat: geo.Coords[1], Lon: geo.Coords[0]}, nil
+	coords := gjson.Get(data, "coordinates").Array()
+	return &Player{ID: id, Lat: coords[1].Float(), Lon: coords[0].Float()}, nil
 }
 
 // AddFeature persist features
