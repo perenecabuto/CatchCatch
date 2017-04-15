@@ -66,18 +66,20 @@ func (g *Game) Start(sessions *SessionManager) {
 	}()
 }
 
-type PlayerPoint struct {
+// PlayerRank ...
+type PlayerRank struct {
 	Player string `json:"player"`
 	Points int    `json:"points"`
 }
 
+// GameRank ...
 type GameRank struct {
-	Game         string        `json:"game"`
-	PlayerPoints []PlayerPoint `json:"player_points"`
+	Game       string       `json:"game"`
+	PlayerRank []PlayerRank `json:"points_per_player"`
 }
 
 func (g *Game) rank() *GameRank {
-	rank := &GameRank{Game: g.ID, PlayerPoints: make([]PlayerPoint, 0)}
+	rank := &GameRank{Game: g.ID, PlayerRank: make([]PlayerRank, 0)}
 
 	playersDistToTarget := map[int]*Player{}
 	for _, p := range g.players {
@@ -94,7 +96,7 @@ func (g *Game) rank() *GameRank {
 	for _, dist := range dists {
 		p := playersDistToTarget[dist]
 		points := 100 * (maxDist - dist) / maxDist
-		rank.PlayerPoints = append(rank.PlayerPoints, PlayerPoint{Player: p.ID, Points: points})
+		rank.PlayerRank = append(rank.PlayerRank, PlayerRank{Player: p.ID, Points: points})
 	}
 
 	return rank
@@ -157,13 +159,13 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	}
 	dist := p.DistTo(g.targetPlayer)
 	if dist <= 20 {
-		delete(g.players, g.targetPlayer.ID)
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
+		delete(g.players, g.targetPlayer.ID)
 		sessions.Emit(p.ID, "game:target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
 		g.Stop()
 	} else if dist <= 100 {
-		sessions.Emit(p.ID, "game:target:near", strconv.FormatFloat(dist, 'f', 0, 64))
 		log.Printf("game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
+		sessions.Emit(p.ID, "game:target:near", strconv.FormatFloat(dist, 'f', 0, 64))
 	} else {
 		log.Printf("game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
 	}

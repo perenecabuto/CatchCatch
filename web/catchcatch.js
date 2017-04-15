@@ -142,7 +142,7 @@ let Player = function (x, y) {
             log(player.id + ':target:reached:winner!!!!');
         })
         socket.on('game:finish', function (rank) {
-            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.player_points));
+            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.points_per_player));
         })
 
         socket.on('checkpoint:detected', function (detected) {
