@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sort"
 	"strconv"
 	"time"
-	"sort"
 
 	io "github.com/googollee/go-socket.io"
 )
@@ -44,16 +44,11 @@ func (g *Game) Start(sessions *SessionManager) {
 	}
 
 	log.Println("---------------------------")
-	log.Println("Game:", g.ID, ":start!!!!!!")
+	log.Println("game:", g.ID, ":start!!!!!!")
 	log.Println("---------------------------")
 	g.sortTargetPlayer()
+	sessions.BroadcastTo(g.playerIDs(), "game:started", g.ID)
 	g.started = true
-
-	for _, p := range g.players {
-		if err := sessions.Emit(p.ID, "game:started", `"`+g.ID+`"`); err != nil {
-			log.Println("error to emit game:started", p.ID, err)
-		}
-	}
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), g.duration)
@@ -61,14 +56,9 @@ func (g *Game) Start(sessions *SessionManager) {
 
 		<-ctx.Done()
 		log.Println("---------------------------")
-		log.Println("Game:", g.ID, ":stop!!!!!!!")
+		log.Println("game:", g.ID, ":stop!!!!!!!")
 		log.Println("---------------------------")
-		rank, _ := json.Marshal(g.rank())
-		for _, p := range g.players {
-			if err := sessions.Emit(p.ID, "game:finish", string(rank)); err != nil {
-				log.Println("error to emit game:finish", rank, err)
-			}
-		}
+		sessions.BroadcastTo(g.playerIDs(), "game:finish", g.rank())
 
 		g.started = false
 		g.players = make(map[string]*Player)
