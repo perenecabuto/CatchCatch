@@ -141,7 +141,7 @@ func (g *Game) setPlayerUntilReady(p *Player, sessions *SessionManager) {
 		return
 	}
 	if !g.hasPlayer(p.ID) {
-		log.Println("Game:"+g.ID+":detect=enter:", p)
+		log.Println("game:"+g.ID+":detect=enter:", p)
 	}
 	g.setPlayer(p)
 	if g.Ready() {
@@ -152,20 +152,20 @@ func (g *Game) setPlayerUntilReady(p *Player, sessions *SessionManager) {
 func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	g.setPlayer(p)
 	if p.ID == g.targetPlayer.ID {
-		log.Printf("Game:%s:target:move", g.ID)
+		log.Printf("game:%s:target:move", g.ID)
 		return
 	}
 	dist := p.DistTo(g.targetPlayer)
 	if dist <= 20 {
 		delete(g.players, g.targetPlayer.ID)
-		log.Printf("Game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
-		sessions.Emit(p.ID, "target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
+		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
+		sessions.Emit(p.ID, "game:target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
 		g.Stop()
 	} else if dist <= 100 {
-		sessions.Emit(p.ID, "target:near", strconv.FormatFloat(dist, 'f', 0, 64))
-		log.Printf("Game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
+		sessions.Emit(p.ID, "game:target:near", strconv.FormatFloat(dist, 'f', 0, 64))
+		log.Printf("game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
 	} else {
-		log.Printf("Game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
+		log.Printf("game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
 	}
 }
 
@@ -185,27 +185,24 @@ func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
 
 	delete(g.players, p.ID)
 	if !g.started {
-		log.Println("Game:"+g.ID+":detect=exit:", p)
+		log.Println("game:"+g.ID+":detect=exit:", p)
 		return
 	}
 
 	if len(g.players) == 1 {
-		for id := range g.players {
-			log.Println("Game:"+g.ID+":detect=winner:", id)
-			break
-		}
+		log.Println("game:"+g.ID+":detect=last-one:", p)
 		g.Stop()
 	} else if p.ID == g.targetPlayer.ID {
-		log.Println("Game:"+g.ID+":detect=target-loose:", p)
+		log.Println("game:"+g.ID+":detect=target-loose:", p)
 		sessions.Emit(p.ID, "game:loose", g.ID)
 		g.Stop()
 	} else if len(g.players) == 0 {
+		log.Println("game:"+g.ID+":detect=no-players:", p)
 		sessions.Emit(p.ID, "game:finish", g.ID)
-		log.Println("Game:"+g.ID+":detect=no-players:", p)
 		g.Stop()
 	} else {
-		log.Println("Game:"+g.ID+":detect=loose:", p)
-		sessions.Emit(p.ID, "game:loose", "{}")
+		log.Println("game:"+g.ID+":detect=loose:", p)
+		sessions.Emit(p.ID, "game:loose", g.ID)
 	}
 }
 
