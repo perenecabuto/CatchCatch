@@ -117,7 +117,12 @@ func streamDetection(addr string, cmd string, callback DetectionHandler) error {
 }
 
 func handleDetection(msg string) (*Detection, error) {
-	featID, coords := gjson.Get(msg, "id").String(), gjson.Get(msg, "object.coordinates").Array()
+	featID := gjson.Get(msg, "id").String()
+	if gjson.Get(msg, "command").String() == "del" {
+		return &Detection{FeatID: featID, Intersects: Exit}, nil
+	}
+
+	coords := gjson.Get(msg, "object.coordinates").Array()
 	if len(coords) != 2 {
 		return nil, DetectionError("invalid coords - msg:\n" + msg)
 	}
