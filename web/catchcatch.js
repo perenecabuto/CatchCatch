@@ -76,7 +76,7 @@ window.addEventListener("DOMContentLoaded", function () {
 
     let evtHandler = new EventHandler(controller);
     socket.on('connect', evtHandler.onConnect);
-    socket.on('player:registred', evtHandler.onPlayerRegistred)
+    socket.on('player:registered', evtHandler.onPlayerRegistred)
     socket.on('player:updated', evtHandler.onPlayerUpdated)
     socket.on('disconnect', evtHandler.onDisconnected)
 
@@ -104,8 +104,8 @@ let Player = function (x, y) {
     function onPlayerRegistred(p) {
         player = p;
         updatePosition(x, y);
-        if (registredCallback !== undefined) {
-            registredCallback(p.id);
+        if (registeredCallback !== undefined) {
+            registeredCallback(p.id);
         }
     }
     function onPlayerUpdated(p) {
@@ -121,29 +121,28 @@ let Player = function (x, y) {
         socket.close();
     }
 
-    let registredCallback = function () { }, disconnectedCallback = function () { };
-    function connect(registredFn, disconnectedFn) {
-        registredCallback = registredFn;
+    let registeredCallback = function () { }, disconnectedCallback = function () { };
+    function connect(registeredFn, disconnectedFn) {
+        registeredCallback = registeredFn;
         disconnectedCallback = disconnectedFn;
         socket = io(location.host, { reconnection: false, path: "/ws" });
-        socket.on('player:registred', onPlayerRegistred)
+        socket.on('player:registered', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
 
         socket.on('game:started', function (game) {
             log(player.id + ':game:started:' + game);
         })
-        socket.on('game:finish', function (rank) {
-            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.player_points));
+        socket.on('game:loose', function (game) {
+            log(player.id + ':game:loose:' + game)
         })
-        socket.on('game:loose', function () {
-            log(player.id + ':game:loose:')
-        })
-
-        socket.on('target:near', function (distToTarget) {
+        socket.on('game:target:near', function (distToTarget) {
             log(player.id + ':targe:near:' + distToTarget);
         })
-        socket.on('target:reached', function (data) {
+        socket.on('game:target:reached', function (data) {
             log(player.id + ':target:reached:winner!!!!');
+        })
+        socket.on('game:finish', function (rank) {
+            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.player_points));
         })
 
         socket.on('checkpoint:detected', function (detected) {
