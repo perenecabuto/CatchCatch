@@ -1,7 +1,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
 <link rel="shortcut icon" type="image/png" href="favicon.png">
-<link rel="shortcut icon" type="image/x-icon" href="favicon.ico"/>
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
 
 
 <!-- BOOTSTRAP -->
@@ -20,6 +20,24 @@
 <!-- CatchCatch -->
 <script src="catchcatch.js"></script>
 
+<style>
+    #connections {
+        overflow-y: overlay;
+        padding-left: 5px;
+        height: 70%;
+    }
+    #connections::-webkit-scrollbar-track {
+        background-color: transparent;
+    }
+    #connections::-webkit-scrollbar {
+        width: 3px;
+        background-color: transparent;
+    }
+    #connections::-webkit-scrollbar-thumb {
+        background-color: #666;
+        border: none;
+    }
+</style>
 
 <body class="container-fluid" style="background-color: ghostwhite">
 
@@ -41,7 +59,7 @@
             <strong class="lead">Connections</strong>
             <button id="reset" type="button" class="btn btn-link">reset</button>
 
-            <div id="connections" style="height: 70%; overflow-y: auto;"></div>
+            <div id="connections"></div>
         </div>
 
         <div class="col-xs-9">
@@ -54,14 +72,13 @@
         </div>
     </div>
 
-    <div id="map-info" class="panel panel-default"
-        style="display: none; width: 300px; margin-left: -50%; margin-top: -50%">
+    <div id="map-info" class="panel panel-default" style="display: none; width: 300px; margin-left: -50%; margin-top: -50%">
         <div class="alert alert-info">Feature</div>
         <div class="panel-body"></div>
     </div>
 
     <script type="text/template" id="player-template">
-        <div class="btn btn-default alert" style="overflow:hidden; width: 99%; text-align:left">
+        <div class="btn btn-default alert" style="overflow:hidden; width: 99%; text-align:left; padding-left: 15px">
             <div class="pull-left">
                 <p class="player-id"></p>
                 <div class="glyphicon glyphicon-map-marker" aria-hidden="true">
