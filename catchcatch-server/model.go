@@ -68,7 +68,7 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 
 // Players return all registered players
 func (s *PlayerLocationService) Players() (*PlayerList, error) {
-	features, err := scanFeature(s.client, "player")
+	features, err := s.Features("player")
 	if err != nil {
 		return nil, err
 	}
@@ -104,17 +104,23 @@ func (s *PlayerLocationService) AddFeature(group, id, geojson string) (*Feature,
 
 // Features ...
 func (s *PlayerLocationService) Features(group string) ([]*Feature, error) {
-	return scanFeature(s.client, group)
+	cmd := redis.NewSliceCmd("SCAN", group)
+	return featuresFromSliceCmd(s.client, group, cmd)
 }
 
-func scanFeature(client *redis.Client, group string) ([]*Feature, error) {
-	cmd := redis.NewSliceCmd("SCAN", group)
+// FeaturesAround return feature group near by point
+func (s *PlayerLocationService) FeaturesAround(group string, point *geo.Point) ([]*Feature, error) {
+	dist := 1000
+	cmd := redis.NewSliceCmd("NEARBY", group, "POINT", point.Lat(), point.Lng(), dist)
+	return featuresFromSliceCmd(s.client, group, cmd)
+}
+
+func featuresFromSliceCmd(client *redis.Client, group string, cmd *redis.SliceCmd) ([]*Feature, error) {
 	client.Process(cmd)
 	res, err := cmd.Result()
 	if err != nil {
 		return nil, err
 	}
-
 	payload, _ := redis.NewSliceResult(res[1].([]interface{}), err).Result()
 	features := make([]*Feature, len(payload))
 	for i, item := range payload {

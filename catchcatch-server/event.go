@@ -41,6 +41,7 @@ func (h *EventHandler) onConnection(so io.Socket) {
 	log.Println("new player connected", player)
 	go h.sendPlayerList(so)
 
+	so.On("player:request-games", h.onPlayerRequestGames(player, so))
 	so.On("player:request-remotes", h.onPlayerRequestRemotes(so))
 	so.On("player:update", h.onPlayerUpdate(player, channel, so))
 	so.On("disconnection", h.onPlayerDisconnect(player, channel))
@@ -75,6 +76,19 @@ func (h *EventHandler) onPlayerUpdate(player *Player, channel string, so io.Sock
 func (h *EventHandler) onPlayerRequestRemotes(so io.Socket) func(string) {
 	return func(string) {
 		h.sendPlayerList(so)
+	}
+}
+
+func (h *EventHandler) onPlayerRequestGames(player *Player, so io.Socket) func(string) {
+	return func(string) {
+		games, err := h.service.FeaturesAround("geofences", player.Point())
+		if err != nil {
+			log.Println("Error to request games:", err)
+		}
+		log.Println("game:around", games)
+		if err = so.Emit("game:around", games); err != nil {
+			log.Println("Error to emit", "game:around", player)
+		}
 	}
 }
 
