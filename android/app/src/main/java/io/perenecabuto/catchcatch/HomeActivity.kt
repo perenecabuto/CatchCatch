@@ -42,10 +42,8 @@ class HomeActivity : ActivityWithLocationPermission() {
         markerOverlay = MarkerOverlay(this)
         map!!.overlays.add(markerOverlay)
 
-        val socketOpts = IO.Options()
-        socketOpts.path = "/ws"
-        val socket = IO.socket(address, socketOpts)
-        manager = PlayerEventHandler(socket, HomeEventHandler(this, map!!))
+        val app = application as CatchCatch
+        manager = PlayerEventHandler(app.socket!!, HomeEventHandler(this, map!!))
         manager!!.connect()
 
         val conf = LocationParams.Builder().setAccuracy(LocationAccuracy.HIGH).build()
