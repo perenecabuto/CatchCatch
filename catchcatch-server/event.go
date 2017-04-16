@@ -81,14 +81,16 @@ func (h *EventHandler) onPlayerRequestRemotes(so io.Socket) func(string) {
 
 func (h *EventHandler) onPlayerRequestGames(player *Player, so io.Socket) func(string) {
 	return func(string) {
-		games, err := h.service.FeaturesAround("geofences", player.Point())
-		if err != nil {
-			log.Println("Error to request games:", err)
-		}
-		log.Println("game:around", games)
-		if err = so.Emit("game:around", games); err != nil {
-			log.Println("Error to emit", "game:around", player)
-		}
+		go func() {
+			games, err := h.service.FeaturesAround("geofences", player.Point())
+			if err != nil {
+				log.Println("Error to request games:", err)
+			}
+			log.Println("game:around", games)
+			if err = so.Emit("game:around", games); err != nil {
+				log.Println("Error to emit", "game:around", player)
+			}
+		}()
 	}
 }
 
