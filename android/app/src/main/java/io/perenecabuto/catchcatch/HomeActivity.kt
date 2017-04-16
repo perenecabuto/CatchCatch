@@ -98,7 +98,6 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
 
     override fun onRegistered(p: Player) {
         activity.runOnUiThread {
-            activity.updateMarker("me", p.point())
             Toast.makeText(activity, "onRegistered" + p, Toast.LENGTH_LONG).show()
         }
     }
