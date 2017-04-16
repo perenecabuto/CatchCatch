@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.widget.TextView
 
-class TransparentDialog(context: Context, val msg: String) : Dialog(context) {
+class TransparentDialog(context: Context, val msg: String) : BaseDialog(context) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.attributes.windowAnimations = R.style.PopUpDialog
@@ -15,10 +15,5 @@ class TransparentDialog(context: Context, val msg: String) : Dialog(context) {
 
         val container = findViewById(R.id.dialog_transparent_text) as TextView
         container.text = msg
-    }
-
-    fun showWithTimeout(millis: Long) {
-        show()
-        Handler().postDelayed(this::dismiss, millis)
     }
 }

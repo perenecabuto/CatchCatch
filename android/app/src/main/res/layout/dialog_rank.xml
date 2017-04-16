@@ -7,6 +7,7 @@
     android:orientation="vertical"
     android:background="@android:color/transparent"
     android:padding="10dp"
+    android:id="@+id/dialog_rank"
     tools:ignore="HardcodedText"
     >
 
