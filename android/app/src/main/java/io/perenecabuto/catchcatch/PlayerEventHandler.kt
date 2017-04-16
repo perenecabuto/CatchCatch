@@ -1,8 +1,8 @@
 package io.perenecabuto.catchcatch
 
 import android.location.Location
-import android.util.Log
 import io.socket.client.Socket
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
@@ -26,6 +26,8 @@ data class Player(val id: String, var lat: Double, var lon: Double) {
         return GeoPoint(lat, lon)
     }
 }
+
+data class Feature(val id: String, val geojson: String)
 
 class PlayerEventHandler(private val socket: Socket, private val callback: EventCallback) {
     internal val TAG = javaClass.name
@@ -82,7 +84,13 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
     }
 
     private fun onGamesAround(args: Array<Any>) {
-        Log.d(TAG, "---> games:" + args.toString())
+        if (args.isEmpty()) return
+        val items = args[0] as JSONArray
+        val games = (0..items.length() - 1).map {
+            val item = items.getJSONObject(it)
+            Feature(item.getString("id"), item.getString("coords"))
+        }
+        callback.onGamesAround(games)
     }
 
     private fun onGameStarted(args: Array<Any>?) {
@@ -161,6 +169,10 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
         } catch (e: JSONException) {
             e.printStackTrace()
         }
+    }
+
+    fun requestAroundGames() {
+        socket.emit("player:request-games")
     }
 
     fun disconnect() {
