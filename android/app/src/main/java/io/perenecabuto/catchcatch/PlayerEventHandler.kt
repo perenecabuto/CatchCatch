@@ -185,14 +185,15 @@ class ConnectionManager(private val socket: Socket, private val callback: EventC
 
 
     interface EventCallback {
-        fun onPlayerList(players: List<Player>)
-        fun onRemotePlayerUpdate(player: Player)
-        fun onRemoteNewPlayer(player: Player)
-        fun onRegistered(p: Player)
-        fun onRemotePlayerDestroy(player: Player)
-        fun onDisconnected()
-        fun onDetectCheckpoint(detection: Detection)
-        fun onConnect()
+        fun onPlayerList(players: List<Player>) {}
+        fun onRemotePlayerUpdate(player: Player) {}
+        fun onRemoteNewPlayer(player: Player) {}
+        fun onRegistered(p: Player) {}
+        fun onRemotePlayerDestroy(player: Player) {}
+        fun onDisconnected() {}
+        fun onDetectCheckpoint(detection: Detection) {}
+        fun onConnect() {}
+        fun onGamesAround(games: List<Feature>) {}
     }
 
     inner class NoConnectionException(msg: String) : Exception(msg)
