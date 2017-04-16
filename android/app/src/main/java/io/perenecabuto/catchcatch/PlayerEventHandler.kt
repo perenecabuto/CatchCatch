@@ -10,6 +10,8 @@ import java.net.URISyntaxException
 import java.util.*
 
 
+data class Feature(val id: String, val geojson: String)
+
 data class Detection(val featID: String, val lat: Double, val lon: Double, val nearByInMeters: Double) {
     fun point(): GeoPoint {
         return GeoPoint(lat, lon)
@@ -27,9 +29,12 @@ data class Player(val id: String, var lat: Double, var lon: Double) {
     }
 }
 
-data class Feature(val id: String, val geojson: String)
 
-class PlayerEventHandler(private val socket: Socket, private val callback: EventCallback) {
+data class GameRank(val game: String?, val pointsPerPlayer: List<PlayerRank>)
+data class PlayerRank(val player: String, val points: Int)
+
+
+class PlayerEventHandler(private val sock: Socket, internal var callback: EventCallback) {
     internal val TAG = javaClass.name
 
     internal val PLAYER_REGISTERED = "player:registered"
@@ -86,9 +91,8 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
         }
     }
 
-    private fun onGamesAround(args: Array<Any>) {
-        if (args.isEmpty()) return
-        val items = args[0] as JSONArray
+    private fun onGamesAround(args: Array<Any>?) {
+        val items = args?.get(0) as JSONArray
         val games = (0..items.length() - 1).map {
             val item = items.getJSONObject(it)
             Feature(item.getString("id"), item.getString("coords"))
@@ -113,7 +117,16 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
     }
 
     private fun onGameFinish(args: Array<Any>?) {
-        callback.onGameFinish(args?.get(0).toString())
+        val json = args?.get(0) as JSONObject
+
+        val game = json.getString("game")
+        val points = json.getJSONArray("points_per_player")
+        val pointsPerPlayer = (0..points.length() - 1)
+            .map { points.getJSONObject(it) }
+            .map { PlayerRank(it.getString("player"), it.getInt("points")) }
+
+        val rank = GameRank(game, pointsPerPlayer)
+        callback.onGameFinish(rank)
     }
 
     private fun onDetectCheckpoint(args: Array<Any>) {
@@ -211,8 +224,9 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
         fun onGameLoose(gameID: String) {}
         fun onGameTargetNear(meters: String) {}
         fun onGameTargetReached(msg: String) {}
-        fun onGameFinish(rank: String) {}
+        fun onGameFinish(rank: GameRank) {}
     }
 
     inner class NoConnectionException(msg: String) : Exception(msg)
 }
+
