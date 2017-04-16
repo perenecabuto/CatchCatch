@@ -27,7 +27,7 @@ data class Player(val id: String, var lat: Double, var lon: Double) {
     }
 }
 
-class ConnectionManager(private val socket: Socket, private val callback: EventCallback) {
+class PlayerEventHandler(private val socket: Socket, private val callback: EventCallback) {
     internal val TAG = javaClass.name
 
     internal val PLAYER_REGISTERED = "player:registered"
