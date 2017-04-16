@@ -1,7 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="android:ThemeOverlay.Material.Dark" tools:ignore="NewApi">
+    <style name="AppTheme" parent="android:Theme.Black.NoTitleBar" tools:ignore="NewApi">
         <!-- Customize your theme here. -->
         <item name="android:actionBarStyle">@android:color/transparent</item>
         <item name="android:colorPrimary">@color/colorPrimary</item>
