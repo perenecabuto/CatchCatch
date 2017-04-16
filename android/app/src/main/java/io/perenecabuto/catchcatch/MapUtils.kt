@@ -46,6 +46,18 @@ object OSMShortcuts {
         map.invalidate()
         Handler().postDelayed({ map.overlays.remove(circle) }, 2000)
     }
+
+    fun showMarkerOnMap(map: MapView, id: String, point: GeoPoint) {
+        val markerOverlay: MarkerOverlay = map.overlays.firstOrNull({ it is MarkerOverlay && it.id == id }) as MarkerOverlay? ?:
+            MarkerOverlay(id, map.context).let { map.overlays.add(it); it }
+
+        val item = OverlayItemWithID(id, point)
+        markerOverlay.removeItem(item)
+        markerOverlay.addItem(item)
+        map.controller?.setCenter(point)
+        map.controller?.setZoom(20)
+        map.invalidate()
+    }
 }
 
 class GeoJsonPolygon(val id: String, geojson: String) : Polygon() {
@@ -90,8 +102,18 @@ class DistanceCircle(val id: String, center: GeoPoint, dist: Double, maxDist: Do
 }
 
 
-class MarkerOverlay(context: Context) :
-    ItemizedIconOverlay<OverlayItem>(ArrayList<OverlayItem>(), context.resources.getDrawable(R.mipmap.marker, context.theme), null, context)
+class MarkerOverlay(val id: String, context: Context) :
+    ItemizedIconOverlay<OverlayItem>(ArrayList<OverlayItem>(), context.resources.getDrawable(R.mipmap.marker, context.theme), null, context) {
+
+    override fun equals(other: Any?): Boolean {
+        val otherItem = (other as MarkerOverlay)
+        return otherItem.id == this.id
+    }
+
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
+}
 
 
 class OverlayItemWithID(private val id: String, point: GeoPoint) : OverlayItem(id, id, point) {

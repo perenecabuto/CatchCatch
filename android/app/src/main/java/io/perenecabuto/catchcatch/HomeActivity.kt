@@ -14,15 +14,13 @@ import java.util.*
 
 
 class HomeActivity : ActivityWithLocationPermission() {
-    internal val TAG = HomeActivity::class.java.simpleName
-    internal val updateGamesInterval: Long = 30_000
+    private val TAG = HomeActivity::class.java.simpleName
+    private val updateGamesInterval: Long = 30_000
+    private val dialogsDelay: Long = 10000L
 
     internal var player = Player("", 0.0, 0.0)
     private var manager: PlayerEventHandler? = null
-    private var markerOverlay: MarkerOverlay? = null
     private var map: MapView? = null
-
-    private val dialogsDelay = 10000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,8 +28,6 @@ class HomeActivity : ActivityWithLocationPermission() {
         setContentView(R.layout.activity_home)
 
         map = OSMShortcuts.findMapById(this, R.id.home_activity_map)
-        markerOverlay = MarkerOverlay(this)
-        map!!.overlays.add(markerOverlay)
 
         val app = application as CatchCatch
         manager = PlayerEventHandler(app.socket!!, HomeEventHandler(this, map!!))
@@ -44,7 +40,6 @@ class HomeActivity : ActivityWithLocationPermission() {
 
         val random = Random()
         RankDialog(this, GameRank("Catch catch", (0..10).map { PlayerRank("Player $it", random.nextInt()) })).show()
-
         TransparentDialog(this, "welcome!").showWithTimeout(dialogsDelay)
     }
 
@@ -74,14 +69,7 @@ class HomeActivity : ActivityWithLocationPermission() {
     }
 
     fun updateMarker(id: String, point: GeoPoint) {
-        if (markerOverlay == null) return
-
-        val item = OverlayItemWithID(id, point)
-        markerOverlay?.removeItem(item)
-        markerOverlay?.addItem(item)
-        map?.controller?.setCenter(point)
-        map?.controller?.setZoom(20)
-        map?.invalidate()
+        OSMShortcuts.showMarkerOnMap(map!!, id, point)
     }
 
     fun onGameStarted(info: GameInfo) {
