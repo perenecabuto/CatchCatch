@@ -14,6 +14,7 @@
     <uses-feature android:name="android.hardware.location.network"/>
 
     <application
+        android:name=".CatchCatch"
         android:allowBackup="true"
         android:fullBackupContent="false"
         android:icon="@mipmap/launcher"
@@ -26,10 +27,10 @@
         <activity android:name=".HomeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
-
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
     </application>
 
 </manifest>
