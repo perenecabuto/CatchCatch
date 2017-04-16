@@ -84,22 +84,26 @@ class HomeActivity : ActivityWithLocationPermission() {
 
     fun onGameStarted(gameID: String) {
         manager!!.callback = GameEventHandler(this, map!!)
-        TransparentDialog(this, "Game $gameID started!").showWithTimeout(2000)
+        TransparentDialog(this, "Game $gameID started").showWithTimeout(2000)
     }
 
     fun onGameLoose(gameID: String) {
         manager!!.callback = HomeEventHandler(this, map!!)
-        TransparentDialog(this, "Game over $gameID").showWithTimeout(2000)
+        TransparentDialog(this, "You loose $gameID").showWithTimeout(2000)
     }
 
     fun onGameFinish(rank: GameRank) {
         manager!!.callback = HomeEventHandler(this, map!!)
-        RankDialog(this, rank).show()
+        RankDialog(this, rank).showWithTimeout(2000)
     }
 
     fun onRegistered(p: Player) {
         player = p
         TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(2000)
+    }
+
+    fun onGameTargetReached(msg: String) {
+        TransparentDialog(this, "You win $msg").showWithTimeout(2000)
     }
 }
 
@@ -145,6 +149,12 @@ class GameEventHandler(val activity: HomeActivity, val map: MapView) : PlayerEve
         Log.d(TAG, "onGameTargetNear:" + meters)
         activity.runOnUiThread {
             OSMShortcuts.drawCircleOnMap(map, "target-dist", activity.player.point(), meters, 1000.0)
+        }
+    }
+
+    override fun onGameTargetReached(msg: String) {
+        activity.runOnUiThread {
+            activity.onGameTargetReached(msg)
         }
     }
 
