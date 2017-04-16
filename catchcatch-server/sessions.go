@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strconv"
 	"sync/atomic"
 
 	engineio "github.com/googollee/go-engine.io"
@@ -65,6 +66,7 @@ func (sm *SessionManager) Emit(id, event string, message interface{}) error {
 	return writer.Close()
 }
 
+// BroadcastTo ids event message
 func (sm *SessionManager) BroadcastTo(ids []string, event string, message interface{}) {
 	for _, id := range ids {
 		if err := sm.Emit(id, event, message); err != nil {
@@ -93,7 +95,7 @@ func (sm *SessionManager) copyConns() connStore {
 func messagePayload(msg interface{}) (string, error) {
 	switch msg.(type) {
 	case string:
-		return `"` + msg.(string) + `"`, nil
+		return strconv.Quote(msg.(string)), nil
 	default:
 		jPayload, err := json.Marshal(msg)
 		if err != nil {

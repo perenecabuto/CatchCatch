@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -247,8 +246,7 @@ func handleGames(stream EventStream, sessions *SessionManager) {
 
 func handleCheckointsDetection(stream EventStream, sessions *SessionManager, server *io.Server) {
 	err := stream.StreamNearByEvents("player", "checkpoint", 1000, func(d *Detection) {
-		payload, _ := json.Marshal(d)
-		if err := sessions.Emit(d.FeatID, "checkpoint:detected", string(payload)); err != nil {
+		if err := sessions.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
 			log.Println("Error to notify player", d.FeatID, err)
 		}
 		server.BroadcastTo("main", "admin:feature:checkpoint", d)
