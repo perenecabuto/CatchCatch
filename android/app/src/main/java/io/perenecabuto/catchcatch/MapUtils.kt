@@ -48,7 +48,7 @@ object OSMShortcuts {
     }
 
     fun showMarkerOnMap(map: MapView, id: String, point: GeoPoint) {
-        val markerOverlay: MarkerOverlay = map.overlays.firstOrNull({ it is MarkerOverlay && it.id == id }) as MarkerOverlay? ?:
+        val markerOverlay: MarkerOverlay = map.overlays.firstOrNull({ it is MarkerOverlay && it.id == id }) as? MarkerOverlay ?:
             MarkerOverlay(id, map.context).let { map.overlays.add(it); it }
 
         val item = OverlayItemWithID(id, point)
@@ -106,8 +106,7 @@ class MarkerOverlay(val id: String, context: Context) :
     ItemizedIconOverlay<OverlayItem>(ArrayList<OverlayItem>(), context.resources.getDrawable(R.mipmap.marker, context.theme), null, context) {
 
     override fun equals(other: Any?): Boolean {
-        val otherItem = (other as MarkerOverlay)
-        return otherItem.id == this.id
+        return other is MarkerOverlay && other.id == this.id
     }
 
     override fun hashCode(): Int {
@@ -118,8 +117,7 @@ class MarkerOverlay(val id: String, context: Context) :
 
 class OverlayItemWithID(private val id: String, point: GeoPoint) : OverlayItem(id, id, point) {
     override fun equals(other: Any?): Boolean {
-        val otherItem = (other as OverlayItemWithID)
-        return otherItem.id == this.id
+        return other is OverlayItemWithID && other.id == this.id
     }
 
     override fun hashCode(): Int {
