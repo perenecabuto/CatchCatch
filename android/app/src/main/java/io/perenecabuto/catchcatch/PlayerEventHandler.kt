@@ -44,9 +44,9 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
     internal val GAME_TARGET_REACHED = "game:target:reached"
     internal val GAME_FINISH = "game:finish"
 
-
     @Throws(URISyntaxException::class, NoConnectionException::class)
     fun connect() {
+        socket.disconnect()
         socket
             .on(Socket.EVENT_CONNECT) { onConnect() }
             .on(PLAYER_REGISTERED) { onPlayerRegistered(it) }
@@ -69,7 +69,6 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
     }
 
     private fun onConnect() {
-        socket.emit("player:request-games")
         callback.onConnect()
     }
 
@@ -113,7 +112,6 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
         } catch (e: JSONException) {
             e.printStackTrace()
         }
-
     }
 
     private fun onRemotePlayerDestroy(args: Array<Any>) {
