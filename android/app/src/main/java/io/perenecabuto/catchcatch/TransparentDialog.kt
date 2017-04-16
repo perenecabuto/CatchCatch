@@ -1,9 +1,7 @@
 package io.perenecabuto.catchcatch
 
-import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
 import android.widget.TextView
 
 class TransparentDialog(context: Context, val msg: String) : BaseDialog(context) {
