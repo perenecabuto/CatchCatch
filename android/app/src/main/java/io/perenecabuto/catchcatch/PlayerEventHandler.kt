@@ -48,9 +48,8 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
 
     @Throws(URISyntaxException::class, NoConnectionException::class)
     fun connect() {
-        socket.disconnect()
-        socket
-            .on(Socket.EVENT_CONNECT) { onConnect() }
+        disconnect()
+        sock.on(Socket.EVENT_CONNECT) { onConnect() }
             .on(PLAYER_REGISTERED) { onPlayerRegistered(it) }
 
             .on(GAME_AROUND) { onGamesAround(it) }
@@ -65,9 +64,13 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
             .on(REMOTE_PLAYER_UPDATED) { onRemotePlayerUpdate(it) }
             .on(REMOTE_PLAYER_DESTROY) { onRemotePlayerDestroy(it) }
             .on(DETECT_CHECKPOINT) { onDetectCheckpoint(it) }
-            .on(Socket.EVENT_DISCONNECT) { callback.onDisconnected() }
+            .on(Socket.EVENT_DISCONNECT) { onDisconnect() }
 
-        socket.connect()
+        sock.connect()
+    }
+
+    private fun onDisconnect() {
+        callback.onDisconnected()
     }
 
     private fun onConnect() {
@@ -165,18 +168,19 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
     fun sendPosition(l: Location) {
         try {
             val coords = JSONObject(mapOf("lat" to l.latitude, "lon" to l.longitude))
-            socket.emit("player:update", coords.toString())
+            sock.emit("player:update", coords.toString())
         } catch (e: JSONException) {
             e.printStackTrace()
         }
     }
 
     fun requestAroundGames() {
-        socket.emit("player:request-games")
+        sock.emit("player:request-games")
     }
 
     fun disconnect() {
-        socket.disconnect()
+        sock.off()
+        sock.disconnect()
     }
 
     @Throws(JSONException::class)
@@ -192,7 +196,6 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
             pJson.getDouble("lat"), pJson.getDouble("lon"),
             pJson.getDouble("near_by_meters"))
     }
-
 
     interface EventCallback {
         fun onPlayerList(players: List<Player>) {}
