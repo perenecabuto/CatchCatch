@@ -22,6 +22,8 @@ class HomeActivity : ActivityWithLocationPermission() {
     private var markerOverlay: MarkerOverlay? = null
     private var map: MapView? = null
 
+    private val dialogsDelay = 10000L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         OSMShortcuts.onCreate(this)
@@ -43,7 +45,7 @@ class HomeActivity : ActivityWithLocationPermission() {
         val random = Random()
         RankDialog(this, GameRank("Catch catch", (0..10).map { PlayerRank("Player $it", random.nextInt()) })).show()
 
-        TransparentDialog(this, "welcome!").showWithTimeout(2000)
+        TransparentDialog(this, "welcome!").showWithTimeout(dialogsDelay)
     }
 
     fun seekForGamesAround() {
@@ -82,28 +84,28 @@ class HomeActivity : ActivityWithLocationPermission() {
         map?.invalidate()
     }
 
-    fun onGameStarted(gameID: String) {
+    fun onGameStarted(info: GameInfo) {
         manager!!.callback = GameEventHandler(this, map!!)
-        TransparentDialog(this, "Game $gameID started").showWithTimeout(2000)
+        TransparentDialog(this, "Game ${info.game} started.\nYour role is: ${info.role}").showWithTimeout(dialogsDelay)
     }
 
     fun onGameLoose(gameID: String) {
         manager!!.callback = HomeEventHandler(this, map!!)
-        TransparentDialog(this, "You loose $gameID").showWithTimeout(2000)
+        TransparentDialog(this, "You loose $gameID").showWithTimeout(dialogsDelay)
     }
 
     fun onGameFinish(rank: GameRank) {
         manager!!.callback = HomeEventHandler(this, map!!)
-        RankDialog(this, rank).showWithTimeout(2000)
+        RankDialog(this, rank).showWithTimeout(dialogsDelay)
     }
 
     fun onRegistered(p: Player) {
         player = p
-        TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(2000)
+        TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(dialogsDelay)
     }
 
     fun onGameTargetReached(msg: String) {
-        TransparentDialog(this, "You win $msg").showWithTimeout(2000)
+        TransparentDialog(this, "You win $msg").showWithTimeout(dialogsDelay)
     }
 }
 
@@ -122,6 +124,7 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
 
     override fun onDisconnected() {
         activity.runOnUiThread {
+            map.overlays.clear()
             Toast.makeText(activity, "onDisconnected", Toast.LENGTH_LONG).show()
         }
     }
