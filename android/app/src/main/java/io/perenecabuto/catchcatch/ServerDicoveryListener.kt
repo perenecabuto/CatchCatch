@@ -1,13 +1,26 @@
 package io.perenecabuto.catchcatch
 
+import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
 
 
-internal class ServerDiscoveryListener(private val nsdManager: NsdManager, private val listener: ServerDiscoveryListener.OnDiscoverListener) : NsdManager.DiscoveryListener {
+internal class ServerDiscoveryListener(private val nsdManager: NsdManager, private val discoverCallback: (NsdServiceInfo) -> Unit) : NsdManager.DiscoveryListener {
     companion object {
         private val TAG = "----> " + ServerDiscoveryListener::class.java.simpleName
+        fun listen(context: Context, callback: (NsdServiceInfo) -> Unit) {
+            val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+            val mdnsListener = ServerDiscoveryListener(nsdManager, callback)
+            nsdManager.discoverServices("_catchcatch._tcp", NsdManager.PROTOCOL_DNS_SD, mdnsListener)
+        }
+
+        fun listen(context: HomeActivity, callback: (String) -> Unit) {
+            listen(context, fun(info: NsdServiceInfo) {
+                val address = "http://" + info.host.hostAddress + ":" + info.port
+                callback(address)
+            })
+        }
     }
 
     override fun onDiscoveryStarted(regType: String) {
@@ -18,11 +31,7 @@ internal class ServerDiscoveryListener(private val nsdManager: NsdManager, priva
         Log.d(TAG, "Service discovery success" + service)
         nsdManager.resolveService(service, object : NsdManager.ResolveListener {
             override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
-
-            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                Log.d(TAG, serviceInfo.toString())
-                listener.onDiscovered(serviceInfo)
-            }
+            override fun onServiceResolved(serviceInfo: NsdServiceInfo) = discoverCallback(serviceInfo)
         })
     }
 
@@ -42,9 +51,5 @@ internal class ServerDiscoveryListener(private val nsdManager: NsdManager, priva
     override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
         Log.e(TAG, "Discovery failed: Error code:" + errorCode)
         nsdManager.stopServiceDiscovery(this)
-    }
-
-    internal interface OnDiscoverListener {
-        fun onDiscovered(info: NsdServiceInfo)
     }
 }
