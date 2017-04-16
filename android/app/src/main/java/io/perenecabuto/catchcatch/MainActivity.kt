@@ -28,7 +28,6 @@ import android.view.View.VISIBLE
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import io.perenecabuto.catchcatch.ServerDiscoveryListener.OnDiscoverListener
 import io.socket.client.IO
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -40,7 +39,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 
-class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverListener {
+class MainActivity : Activity(), PlayerEventHandler.EventCallback {
 
     companion object {
         private val TAG = MainActivity::class.java.simpleName
@@ -49,7 +48,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
     }
 
     private var prefs: SharedPreferences? = null
-    private var manager: ConnectionManager? = null
+    private var manager: PlayerEventHandler? = null
     private var markerOverlay: ItemizedIconOverlay<OverlayItem>? = null
 
     private var map: MapView? = null
@@ -63,7 +62,6 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             path = "/ws"
         }
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,9 +87,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         val label = findViewById(R.id.activity_main_address_label)
         label.visibility = if (TextUtils.isEmpty(addressText!!.text)) VISIBLE else GONE
 
-        val nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
-        val mdnsListener = ServerDiscoveryListener(nsdManager, this)
-        nsdManager.discoverServices("_catchcatch._tcp", NsdManager.PROTOCOL_DNS_SD, mdnsListener)
+        ServerDiscoveryListener.listen(this, this::onDiscovered)
 
         setupLocation()
     }
@@ -101,7 +97,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this));
     }
 
-    override fun onDiscovered(info: NsdServiceInfo) {
+    fun onDiscovered(info: NsdServiceInfo) {
         val disoveredAddress = "http://" + info.host.hostAddress + ":" + info.port
         runOnUiThread { addressText!!.setText(disoveredAddress) }
         connect(disoveredAddress)
@@ -137,7 +133,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         try {
             manager?.disconnect()
             val socket = IO.socket(address, socketOpts)
-            manager = ConnectionManager(socket, this)
+            manager = PlayerEventHandler(socket, this)
             manager!!.connect()
         } catch (e: Throwable) {
             Log.e(TAG, e.message)
@@ -220,7 +216,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         }
     }
 
-    override fun onRegistred(p: Player) {
+    override fun onRegistered(p: Player) {
         runOnUiThread finish@ {
             this.player = p
             val locationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -232,7 +228,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
             map!!.controller.setZoom(20)
             map!!.controller.setCenter(player.point())
             Log.d(TAG, "p:register:" + player)
-            Toast.makeText(this, "registred as " + player.id, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "registered as " + player.id, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -243,7 +239,7 @@ class MainActivity : Activity(), ConnectionManager.EventCallback, OnDiscoverList
         }
     }
 
-    override fun onDiconnected() {
+    override fun onDisconnected() {
         Log.d(TAG, "diconnected " + player + " " + markers[player.id])
         clearMarkers()
     }
