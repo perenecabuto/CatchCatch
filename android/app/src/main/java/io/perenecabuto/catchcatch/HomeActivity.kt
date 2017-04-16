@@ -51,13 +51,13 @@ class HomeActivity : ActivityWithLocationPermission() {
         val conf = LocationParams.Builder().setAccuracy(LocationAccuracy.HIGH).build()
         SmartLocation.with(this).location().continuous().config(conf).start(this::onLocationUpdate)
 
-        var seekForGamesAround: (() -> Unit)? = null
-        seekForGamesAround = stop@ {
-            if (isFinishing || isDestroyed) return@stop
-            manager?.requestAroundGames()
-            Handler().postDelayed(seekForGamesAround, updateGamesInterval)
-        }
         seekForGamesAround()
+    }
+
+    fun seekForGamesAround() {
+        if (isFinishing || isDestroyed) return
+        manager?.requestAroundGames()
+        Handler().postDelayed(this::seekForGamesAround, updateGamesInterval)
     }
 
     private fun onLocationUpdate(l: Location) {
