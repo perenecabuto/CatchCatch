@@ -3,42 +3,29 @@ package io.perenecabuto.catchcatch
 import android.location.Location
 import android.os.Bundle
 import android.os.Handler
-import android.preference.PreferenceManager
+import android.util.Log
 import android.widget.Toast
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
-import io.socket.client.IO
-import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
 
 class HomeActivity : ActivityWithLocationPermission() {
+    internal val TAG = HomeActivity::class.java.simpleName
+    internal val updateGamesInterval: Long = 30_000
 
-    internal val updateGamesInterval: Long = 60_000
-
+    internal var manager: PlayerEventHandler? = null
     private var markerOverlay: MarkerOverlay? = null
-    private var manager: PlayerEventHandler? = null
     private var map: MapView? = null
-
-    private val address = "https://beta-catchcatch.ddns.net/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
-        Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
+        OSMShortcuts.onCreate(this)
         setContentView(R.layout.activity_home)
 
-        map = findViewById(R.id.home_activity_map) as MapView
-        map!!.setTileSource(TileSourceFactory.MAPNIK)
-        map!!.setBuiltInZoomControls(false)
-        map!!.setMultiTouchControls(false)
-
-        val tiles = map!!.overlayManager.tilesOverlay
-        tiles.overshootTileCache = tiles.overshootTileCache * 3
-
+        map = OSMShortcuts.findMapById(this, R.id.home_activity_map)
         markerOverlay = MarkerOverlay(this)
         map!!.overlays.add(markerOverlay)
 
@@ -66,7 +53,7 @@ class HomeActivity : ActivityWithLocationPermission() {
 
     override fun onResume() {
         super.onResume()
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        OSMShortcuts.onResume(this)
     }
 
     override fun onDestroy() {
