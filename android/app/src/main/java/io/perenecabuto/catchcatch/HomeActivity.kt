@@ -10,6 +10,7 @@ import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import java.util.*
 
 
 class HomeActivity : ActivityWithLocationPermission() {
@@ -38,6 +39,11 @@ class HomeActivity : ActivityWithLocationPermission() {
         SmartLocation.with(this).location().continuous().config(conf).start(this::onLocationUpdate)
 
         seekForGamesAround()
+
+        val random = Random()
+        RankDialog(this, GameRank("Catch catch", (0..10).map { PlayerRank("Player $it", random.nextInt()) })).show()
+
+        TransparentDialog(this, "welcome!").showWithTimeout(2000)
     }
 
     fun seekForGamesAround() {
@@ -77,22 +83,23 @@ class HomeActivity : ActivityWithLocationPermission() {
     }
 
     fun onGameStarted(gameID: String) {
-        Log.d(TAG, "onGameStarted:" + gameID)
         manager!!.callback = GameEventHandler(this, map!!)
+        TransparentDialog(this, "Game $gameID started!").showWithTimeout(2000)
     }
 
     fun onGameLoose(gameID: String) {
-        Log.d(TAG, "onGameLoose:" + gameID)
         manager!!.callback = HomeEventHandler(this, map!!)
+        TransparentDialog(this, "Game over $gameID").showWithTimeout(2000)
     }
 
     fun onGameFinish(rank: GameRank) {
-        Log.d(TAG, "onGameFinish:" + rank)
         manager!!.callback = HomeEventHandler(this, map!!)
+        RankDialog(this, rank).show()
     }
 
     fun onRegistered(p: Player) {
         player = p
+        TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(2000)
     }
 }
 
@@ -106,7 +113,6 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
     override fun onRegistered(p: Player) {
         activity.runOnUiThread {
             activity.onRegistered(p)
-            Toast.makeText(activity, "onRegistered" + p, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -143,10 +149,14 @@ class GameEventHandler(val activity: HomeActivity, val map: MapView) : PlayerEve
     }
 
     override fun onGameLoose(gameID: String) {
-        activity.onGameLoose(gameID)
+        activity.runOnUiThread {
+            activity.onGameLoose(gameID)
+        }
     }
 
     override fun onGameFinish(rank: GameRank) {
-        activity.onGameFinish(rank)
+        activity.runOnUiThread {
+            activity.onGameFinish(rank)
+        }
     }
 }
