@@ -46,7 +46,13 @@ func (g *Game) Start(sessions *SessionManager) {
 	log.Println("game:", g.ID, ":start!!!!!!")
 	log.Println("---------------------------")
 	g.sortTargetPlayer()
-	sessions.BroadcastTo(g.playerIDs(), "game:started", g.ID)
+	for id := range g.players {
+		role := "hunter"
+		if id == g.targetPlayer.ID {
+			role = "target"
+		}
+		sessions.Emit(id, "game:started", &GameInfo{Game: g.ID, Role: role})
+	}
 	g.started = true
 
 	go func() {
@@ -63,6 +69,12 @@ func (g *Game) Start(sessions *SessionManager) {
 		g.players = make(map[string]*Player)
 		g.targetPlayer = nil
 	}()
+}
+
+// GameInfo ...
+type GameInfo struct {
+	Role string `json:"role"`
+	Game string `json:"game"`
 }
 
 // PlayerRank ...
