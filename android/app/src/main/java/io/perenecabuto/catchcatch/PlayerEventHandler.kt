@@ -94,23 +94,23 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
     }
 
     private fun onGameStarted(args: Array<Any>?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        callback.onGameStarted(args?.get(0).toString())
     }
 
     private fun onGameLoose(args: Array<Any>?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        callback.onGameLoose(args?.get(0).toString())
     }
 
     private fun onGameTargetNear(args: Array<Any>?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        callback.onGameTargetNear(args?.get(0).toString())
     }
 
     private fun onGameTargetReached(args: Array<Any>?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        callback.onGameTargetReached(args?.get(0).toString())
     }
 
     private fun onGameFinish(args: Array<Any>?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        callback.onGameFinish(args?.get(0).toString())
     }
 
     private fun onDetectCheckpoint(args: Array<Any>) {
@@ -204,6 +204,11 @@ class PlayerEventHandler(private val socket: Socket, private val callback: Event
         fun onDetectCheckpoint(detection: Detection) {}
         fun onConnect() {}
         fun onGamesAround(games: List<Feature>) {}
+        fun onGameStarted(gameID: String) {}
+        fun onGameLoose(gameID: String) {}
+        fun onGameTargetNear(meters: String) {}
+        fun onGameTargetReached(msg: String) {}
+        fun onGameFinish(rank: String) {}
     }
 
     inner class NoConnectionException(msg: String) : Exception(msg)
