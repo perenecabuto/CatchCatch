@@ -16,7 +16,7 @@ class HomeActivity : ActivityWithLocationPermission() {
     internal val TAG = HomeActivity::class.java.simpleName
     internal val updateGamesInterval: Long = 30_000
 
-    internal var manager: PlayerEventHandler? = null
+    private var manager: PlayerEventHandler? = null
     private var markerOverlay: MarkerOverlay? = null
     private var map: MapView? = null
 
@@ -41,14 +41,15 @@ class HomeActivity : ActivityWithLocationPermission() {
 
     fun seekForGamesAround() {
         if (isFinishing || isDestroyed) return
+        Log.d(TAG, "seekForGamesAround")
         manager?.requestAroundGames()
         Handler().postDelayed(this::seekForGamesAround, updateGamesInterval)
     }
 
     private fun onLocationUpdate(l: Location) {
         val point = GeoPoint(l.latitude, l.longitude)
-        manager!!.sendPosition(l)
         updateMarker("me", point)
+        manager!!.sendPosition(l)
     }
 
     override fun onResume() {
@@ -72,6 +73,21 @@ class HomeActivity : ActivityWithLocationPermission() {
         map?.controller?.setZoom(20)
         map?.invalidate()
     }
+
+    fun onGameStarted(gameID: String) {
+        Log.d(TAG, "onGameStarted:" + gameID)
+        manager!!.callback = GameEventHandler(this)
+    }
+
+    fun onGameLoose(gameID: String) {
+        Log.d(TAG, "onGameLoose:" + gameID)
+        manager!!.callback = HomeEventHandler(this, map!!)
+    }
+
+    fun onGameFinish(rank: GameRank) {
+        Log.d(TAG, "onGameFinish:" + rank)
+        manager!!.callback = HomeEventHandler(this, map!!)
+    }
 }
 
 class HomeEventHandler(private val activity: HomeActivity, private val map: MapView) : PlayerEventHandler.EventCallback {
@@ -89,7 +105,7 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
 
     override fun onDisconnected() {
         activity.runOnUiThread {
-            Toast.makeText(activity, "onDisconnected", Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, "onDisconnected",   Toast.LENGTH_LONG).show()
         }
     }
 
@@ -101,6 +117,26 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
             map.invalidate()
         }
     }
+
+    override fun onGameStarted(gameID: String) {
+        activity.runOnUiThread {
+            activity.onGameStarted(gameID)
+        }
+    }
 }
 
+class GameEventHandler(val activity: HomeActivity) : PlayerEventHandler.EventCallback {
+    private val TAG = GameEventHandler::class.java.simpleName
 
+    override fun onGameTargetNear(meters: Int) {
+        Log.d(TAG, "onGameTargetNear:" + meters)
+    }
+
+    override fun onGameLoose(gameID: String) {
+        activity.onGameLoose(gameID)
+    }
+
+    override fun onGameFinish(rank: GameRank) {
+        activity.onGameFinish(rank)
+    }
+}
