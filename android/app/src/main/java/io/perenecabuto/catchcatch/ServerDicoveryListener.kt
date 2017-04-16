@@ -15,7 +15,7 @@ internal class ServerDiscoveryListener(private val nsdManager: NsdManager, priva
             nsdManager.discoverServices("_catchcatch._tcp", NsdManager.PROTOCOL_DNS_SD, mdnsListener)
         }
 
-        fun listen(context: HomeActivity, callback: (String) -> Unit) {
+        fun listenServerAddress(context: Context, callback: (String) -> Unit) {
             listen(context, fun(info: NsdServiceInfo) {
                 val address = "http://" + info.host.hostAddress + ":" + info.port
                 callback(address)
