@@ -173,7 +173,7 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
 		sessions.Emit(g.targetPlayer.ID, "game:loose", g.ID)
 		delete(g.players, g.targetPlayer.ID)
-		sessions.Emit(p.ID, "game:target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
+		go sessions.Emit(p.ID, "game:target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
 		g.Stop()
 	} else if dist <= 100 {
 		log.Printf("game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)

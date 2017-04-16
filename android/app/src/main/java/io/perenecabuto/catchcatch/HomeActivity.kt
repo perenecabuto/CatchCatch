@@ -92,8 +92,8 @@ class HomeActivity : ActivityWithLocationPermission() {
         TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(dialogsDelay)
     }
 
-    fun onGameTargetReached(msg: String) {
-        TransparentDialog(this, "You win $msg").showWithTimeout(dialogsDelay)
+    fun onGameTargetReached(meters: Double) {
+        TransparentDialog(this, "You win!\nTarget was ${meters}m closer").showWithTimeout(dialogsDelay)
     }
 }
 
@@ -143,9 +143,9 @@ class GameEventHandler(val activity: HomeActivity, val map: MapView) : PlayerEve
         }
     }
 
-    override fun onGameTargetReached(msg: String) {
+    override fun onGameTargetReached(meters: Double) {
         activity.runOnUiThread {
-            activity.onGameTargetReached(msg)
+            activity.onGameTargetReached(meters)
         }
     }
 
