@@ -138,9 +138,9 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
         }
     }
 
-    override fun onGameStarted(gameID: String) {
+    override fun onGameStarted(info: GameInfo) {
         activity.runOnUiThread {
-            activity.onGameStarted(gameID)
+            activity.onGameStarted(info)
         }
     }
 }

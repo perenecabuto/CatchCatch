@@ -18,6 +18,8 @@ data class Detection(val featID: String, val lat: Double, val lon: Double, val n
     }
 }
 
+data class GameInfo(val game: String, val role: String)
+
 data class Player(val id: String, var lat: Double, var lon: Double) {
     fun updateLocation(l: Location): Player {
         lat = l.latitude; lon = l.longitude
@@ -92,7 +94,7 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
     }
 
     private fun onGamesAround(args: Array<Any>?) {
-        val items = args?.get(0) as JSONArray
+        val items = args?.get(0) as? JSONArray ?: return
         val games = (0..items.length() - 1).map {
             val item = items.getJSONObject(it)
             Feature(item.getString("id"), item.getString("coords"))
@@ -101,7 +103,8 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
     }
 
     private fun onGameStarted(args: Array<Any>?) {
-        callback.onGameStarted(args?.get(0).toString())
+        val json = args?.get(0) as? JSONObject ?: return
+        callback.onGameStarted(GameInfo(json.getString("game"), json.getString("role")))
     }
 
     private fun onGameLoose(args: Array<Any>?) {
@@ -117,7 +120,7 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
     }
 
     private fun onGameFinish(args: Array<Any>?) {
-        val json = args?.get(0) as JSONObject
+        val json = args?.get(0) as? JSONObject ?: return
 
         val game = json.getString("game")
         val points = json.getJSONArray("points_per_player")
@@ -220,7 +223,7 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
         fun onDetectCheckpoint(detection: Detection) {}
         fun onConnect() {}
         fun onGamesAround(games: List<Feature>) {}
-        fun onGameStarted(gameID: String) {}
+        fun onGameStarted(info: GameInfo) {}
         fun onGameLoose(gameID: String) {}
         fun onGameTargetNear(meters: Double) {}
         fun onGameTargetReached(msg: String) {}
@@ -229,4 +232,3 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
 
     inner class NoConnectionException(msg: String) : Exception(msg)
 }
-
