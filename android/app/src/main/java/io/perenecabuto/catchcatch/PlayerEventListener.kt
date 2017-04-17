@@ -35,62 +35,34 @@ data class Player(val id: String, var lat: Double, var lon: Double) {
 data class GameRank(val game: String?, val pointsPerPlayer: List<PlayerRank>)
 data class PlayerRank(val player: String, val points: Int)
 
+interface ConnectableHandler {
+    fun onConnect() {}
+    fun onDisconnected() {}
+}
 
-class PlayerEventHandler(private val sock: Socket, internal var callback: EventCallback) {
-    internal val TAG = javaClass.name
+class GameXEventListener(private val sock: Socket, internal val handler: Handler) {
+    internal val AROUND = "game:around"
+    internal val STARTED = "game:started"
+    internal val LOOSE = "game:loose"
+    internal val TARGET_NEAR = "game:target:near"
+    internal val TARGET_REACHED = "game:target:reached"
+    internal val FINISH = "game:finish"
 
-    internal val PLAYER_REGISTERED = "player:registered"
-    internal val REMOTE_PLAYER_LIST = "remote-player:list"
-    internal val REMOTE_PLAYER_NEW = "remote-player:new"
-    internal val REMOTE_PLAYER_UPDATED = "remote-player:updated"
-    internal val REMOTE_PLAYER_DESTROY = "remote-player:destroy"
-    internal val DETECT_CHECKPOINT = "checkpoint:detected"
-
-    internal val GAME_AROUND = "game:around"
-    internal val GAME_STARTED = "game:started"
-    internal val GAME_LOOSE = "game:loose"
-    internal val GAME_TARGET_NEAR = "game:target:near"
-    internal val GAME_TARGET_REACHED = "game:target:reached"
-    internal val GAME_FINISH = "game:finish"
-
-    @Throws(URISyntaxException::class, NoConnectionException::class)
     fun connect() {
-        disconnect()
-        sock.on(Socket.EVENT_CONNECT) { onConnect() }
-            .on(PLAYER_REGISTERED) { onPlayerRegistered(it) }
-
-            .on(GAME_AROUND) { onGamesAround(it) }
-            .on(GAME_STARTED) { onGameStarted(it) }
-            .on(GAME_LOOSE) { onGameLoose(it) }
-            .on(GAME_TARGET_NEAR) { onGameTargetNear(it) }
-            .on(GAME_TARGET_REACHED) { onGameTargetReached(it) }
-            .on(GAME_FINISH) { onGameFinish(it) }
-
-            .on(REMOTE_PLAYER_LIST) { onRemotePlayerList(it) }
-            .on(REMOTE_PLAYER_NEW) { onRemotePlayerNew(it) }
-            .on(REMOTE_PLAYER_UPDATED) { onRemotePlayerUpdate(it) }
-            .on(REMOTE_PLAYER_DESTROY) { onRemotePlayerDestroy(it) }
-            .on(DETECT_CHECKPOINT) { onDetectCheckpoint(it) }
-            .on(Socket.EVENT_DISCONNECT) { onDisconnect() }
-
+        sock.off()
+        sock.on(Socket.EVENT_CONNECT) { handler.onConnect() }
+            .on(AROUND) { onGamesAround(it) }
+            .on(STARTED) { onGameStarted(it) }
+            .on(LOOSE) { onGameLoose(it) }
+            .on(TARGET_NEAR) { onGameTargetNear(it) }
+            .on(TARGET_REACHED) { onGameTargetReached(it) }
+            .on(FINISH) { onGameFinish(it) }
+            .on(Socket.EVENT_CONNECT) { handler.onDisconnected() }
         sock.connect()
     }
 
-    private fun onDisconnect() {
-        callback.onDisconnected()
-    }
-
-    private fun onConnect() {
-        callback.onConnect()
-    }
-
-    private fun onPlayerRegistered(args: Array<Any>) {
-        try {
-            val player = playerFromJSON(args[0].toString())
-            callback.onRegistered(player)
-        } catch (e: JSONException) {
-            e.printStackTrace()
-        }
+    fun requestAroundGames() {
+        sock.emit("player:request-games")
     }
 
     private fun onGamesAround(args: Array<Any>?) {
@@ -99,24 +71,24 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
             val item = items.getJSONObject(it)
             Feature(item.getString("id"), item.getString("coords"))
         }
-        callback.onGamesAround(games)
+        handler.onGamesAround(games)
     }
 
     private fun onGameStarted(args: Array<Any>?) {
         val json = args?.get(0) as? JSONObject ?: return
-        callback.onGameStarted(GameInfo(json.getString("game"), json.getString("role")))
+        handler.onGameStarted(GameInfo(json.getString("game"), json.getString("role")))
     }
 
     private fun onGameLoose(args: Array<Any>?) {
-        callback.onGameLoose(args?.get(0).toString())
+        handler.onGameLoose(args?.get(0).toString())
     }
 
     private fun onGameTargetNear(args: Array<Any>?) {
-        callback.onGameTargetNear(args?.get(0).toString().toDouble())
+        handler.onGameTargetNear(args?.get(0).toString().toDouble())
     }
 
     private fun onGameTargetReached(args: Array<Any>?) {
-        callback.onGameTargetReached(args?.get(0).toString().toDouble())
+        handler.onGameTargetReached(args?.get(0).toString().toDouble())
     }
 
     private fun onGameFinish(args: Array<Any>?) {
@@ -129,13 +101,58 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
             .map { PlayerRank(it.getString("player"), it.getInt("points")) }
 
         val rank = GameRank(game, pointsPerPlayer)
-        callback.onGameFinish(rank)
+        handler.onGameFinish(rank)
+    }
+
+    interface Handler : ConnectableHandler {
+        fun onGamesAround(games: List<Feature>)
+        fun onGameStarted(info: GameInfo)
+        fun onGameTargetNear(meters: Double)
+        fun onGameTargetReached(meters: Double)
+        fun onGameLoose(gameID: String)
+        fun onGameFinish(rank: GameRank) {}
+    }
+}
+
+
+class GameRadarListener(private val sock: Socket, private val handler: Handler) {
+    internal val TAG = javaClass.name
+
+    internal val PLAYER_REGISTERED = "player:registered"
+    internal val REMOTE_PLAYER_LIST = "remote-player:list"
+    internal val REMOTE_PLAYER_NEW = "remote-player:new"
+    internal val REMOTE_PLAYER_UPDATED = "remote-player:updated"
+    internal val REMOTE_PLAYER_DESTROY = "remote-player:destroy"
+    internal val DETECT_CHECKPOINT = "checkpoint:detected"
+
+
+    @Throws(URISyntaxException::class, NoConnectionException::class)
+    fun connect() {
+        sock.off()
+        sock.on(Socket.EVENT_CONNECT) { handler.onConnect() }
+            .on(PLAYER_REGISTERED) { onPlayerRegistered(it) }
+            .on(REMOTE_PLAYER_LIST) { onRemotePlayerList(it) }
+            .on(REMOTE_PLAYER_NEW) { onRemotePlayerNew(it) }
+            .on(REMOTE_PLAYER_UPDATED) { onRemotePlayerUpdate(it) }
+            .on(REMOTE_PLAYER_DESTROY) { onRemotePlayerDestroy(it) }
+            .on(DETECT_CHECKPOINT) { onDetectCheckpoint(it) }
+            .on(Socket.EVENT_DISCONNECT) { handler.onDisconnected() }
+        sock.connect()
+    }
+
+    private fun onPlayerRegistered(args: Array<Any>) {
+        try {
+            val player = playerFromJSON(args[0].toString())
+            handler.onRegistered(player)
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
     }
 
     private fun onDetectCheckpoint(args: Array<Any>) {
         try {
             val detection = getDetectionFromJSON(args[0].toString())
-            callback.onDetectCheckpoint(detection)
+            handler.onDetectCheckpoint(detection)
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -144,7 +161,7 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
     private fun onRemotePlayerDestroy(args: Array<Any>) {
         try {
             val player = playerFromJSON(args[0].toString())
-            callback.onRemotePlayerDestroy(player)
+            handler.onRemotePlayerDestroy(player)
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -153,7 +170,7 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
     private fun onRemotePlayerNew(args: Array<Any>) {
         try {
             val player = playerFromJSON(args[0].toString())
-            callback.onRemoteNewPlayer(player)
+            handler.onRemoteNewPlayer(player)
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -162,7 +179,7 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
     private fun onRemotePlayerUpdate(args: Array<Any>) {
         try {
             val player = playerFromJSON(args[0].toString())
-            callback.onRemotePlayerUpdate(player)
+            handler.onRemotePlayerUpdate(player)
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -178,25 +195,12 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
             e.printStackTrace()
         }
 
-        callback.onPlayerList(players)
+        handler.onPlayerList(players)
     }
 
     fun sendPosition(l: Location) {
-        try {
-            val coords = JSONObject(mapOf("lat" to l.latitude, "lon" to l.longitude))
-            sock.emit("player:update", coords.toString())
-        } catch (e: JSONException) {
-            e.printStackTrace()
-        }
-    }
-
-    fun requestAroundGames() {
-        sock.emit("player:request-games")
-    }
-
-    fun disconnect() {
-        sock.off()
-        sock.disconnect()
+        val coords = JSONObject(mapOf("lat" to l.latitude, "lon" to l.longitude))
+        sock.emit("player:update", coords.toString())
     }
 
     @Throws(JSONException::class)
@@ -213,21 +217,13 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
             pJson.getDouble("near_by_meters"))
     }
 
-    interface EventCallback {
+    interface Handler : ConnectableHandler {
         fun onPlayerList(players: List<Player>) {}
         fun onRemotePlayerUpdate(player: Player) {}
         fun onRemoteNewPlayer(player: Player) {}
         fun onRegistered(p: Player) {}
         fun onRemotePlayerDestroy(player: Player) {}
-        fun onDisconnected() {}
         fun onDetectCheckpoint(detection: Detection) {}
-        fun onConnect() {}
-        fun onGamesAround(games: List<Feature>) {}
-        fun onGameStarted(info: GameInfo) {}
-        fun onGameLoose(gameID: String) {}
-        fun onGameTargetNear(meters: Double) {}
-        fun onGameTargetReached(meters: Double) {}
-        fun onGameFinish(rank: GameRank) {}
     }
 
     inner class NoConnectionException(msg: String) : Exception(msg)

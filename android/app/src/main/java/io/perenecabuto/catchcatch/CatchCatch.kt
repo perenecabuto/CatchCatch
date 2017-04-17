@@ -18,7 +18,6 @@ class CatchCatch : Application() {
                 rememberUpgrade = true
                 timestampRequests = false
                 reconnection = true
-                reconnectionAttempts = -1
             }
         }
         socket = IO.socket(address, socketOpts)
