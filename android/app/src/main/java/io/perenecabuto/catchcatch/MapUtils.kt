@@ -58,6 +58,13 @@ object OSMShortcuts {
         map.controller?.setZoom(20)
         map.invalidate()
     }
+
+    fun refreshGeojsonFeaturesOnMap(map: MapView, geojsons: List<GeoJsonPolygon>) {
+        val gameOverlays = map.overlays.filter { it is GeoJsonPolygon }
+        map.overlays.removeAll(gameOverlays)
+        map.overlays.addAll(geojsons)
+        map.invalidate()
+    }
 }
 
 class GeoJsonPolygon(val id: String, geojson: String) : Polygon() {

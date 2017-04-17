@@ -114,10 +114,7 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
 
     override fun onGamesAround(games: List<Feature>) {
         activity.runOnUiThread {
-            val gameOverlays = map.overlays.filter { it is GeoJsonPolygon }
-            map.overlays.removeAll(gameOverlays)
-            map.overlays.addAll(games.map { GeoJsonPolygon(it.id, it.geojson) })
-            map.invalidate()
+            OSMShortcuts.refreshGeojsonFeaturesOnMap(map, games.map { GeoJsonPolygon(it.id, it.geojson) })
         }
     }
 
