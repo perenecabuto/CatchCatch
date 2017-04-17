@@ -9,11 +9,13 @@ import com.google.gson.JsonParser
 import org.osmdroid.bonuspack.kml.KmlGeometry
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polygon
+import java.util.*
 
 
 object OSMShortcuts {
@@ -54,6 +56,10 @@ object OSMShortcuts {
         val item = OverlayItemWithID(id, point)
         markerOverlay.removeItem(item)
         markerOverlay.addItem(item)
+        map.invalidate()
+    }
+
+    fun focus(map: MapView, point: GeoPoint) {
         map.controller?.setCenter(point)
         map.controller?.setZoom(20)
         map.invalidate()
@@ -65,9 +71,43 @@ object OSMShortcuts {
         map.overlays.addAll(geojsons)
         map.invalidate()
     }
+
+    fun animatePolygonOverlay(map: MapView, id: String): PolygonAnimator? {
+        val overlay = map.overlays.firstOrNull({ it is PolygonWithID && it.id == id }) as? PolygonWithID
+            ?: return null
+
+        return PolygonAnimator(map, overlay).start()
+    }
 }
 
-class GeoJsonPolygon(val id: String, geojson: String) : Polygon() {
+class PolygonAnimator(val map: MapView, val overlay: PolygonWithID) {
+    private var stopSign = false
+    private var ramdom = Random()
+
+    fun start(): PolygonAnimator {
+        animate()
+        return this
+    }
+
+    fun stop() {
+        stopSign = true
+    }
+
+    fun animate() {
+        if (stopSign) {
+            stopSign = false
+            return
+        }
+        overlay.strokeColor = Color.argb(127, ramdom.nextInt(254), ramdom.nextInt(254), ramdom.nextInt(254))
+        overlay.fillColor = Color.argb(25, ramdom.nextInt(254), ramdom.nextInt(254), ramdom.nextInt(254))
+        overlay.strokeWidth = 5.0f
+        map.invalidate()
+        Handler().postDelayed(this::animate, 1_000)
+    }
+
+}
+
+class GeoJsonPolygon(id: String, geojson: String) : PolygonWithID(id) {
     init {
         val jsonObject = JsonParser().parse(geojson).asJsonObject
         val geom = KmlGeometry.parseGeoJSON(jsonObject)
@@ -76,18 +116,10 @@ class GeoJsonPolygon(val id: String, geojson: String) : Polygon() {
         fillColor = 0x12121212
         points = geom.mCoordinates
     }
-
-    override fun equals(other: Any?): Boolean {
-        return other is GeoJsonPolygon && id == other.id
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
-    }
 }
 
 
-class DistanceCircle(val id: String, center: GeoPoint, dist: Double, maxDist: Double) : Polygon() {
+class DistanceCircle(id: String, center: GeoPoint, dist: Double, maxDist: Double) : PolygonWithID(id) {
     val color = when {
         dist < maxDist / 3 -> listOf(Color.RED, Color.argb(127, 169, 86, 66))
         dist < maxDist / 2 -> listOf(Color.YELLOW, Color.argb(127, 169, 165, 66))
@@ -100,16 +132,29 @@ class DistanceCircle(val id: String, center: GeoPoint, dist: Double, maxDist: Do
         fillColor = color[1]
         strokeWidth = 3F
     }
+}
 
+open class PolygonWithID(val id: String) : Polygon() {
     override fun equals(other: Any?): Boolean {
-        return other is DistanceCircle && id == other.id
+        return other is PolygonWithID && id == other.id
     }
 
     override fun hashCode(): Int {
         return id.hashCode()
     }
-}
 
+    val boundingBox: BoundingBox by lazy {
+        val max = Double.MAX_VALUE
+        val box = mutableListOf(max, max, -max, -max)
+        points.forEach { p ->
+            box[0] = if (p.latitude < box[0]) p.latitude else box[0]
+            box[1] = if (p.longitude < box[1]) p.longitude else box[1]
+            box[2] = if (p.latitude > box[2]) p.latitude else box[2]
+            box[3] = if (p.longitude > box[3]) p.longitude else box[3]
+        }
+        BoundingBox(box[0], box[1], box[2], box[3])
+    }
+}
 
 class MarkerOverlay(val id: String, context: Context) :
     ItemizedIconOverlay<OverlayItem>(ArrayList<OverlayItem>(), context.resources.getDrawable(R.mipmap.marker, context.theme), null, context) {
