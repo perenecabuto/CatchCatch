@@ -112,11 +112,11 @@ class PlayerEventHandler(private val sock: Socket, internal var callback: EventC
     }
 
     private fun onGameTargetNear(args: Array<Any>?) {
-        callback.onGameTargetNear(args?.get(0) as? Double ?: 0.0)
+        callback.onGameTargetNear(args?.get(0).toString().toDouble())
     }
 
     private fun onGameTargetReached(args: Array<Any>?) {
-        callback.onGameTargetReached(args?.get(0) as? Double ?: 0.0)
+        callback.onGameTargetReached(args?.get(0).toString().toDouble())
     }
 
     private fun onGameFinish(args: Array<Any>?) {

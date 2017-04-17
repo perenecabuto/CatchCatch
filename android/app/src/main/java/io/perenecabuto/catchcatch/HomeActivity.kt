@@ -72,6 +72,11 @@ class HomeActivity : ActivityWithLocationPermission() {
         OSMShortcuts.showMarkerOnMap(map!!, id, point)
     }
 
+    fun onRegistered(p: Player) {
+        player = p
+        TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(dialogsDelay)
+    }
+
     fun onGameStarted(info: GameInfo) {
         manager!!.callback = GameEventHandler(this, map!!)
         TransparentDialog(this, "Game ${info.game} started.\nYour role is: ${info.role}").showWithTimeout(dialogsDelay)
@@ -82,18 +87,15 @@ class HomeActivity : ActivityWithLocationPermission() {
         TransparentDialog(this, "You loose $gameID").showWithTimeout(dialogsDelay)
     }
 
-    fun onGameFinish(rank: GameRank) {
-        manager!!.callback = HomeEventHandler(this, map!!)
-        RankDialog(this, rank).showWithTimeout(dialogsDelay)
-    }
-
-    fun onRegistered(p: Player) {
-        player = p
-        TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(dialogsDelay)
-    }
-
     fun onGameTargetReached(meters: Double) {
-        TransparentDialog(this, "You win!\nTarget was ${meters}m closer").showWithTimeout(dialogsDelay)
+        TransparentDialog(this, "You win!\nTarget was ${meters.toInt()}m closer").showWithTimeout(dialogsDelay)
+    }
+
+    fun onGameFinish(rank: GameRank) {
+        Handler().postDelayed({
+            manager!!.callback = HomeEventHandler(this, map!!)
+            RankDialog(this, rank).showWithTimeout(dialogsDelay)
+        }, 5000)
     }
 }
 
