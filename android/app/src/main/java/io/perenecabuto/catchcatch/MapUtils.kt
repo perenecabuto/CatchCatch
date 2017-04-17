@@ -93,14 +93,14 @@ class PolygonAnimator(val map: MapView, val overlay: PolygonWithID) {
         stopSign = true
     }
 
-    fun animate() {
+    private fun animate() {
         if (stopSign) {
             stopSign = false
             return
         }
-        overlay.strokeColor = Color.argb(127, ramdom.nextInt(254), ramdom.nextInt(254), ramdom.nextInt(254))
-        overlay.fillColor = Color.argb(25, ramdom.nextInt(254), ramdom.nextInt(254), ramdom.nextInt(254))
-        overlay.strokeWidth = 5.0f
+        val color = listOf(ramdom.nextInt(254), ramdom.nextInt(254), ramdom.nextInt(254))
+        overlay.strokeColor = Color.argb(127, color[0], color[1], color[2])
+        overlay.fillColor = Color.argb(25, color[0], color[1], color[2])
         map.invalidate()
         Handler().postDelayed(this::animate, 1_000)
     }
@@ -112,7 +112,7 @@ class GeoJsonPolygon(id: String, geojson: String) : PolygonWithID(id) {
         val jsonObject = JsonParser().parse(geojson).asJsonObject
         val geom = KmlGeometry.parseGeoJSON(jsonObject)
         strokeColor = Color.BLACK
-        strokeWidth = 2F
+        strokeWidth = 3F
         fillColor = 0x12121212
         points = geom.mCoordinates
     }
@@ -130,7 +130,7 @@ class DistanceCircle(id: String, center: GeoPoint, dist: Double, maxDist: Double
         points = Polygon.pointsAsCircle(center, dist)
         strokeColor = color[0]
         fillColor = color[1]
-        strokeWidth = 3F
+        strokeWidth = 2F
     }
 }
 
