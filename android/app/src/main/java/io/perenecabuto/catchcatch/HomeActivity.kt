@@ -4,7 +4,6 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
-import android.widget.Toast
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
@@ -74,7 +73,7 @@ class HomeActivity : ActivityWithLocationPermission() {
 
     fun onRegistered(p: Player) {
         player = p
-        TransparentDialog(this, "Registered as ${p.id}").showWithTimeout(dialogsDelay)
+        TransparentDialog(this, "Connected as\n${p.id}").showWithTimeout(dialogsDelay)
     }
 
     fun onGameStarted(info: GameInfo) {
@@ -100,12 +99,6 @@ class HomeActivity : ActivityWithLocationPermission() {
 }
 
 class HomeEventHandler(private val activity: HomeActivity, private val map: MapView) : PlayerEventHandler.EventCallback {
-    override fun onConnect() {
-        activity.runOnUiThread {
-            Toast.makeText(activity, "onConnect", Toast.LENGTH_LONG).show()
-        }
-    }
-
     override fun onRegistered(p: Player) {
         activity.runOnUiThread {
             activity.onRegistered(p)
@@ -115,7 +108,7 @@ class HomeEventHandler(private val activity: HomeActivity, private val map: MapV
     override fun onDisconnected() {
         activity.runOnUiThread {
             map.overlays.clear()
-            Toast.makeText(activity, "onDisconnected", Toast.LENGTH_LONG).show()
+            TransparentDialog(activity, "disconnected").showWithTimeout(5000)
         }
     }
 
@@ -139,7 +132,6 @@ class GameEventHandler(val activity: HomeActivity, val map: MapView) : PlayerEve
     private val TAG = GameEventHandler::class.java.simpleName
 
     override fun onGameTargetNear(meters: Double) {
-        Log.d(TAG, "onGameTargetNear:" + meters)
         activity.runOnUiThread {
             OSMShortcuts.drawCircleOnMap(map, "target-dist", activity.player.point(), meters, 1000.0)
         }
