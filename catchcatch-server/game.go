@@ -168,7 +168,6 @@ func (g *Game) setPlayerUntilReady(p *Player, sessions *SessionManager) {
 func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	g.setPlayer(p)
 	if p.ID == g.targetPlayer.ID {
-		log.Printf("game:%s:target:move", g.ID)
 		return
 	}
 	dist := p.DistTo(g.targetPlayer)
@@ -181,8 +180,8 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	} else if dist <= 100 {
 		log.Printf("game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
 		sessions.Emit(p.ID, "game:target:near", strconv.FormatFloat(dist, 'f', 0, 64))
-	} else {
-		log.Printf("game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
+		// } else {
+		// log.Printf("game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
 	}
 }
 
