@@ -7,7 +7,7 @@ open class BaseDialog(context: android.content.Context) : android.app.Dialog(con
         window.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
-    fun show() {
+    override fun show() {
         try {
             super.show()
         } catch (e: Exception) {
@@ -17,6 +17,7 @@ open class BaseDialog(context: android.content.Context) : android.app.Dialog(con
     }
 
     fun showWithTimeout(millis: Long) {
+        show()
         android.os.Handler().postDelayed(this::dismiss, millis)
     }
 }
