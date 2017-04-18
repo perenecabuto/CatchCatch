@@ -131,8 +131,8 @@ func (g Game) Ready() bool {
 }
 
 // WatchPlayers events
-func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) {
-	go stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
+func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) error {
+	return stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
 		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		switch d.Intersects {
 		case Enter:
@@ -249,7 +249,13 @@ func handleGames(stream EventStream, sessions *SessionManager) {
 			gameDuration := time.Minute
 			game = NewGame(gameID, gameDuration)
 			games[gameID] = game
-			game.WatchPlayers(stream, sessions)
+
+			go func() {
+				if err := game.WatchPlayers(stream, sessions); err != nil {
+					delete(games, gameID)
+					log.Printf("Error to start gamewatcher:%s - err: %v", game.ID, err)
+				}
+			}()
 		}
 	})
 	if err != nil {
