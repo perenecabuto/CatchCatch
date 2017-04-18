@@ -138,8 +138,11 @@ let Player = function (x, y) {
         socket.on('game:target:near', function (distToTarget) {
             log(player.id + ':targe:near:' + distToTarget);
         })
-        socket.on('game:target:reached', function (data) {
-            log(player.id + ':target:reached:winner!!!!');
+        socket.on('game:target:reached', function (distToTarget) {
+            log(player.id + ':target:reached:' + distToTarget);
+        })
+        socket.on('game:target:win', function () {
+            log(player.id + ':target:reached:win');
         })
         socket.on('game:finish', function (rank) {
             log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.points_per_player));

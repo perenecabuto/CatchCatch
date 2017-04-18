@@ -94,6 +94,10 @@ class GameEventHandler(val activity: HomeActivity, val map: MapView) : GameEvent
         TransparentDialog(activity, "You win!\nTarget was ${meters.toInt()}m closer").showWithTimeout(dialogsDelay)
     }
 
+    override fun onGameTargetWin() {
+        TransparentDialog(activity, "You win!\n \\o/ ").show()
+    }
+
     override fun onGameLoose(gameID: String) = activity.runOnUiThread {
         finish()
         TransparentDialog(activity, "You loose =/").showWithTimeout(dialogsDelay)

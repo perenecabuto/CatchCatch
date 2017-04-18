@@ -93,6 +93,10 @@ class GameEventListener(override val sock: Socket, override val handler: Handler
         handler.onGameTargetReached(args?.get(0).toString().toDouble())
     }
 
+    private fun onGameTargetWin() {
+        handler.onGameTargetWin()
+    }
+
     private fun onGameFinish(args: Array<Any>?) {
         val json = args?.get(0) as? JSONObject ?: return
 
@@ -114,5 +118,6 @@ class GameEventListener(override val sock: Socket, override val handler: Handler
         fun onGameTargetReached(meters: Double)
         fun onGameLoose(gameID: String)
         fun onGameFinish(rank: GameRank) {}
+        fun onGameTargetWin() {}
     }
 }

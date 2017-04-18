@@ -63,6 +63,9 @@ func (g *Game) Start(sessions *SessionManager) {
 		log.Println("---------------------------")
 		log.Println("game:", g.ID, ":stop!!!!!!!")
 		log.Println("---------------------------")
+		if _, exists := g.players[g.targetPlayer.ID]; exists {
+			go sessions.Emit(g.targetPlayer.ID, "game:target:win", "")
+		}
 		sessions.BroadcastTo(g.playerIDs(), "game:finish", g.rank())
 
 		g.started = false
