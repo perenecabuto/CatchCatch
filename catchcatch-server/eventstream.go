@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	protocol "github.com/quorzz/redis-protocol"
 	"github.com/tidwall/gjson"
 )
 
@@ -29,14 +30,13 @@ func NewEventStream(addr string) EventStream {
 
 // StreamNearByEvents stream proximation events
 func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error {
-	cmd := fmt.Sprintf("NEARBY %s FENCE ROAM %s * %d", nearByKey, roamKey, meters)
+	cmd := query{"NEARBY", nearByKey, "FENCE", "ROAM", roamKey, "*", meters}
 	return streamDetection(es.addr, cmd, callback)
 }
 
 // StreamIntersects stream intersection events
 func (es *Tile38EventStream) StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
-	//INTERSECTS player FENCE DETECT inside,enter,exit GET geofences uuu
-	cmd := fmt.Sprintf("INTERSECTS %s FENCE DETECT inside,enter,exit GET %s %s", intersectKey, onKey, onKeyID)
+	cmd := query{"INTERSECTS", intersectKey, "FENCE", "DETECT", "inside,enter,exit", "GET", onKey, onKeyID}
 	return streamDetection(es.addr, cmd, overrideNearByFeatIDWrapper(onKeyID, callback))
 }
 
@@ -84,8 +84,8 @@ func (err DetectionError) Error() string {
 	return string("DetectionError: " + err)
 }
 
-func streamDetection(addr string, cmd string, callback DetectionHandler) error {
-	conn, err := listenTo(addr, cmd)
+func streamDetection(addr string, q query, callback DetectionHandler) error {
+	conn, err := listenTo(addr, q)
 	if err != nil {
 		return err
 	}
@@ -133,21 +133,33 @@ func handleDetection(msg string) (*Detection, error) {
 	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects}, nil
 }
 
-func listenTo(addr, cmd string) (net.Conn, error) {
+func listenTo(addr string, q query) (net.Conn, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println("REDIS DEBUG:", cmd)
-	if _, err = fmt.Fprintf(conn, cmd+"\r\n"); err != nil {
+	log.Println("REDIS DEBUG:", q)
+	if _, err = fmt.Fprintf(conn, q.cmd()); err != nil {
 		return nil, err
 	}
 	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
 	res := string(buf[:n])
 	if res != "+OK\r\n" {
-		return nil, fmt.Errorf("expected OK, got '%v'", res)
+		return nil, fmt.Errorf("expected OK, got '%v' - query: %s", res, q)
 	}
 	return conn, nil
+}
+
+type query []interface{}
+
+func (q query) String() string {
+	args := q
+	return fmt.Sprintln(args...)
+}
+
+func (q query) cmd() string {
+	cmd, _ := protocol.PackCommand(q...)
+	return string(cmd)
 }
