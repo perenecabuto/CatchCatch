@@ -129,8 +129,8 @@ let Player = function (x, y) {
         socket.on('player:registered', onPlayerRegistred)
         socket.on('player:updated', onPlayerUpdated)
 
-        socket.on('game:started', function (game) {
-            log(player.id + ':game:started:' + game);
+        socket.on('game:started', function (info) {
+            log(player.id + ':game:started:' + info.game + ":role:" + info.role);
         })
         socket.on('game:loose', function (game) {
             log(player.id + ':game:loose:' + game)
