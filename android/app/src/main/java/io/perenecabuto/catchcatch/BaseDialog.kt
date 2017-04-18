@@ -7,8 +7,16 @@ open class BaseDialog(context: android.content.Context) : android.app.Dialog(con
         window.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
+    fun show() {
+        try {
+            super.show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
+    }
+
     fun showWithTimeout(millis: Long) {
-        show()
         android.os.Handler().postDelayed(this::dismiss, millis)
     }
 }
