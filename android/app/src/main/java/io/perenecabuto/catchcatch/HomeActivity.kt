@@ -63,20 +63,10 @@ class HomeActivity : ActivityWithLocationPermission(), PlayerEventListener.Handl
     override fun onRegistered(p: Player) = runOnUiThread {
         player = p
         TransparentDialog(this, "Connected as\n${p.id}").showWithTimeout(dialogsDelay)
-        startRadar()
     }
 
     override fun onDisconnected() = runOnUiThread {
-        stopRadar()
         TransparentDialog(this, "Disconnected").showWithTimeout(5000)
-    }
-
-    fun stopRadar() {
-        gameListener?.stopRadar()
-    }
-
-    fun startRadar() {
-        gameListener?.startRadar()
     }
 }
 
@@ -92,7 +82,6 @@ class GameEventHandler(val activity: HomeActivity, val map: MapView) : GameEvent
     override fun onGameStarted(info: GameInfo) = activity.runOnUiThread {
         this.info = info
         this.animator = OSMShortcuts.animatePolygonOverlay(map, info.game)
-        activity.stopRadar()
         animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox.center) }
         TransparentDialog(activity, "Game ${info.game} started.\nYour role is: ${info.role}").showWithTimeout(dialogsDelay)
     }
@@ -124,6 +113,5 @@ class GameEventHandler(val activity: HomeActivity, val map: MapView) : GameEvent
     private fun finish() {
         info = null
         animator?.stop()
-        activity.startRadar()
     }
 }

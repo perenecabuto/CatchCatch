@@ -1,6 +1,7 @@
 package io.perenecabuto.catchcatch
 
 import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import io.socket.client.Socket
 import org.json.JSONArray
@@ -20,8 +21,10 @@ class GameEventListener(override val sock: Socket, override val handler: Handler
     internal val LOOSE = "game:loose"
     internal val TARGET_NEAR = "game:target:near"
     internal val TARGET_REACHED = "game:target:reached"
+    internal val TARGET_WIN = "game:target:win"
     internal val FINISH = "game:finish"
 
+    private val looper = Looper.myLooper()
     private val interval: Long = 30_000
 
     override fun bind() {
@@ -30,26 +33,38 @@ class GameEventListener(override val sock: Socket, override val handler: Handler
             .on(LOOSE) { onGameLoose(it) }
             .on(TARGET_NEAR) { onGameTargetNear(it) }
             .on(TARGET_REACHED) { onGameTargetReached(it) }
+            .on(TARGET_WIN) { onGameTargetWin() }
             .on(FINISH) { onGameFinish(it) }
             .on(Socket.EVENT_CONNECT) { handler.onDisconnected() }
-
     }
 
-    private var stopSeek: Boolean = false
+    override fun connect() {
+        super.connect()
+        startRadar()
+    }
 
-    internal fun startRadar() {
-        if (stopSeek) {
-            stopSeek = false
-            return
-        }
+    override fun stop() {
+        super.stop()
+        stopRadar()
+    }
+
+    private var running: Boolean = false
+    private fun startRadar() {
+        running = true
+        radar()
+    }
+
+    private fun stopRadar() {
+        running = false
+    }
+
+    private fun radar() {
+        if (!running) return
         Log.d(TAG, "startRadar")
         sock.emit("player:request-games")
-        Handler().postDelayed(this::startRadar, interval)
+        Handler(looper).postDelayed(this::radar, interval)
     }
 
-    fun stopRadar() {
-        stopSeek = true
-    }
 
     private fun onGamesAround(args: Array<Any>?) {
         val items = args?.get(0) as? JSONArray ?: return
@@ -63,6 +78,7 @@ class GameEventListener(override val sock: Socket, override val handler: Handler
     private fun onGameStarted(args: Array<Any>?) {
         val json = args?.get(0) as? JSONObject ?: return
         handler.onGameStarted(GameInfo(json.getString("game"), json.getString("role")))
+        stopRadar()
     }
 
     private fun onGameLoose(args: Array<Any>?) {
@@ -88,6 +104,7 @@ class GameEventListener(override val sock: Socket, override val handler: Handler
 
         val rank = GameRank(game, pointsPerPlayer)
         handler.onGameFinish(rank)
+        startRadar()
     }
 
     interface Handler : ConnectableHandler {
