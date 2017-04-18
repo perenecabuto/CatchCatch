@@ -60,11 +60,10 @@ class GameEventListener(override val sock: Socket, override val handler: Handler
 
     private fun radar() {
         if (!running) return
-        Log.d(TAG, "startRadar")
+        Log.d(TAG, "searching for games around...")
         sock.emit("player:request-games")
         Handler(looper).postDelayed(this::radar, interval)
     }
-
 
     private fun onGamesAround(args: Array<Any>?) {
         val items = args?.get(0) as? JSONArray ?: return
