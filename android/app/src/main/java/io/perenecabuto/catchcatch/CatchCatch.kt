@@ -22,6 +22,7 @@ class CatchCatch : Application() {
         }
         socket = IO.socket(address, socketOpts)
         socket!!.on(Socket.EVENT_DISCONNECT, { socket!!.connect() })
+        socket!!.connect()
     }
 
     override fun onTerminate() {
