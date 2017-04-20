@@ -81,30 +81,27 @@ object OSMShortcuts {
 }
 
 class PolygonAnimator(val map: MapView, val overlay: PolygonWithID) {
-    private var stopSign = false
     private var ramdom = Random()
+    internal var running = false
 
     fun start(): PolygonAnimator {
         animate()
+        running = true
         return this
     }
 
     fun stop() {
-        stopSign = true
+        running = false
     }
 
     private fun animate() {
-        if (stopSign) {
-            stopSign = false
-            return
-        }
+        if (!running) return
         val color = listOf(ramdom.nextInt(254), ramdom.nextInt(254), ramdom.nextInt(254))
         overlay.strokeColor = Color.argb(127, color[0], color[1], color[2])
         overlay.fillColor = Color.argb(25, color[0], color[1], color[2])
         map.invalidate()
         Handler().postDelayed(this::animate, 1_000)
     }
-
 }
 
 class GeoJsonPolygon(id: String, geojson: String) : PolygonWithID(id) {
