@@ -3,6 +3,7 @@ package io.perenecabuto.catchcatch
 import android.content.Context
 import android.location.Location
 import android.os.Bundle
+import android.os.Handler
 import android.os.Vibrator
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
@@ -42,9 +43,11 @@ class HomeActivity : ActivityWithLocationPermission() {
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
-
         showMessage("welcome!")
-        showRank(GameRank("CatchCatch", (0..10).map { PlayerRank("Player $it", Random().nextInt()) }))
+
+        Handler().postDelayed({
+            showRank(GameRank("CatchCatch", (0..10).map { PlayerRank("Player $it", Random().nextInt()) }))
+        }, dialogsDelay)
     }
 
     private fun onLocationUpdate(l: Location) {
