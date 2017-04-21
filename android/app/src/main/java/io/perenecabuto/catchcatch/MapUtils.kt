@@ -59,10 +59,9 @@ object OSMShortcuts {
         map.invalidate()
     }
 
-    fun focus(map: MapView, point: GeoPoint) {
-        map.controller?.setCenter(point)
-        map.controller?.setZoom(20)
-        map.invalidate()
+    fun focus(map: MapView, point: GeoPoint, zoomLevel: Int = 20) {
+        map.controller?.zoomTo(zoomLevel)
+        map.controller?.animateTo(point)
     }
 
     fun refreshGeojsonFeaturesOnMap(map: MapView, geojsons: List<GeoJsonPolygon>) {
