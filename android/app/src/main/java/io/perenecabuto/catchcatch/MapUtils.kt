@@ -117,15 +117,15 @@ class GeoJsonPolygon(id: String, geojson: String) : PolygonWithID(id) {
 
 class DistanceCircle(id: String, center: GeoPoint, dist: Double, maxDist: Double) : PolygonWithID(id) {
     val color = when {
-        dist < maxDist / 3 -> listOf(Color.RED, Color.argb(127, 169, 86, 66))
-        dist < maxDist / 2 -> listOf(Color.YELLOW, Color.argb(127, 169, 165, 66))
-        else -> listOf(Color.GRAY, Color.argb(96, 66, 162, 169))
+        dist < maxDist / 3 -> Color.argb(127, 169, 86, 66)
+        dist < maxDist / 2 -> Color.argb(127, 169, 165, 66)
+        else -> Color.argb(96, 66, 162, 169)
     }
 
     init {
         points = Polygon.pointsAsCircle(center, dist)
-        strokeColor = color[0]
-        fillColor = color[1]
+        strokeColor = color
+        fillColor = color
         strokeWidth = 2F
     }
 }
