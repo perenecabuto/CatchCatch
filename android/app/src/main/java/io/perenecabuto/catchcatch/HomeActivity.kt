@@ -5,6 +5,7 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
+import io.nlopez.smartlocation.OnLocationUpdatedListener
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
@@ -16,7 +17,7 @@ import java.util.*
 private val dialogsDelay: Long = 5000L
 
 
-class HomeActivity : ActivityWithLocationPermission() {
+class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener {
 
     internal var player = Player("", 0.0, 0.0)
     private var animator: PolygonAnimator? = null
@@ -29,12 +30,14 @@ class HomeActivity : ActivityWithLocationPermission() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         OSMShortcuts.onCreate(this)
+
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity_home)
 
         map = OSMShortcuts.findMapById(this, R.id.home_activity_map)
 
         val conf = LocationParams.Builder().setAccuracy(LocationAccuracy.HIGH).build()
-        SmartLocation.with(this).location().continuous().config(conf).start(this::onLocationUpdate)
+        SmartLocation.with(this).location().continuous().config(conf).start(this)
 
         val app = application as CatchCatch
         radar = RadarEventHandler(app.socket!!, this)
@@ -43,20 +46,20 @@ class HomeActivity : ActivityWithLocationPermission() {
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
-        showMessage("welcome!")
 
+        showMessage("welcome!")
         Handler().postDelayed({
             showRank(GameRank("CatchCatch", (0..10).map { PlayerRank("Player $it", Random().nextInt()) }))
         }, dialogsDelay)
     }
 
-    private fun onLocationUpdate(l: Location) {
-        val point = GeoPoint(l.latitude, l.longitude)
-        OSMShortcuts.focus(map!!, point)
+    override fun onLocationUpdated(l: Location) {
         player.updateLocation(l)
         sendPosition(l)
 
         if (animator == null || animator!!.running.not()) {
+            val point = GeoPoint(l.latitude, l.longitude)
+            OSMShortcuts.focus(map!!, point)
             OSMShortcuts.showMarkerOnMap(map!!, "me", point)
         }
     }
