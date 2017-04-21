@@ -8,8 +8,6 @@ import (
 	"sort"
 	"strconv"
 	"time"
-
-	io "github.com/googollee/go-socket.io"
 )
 
 // MinPlayersPerGame ...
@@ -133,40 +131,21 @@ func (g Game) Ready() bool {
 	return !g.started && len(g.players) >= MinPlayersPerGame
 }
 
-// WatchPlayers events
-func (g *Game) WatchPlayers(stream EventStream, sessions *SessionManager) error {
-	return stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
-		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
-		switch d.Intersects {
-		case Enter:
-			g.setPlayerUntilReady(p, sessions)
-		case Exit:
-			g.removePlayer(p, sessions)
-		case Inside:
-			if !g.started {
-				g.setPlayerUntilReady(p, sessions)
-			} else if g.hasPlayer(p.ID) {
-				g.updateAndNofityPlayer(p, sessions)
-			}
-		}
-	})
-}
-
-func (g *Game) setPlayerUntilReady(p *Player, sessions *SessionManager) {
+func (g *Game) SetPlayerUntilReady(p *Player, sessions *SessionManager) {
 	if g.started {
 		return
 	}
-	if !g.hasPlayer(p.ID) {
+	if !g.HasPlayer(p.ID) {
 		log.Println("game:"+g.ID+":detect=enter:", p)
 	}
-	g.setPlayer(p)
+	g.SetPlayer(p)
 	if g.Ready() {
 		g.Start(sessions)
 	}
 }
 
-func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
-	g.setPlayer(p)
+func (g *Game) UpdateAndNofityPlayer(p *Player, sessions *SessionManager) {
+	g.SetPlayer(p)
 	if p.ID == g.targetPlayer.ID {
 		return
 	}
@@ -185,7 +164,7 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	}
 }
 
-func (g *Game) setPlayer(p *Player) {
+func (g *Game) SetPlayer(p *Player) {
 	if player, exists := g.players[p.ID]; exists {
 		player.Lon = p.Lon
 		player.Lat = p.Lat
@@ -194,8 +173,8 @@ func (g *Game) setPlayer(p *Player) {
 	}
 }
 
-func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
-	if !g.hasPlayer(p.ID) {
+func (g *Game) RemovePlayer(p *Player, sessions *SessionManager) {
+	if !g.HasPlayer(p.ID) {
 		return
 	}
 
@@ -222,7 +201,7 @@ func (g *Game) removePlayer(p *Player, sessions *SessionManager) {
 	}
 }
 
-func (g *Game) hasPlayer(id string) bool {
+func (g *Game) HasPlayer(id string) bool {
 	_, exists := g.players[id]
 	return exists
 }
@@ -239,40 +218,4 @@ func (g *Game) sortTargetPlayer() {
 	ids := g.playerIDs()
 	randPlayerID := ids[rand.Intn(len(ids))]
 	g.targetPlayer = g.players[randPlayerID]
-}
-
-func handleGames(stream EventStream, sessions *SessionManager) {
-	games := make(map[string]*Game)
-	err := stream.StreamNearByEvents("player", "geofences", 0, func(d *Detection) {
-		gameID := d.NearByFeatID
-		game, exists := games[gameID]
-		if !exists {
-			log.Println("Creating game", gameID)
-			gameDuration := time.Minute
-			game = NewGame(gameID, gameDuration)
-			games[gameID] = game
-
-			go func() {
-				if err := game.WatchPlayers(stream, sessions); err != nil {
-					delete(games, gameID)
-					log.Printf("Error to start gamewatcher:%s - err: %v", game.ID, err)
-				}
-			}()
-		}
-	})
-	if err != nil {
-		log.Println("Error to stream geofence:event", err)
-	}
-}
-
-func handleCheckointsDetection(stream EventStream, sessions *SessionManager, server *io.Server) {
-	err := stream.StreamNearByEvents("player", "checkpoint", 1000, func(d *Detection) {
-		if err := sessions.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
-			log.Println("Error to notify player", d.FeatID, err)
-		}
-		server.BroadcastTo("main", "admin:feature:checkpoint", d)
-	})
-	if err != nil {
-		log.Println("Error to stream geofence:event", err)
-	}
 }

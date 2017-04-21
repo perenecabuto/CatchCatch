@@ -43,8 +43,9 @@ func main() {
 		log.Println("WS error:", err)
 	})
 
-	go handleGames(stream, sessions)
-	go handleCheckointsDetection(stream, sessions, server)
+	watcher := NewGameWatcher(stream, sessions)
+	go watcher.WatchGames()
+	go watcher.WatchCheckpoints(server)
 
 	eventH := NewEventHandler(server, service, sessions)
 	http.Handle("/ws/", recoverWrapper(eventH))
