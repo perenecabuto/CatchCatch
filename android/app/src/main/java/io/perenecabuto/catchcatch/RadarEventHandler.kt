@@ -29,7 +29,6 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
             .on(Socket.EVENT_DISCONNECT) { onDisconnect() }
 
         running = true
-        radar()
     }
 
     override fun stop() {
@@ -54,6 +53,7 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
     }
 
     private fun onRegistered(p: Player) {
+        radar()
         activity.player = p
         activity.showMessage("Connected as\n${p.id}")
     }
