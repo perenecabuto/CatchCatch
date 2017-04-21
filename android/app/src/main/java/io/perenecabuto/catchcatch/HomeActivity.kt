@@ -5,6 +5,7 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
+import android.view.Window
 import io.nlopez.smartlocation.OnLocationUpdatedListener
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
