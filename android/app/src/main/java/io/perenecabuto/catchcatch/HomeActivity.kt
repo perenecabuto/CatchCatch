@@ -1,7 +1,9 @@
 package io.perenecabuto.catchcatch
 
+import android.content.Context
 import android.location.Location
 import android.os.Bundle
+import android.os.Vibrator
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
@@ -67,6 +69,8 @@ class HomeActivity : ActivityWithLocationPermission() {
     }
 
     fun showMessage(msg: String) = runOnUiThread {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        vibrator.vibrate(100)
         TransparentDialog(this, msg).showWithTimeout(dialogsDelay)
     }
 
