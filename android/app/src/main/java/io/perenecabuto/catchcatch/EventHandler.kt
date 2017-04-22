@@ -9,6 +9,7 @@ internal val GAME_TARGET_WIN = "game:target:win"
 internal val GAME_FINISH = "game:finish"
 
 internal val PLAYER_REGISTERED = "player:registered"
+internal val PLAYER_UPDATED = "player:updated"
 internal val REMOTE_PLAYER_LIST = "remote-player:list"
 internal val REMOTE_PLAYER_NEW = "remote-player:new"
 internal val REMOTE_PLAYER_UPDATED = "remote-player:updated"

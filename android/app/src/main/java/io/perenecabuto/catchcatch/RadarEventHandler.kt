@@ -17,6 +17,9 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
                 val json = args?.get(0) as JSONObject? ?: return@finish
                 onRegistered(Player(json))
             }
+            .on(PLAYER_UPDATED) {
+                onUpdated()
+            }
             .on(GAME_AROUND) finish@ { args: Array<Any?>? ->
                 val items = args?.get(0) as? JSONArray ?: return@finish
                 onGamesAround(FeatureList(items))
@@ -26,12 +29,18 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
                 onGameStarted(GameInfo(json))
             }
             .on(Socket.EVENT_DISCONNECT) { onDisconnect() }
-
-        running = true
     }
 
-    override fun stop() {
-        running = false
+    override fun onStop() {
+        radarStarted = false
+    }
+
+    private var radarStarted: Boolean = false
+    private fun onUpdated() {
+        if (!radarStarted) {
+            radarStarted = true
+            radar()
+        }
     }
 
     private fun radar() {
@@ -40,7 +49,6 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
         sock.emit("player:request-games")
         Handler(looper).postDelayed(this::radar, interval)
     }
-
 
     private fun onGamesAround(games: FeatureList) {
         activity.showFeatures(games.list)
@@ -52,7 +60,6 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
     }
 
     private fun onRegistered(p: Player) {
-        radar()
         activity.player = p
         activity.showMessage("Connected as\n${p.id}")
     }
