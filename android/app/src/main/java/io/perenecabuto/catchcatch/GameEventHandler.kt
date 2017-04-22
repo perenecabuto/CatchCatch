@@ -45,8 +45,8 @@ class GameEventHandler(val sock: Socket, val info: GameInfo, val activity: HomeA
     }
 
     fun onGameLoose(gameID: String) {
-        stop()
         activity.showMessage("You loose =/")
+        stop()
     }
 
     fun onGameFinish(rank: GameRank) {
