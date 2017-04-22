@@ -52,7 +52,7 @@ class GameEventHandler(val sock: Socket, val info: GameInfo, val activity: HomeA
     }
 
     fun onGameFinish(rank: GameRank) {
-        activity.showMessage("Game over")
+        activity.showMessage("This game is over")
         activity.showRank(rank)
         stop()
     }
