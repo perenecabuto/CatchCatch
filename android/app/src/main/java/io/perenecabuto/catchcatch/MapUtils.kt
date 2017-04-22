@@ -80,7 +80,7 @@ object OSMShortcuts {
 }
 
 class PolygonAnimator(val map: MapView, val overlay: PolygonWithID) {
-    private var ramdom = Random()
+    private var random = Random()
     internal var running = false
 
     fun start(): PolygonAnimator {
@@ -95,21 +95,22 @@ class PolygonAnimator(val map: MapView, val overlay: PolygonWithID) {
 
     private fun animate() {
         if (!running) return
-        val color = listOf(ramdom.nextInt(254), ramdom.nextInt(254), ramdom.nextInt(254))
-        overlay.strokeColor = Color.argb(127, color[0], color[1], color[2])
+        val color = listOf(random.nextInt(254), random.nextInt(254), random.nextInt(254))
+        overlay.strokeWidth = 50F
+        overlay.strokeColor = Color.argb(50, color[0], color[1], color[2])
         overlay.fillColor = Color.argb(25, color[0], color[1], color[2])
         map.invalidate()
-        Handler().postDelayed(this::animate, 1_000)
+        Handler().postDelayed(this::animate, 500)
     }
 }
 
-class GeoJsonPolygon(id: String, geojson: String) : PolygonWithID(id) {
+class GeoJsonPolygon(id: String, geojson: String, val color: Int = Color.argb(63, 31, 96, 96)) : PolygonWithID(id) {
     init {
         val jsonObject = JsonParser().parse(geojson).asJsonObject
         val geom = KmlGeometry.parseGeoJSON(jsonObject)
-        strokeColor = Color.BLACK
+        strokeColor = color
         strokeWidth = 3F
-        fillColor = 0x12121212
+        fillColor = color
         points = geom.mCoordinates
     }
 }
@@ -117,16 +118,15 @@ class GeoJsonPolygon(id: String, geojson: String) : PolygonWithID(id) {
 
 class DistanceCircle(id: String, center: GeoPoint, dist: Double, maxDist: Double) : PolygonWithID(id) {
     val color = when {
-        dist < maxDist / 3 -> Color.argb(127, 169, 86, 66)
-        dist < maxDist / 2 -> Color.argb(127, 169, 165, 66)
-        else -> Color.argb(96, 66, 162, 169)
+        dist < maxDist / 3 -> Color.argb(63, 169, 86, 66)
+        dist < maxDist / 2 -> Color.argb(63, 169, 165, 66)
+        else -> Color.argb(63, 66, 162, 169)
     }
 
     init {
         points = Polygon.pointsAsCircle(center, dist)
         strokeColor = color
         fillColor = color
-        strokeWidth = 2F
     }
 }
 
