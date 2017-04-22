@@ -39,7 +39,7 @@ class GameEventHandler(val sock: Socket, val info: GameInfo, val activity: HomeA
     }
 
     fun onGameTargetReached(meters: Double) {
-        activity.showMessage("You win!\nTarget was ${meters.toInt()}m closer")
+        activity.showMessage("Congratulations!\nYou win!\nTarget was ${meters.toInt()}m closer")
     }
 
     fun onGameTargetWin() {
