@@ -60,7 +60,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
         if (animator == null || animator!!.running.not()) {
             val point = GeoPoint(l.latitude, l.longitude)
-            OSMShortcuts.focus(map!!, point)
+            OSMShortcuts.focus(map!!, point, 18)
             OSMShortcuts.showMarkerOnMap(map!!, "me", point)
         }
     }
@@ -93,7 +93,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     fun startGame(info: GameInfo) = runOnUiThread finish@ {
         val map = map ?: return@finish
         animator = OSMShortcuts.animatePolygonOverlay(map, info.game)
-        animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox.center) }
+        animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox.center, 23) }
 
         val app = application as CatchCatch
         game = GameEventHandler(app.socket!!, info, this)
