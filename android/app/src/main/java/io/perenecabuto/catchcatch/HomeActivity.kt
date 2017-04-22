@@ -113,7 +113,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     fun showInfo(text: String) = runOnUiThread {
         val info = findViewById(R.id.home_activity_info) as TextView
         info.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
-        info.text = text
+        info.text = text.capitalize()
     }
 
     fun showRank(rank: GameRank) = runOnUiThread {
