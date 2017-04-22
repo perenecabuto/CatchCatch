@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+import android.widget.TextView
 import io.nlopez.smartlocation.OnLocationUpdatedListener
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
@@ -14,6 +15,7 @@ import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import java.util.*
+
 
 private val dialogsDelay: Long = 5000L
 
@@ -114,5 +116,10 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         val sock = (application as CatchCatch).socket!!
         val coords = JSONObject(mapOf("lat" to l.latitude, "lon" to l.longitude))
         sock.emit("player:update", coords.toString())
+    }
+
+    fun showInfo(text: String) = runOnUiThread {
+        val info = findViewById(R.id.home_activity_info) as TextView
+        info.text = text
     }
 }
