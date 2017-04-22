@@ -25,8 +25,11 @@ open class BaseDialog(val activity: Activity) : android.app.Dialog(activity) {
     }
 
     fun showWithTimeout(millis: Long) {
-        android.os.Handler().postDelayed(this::dismiss, millis)
         show()
+        android.os.Handler().postDelayed(finish@ {
+            if (activity.isDestroyed || activity.isFinishing) return@finish
+            dismiss()
+        }, millis)
     }
 }
 
