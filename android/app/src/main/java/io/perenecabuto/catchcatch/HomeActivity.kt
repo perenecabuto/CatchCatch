@@ -110,7 +110,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     }
 
     fun showRank(rank: GameRank) = runOnUiThread {
-        RankDialog(this, rank).showWithTimeout(dialogsDelay)
+        RankDialog(this, rank).showWithTimeout(dialogsDelay*2)
     }
 
     fun showFeatures(games: List<Feature>) = runOnUiThread finish@ {
