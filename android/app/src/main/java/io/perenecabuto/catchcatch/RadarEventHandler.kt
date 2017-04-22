@@ -2,7 +2,6 @@ package io.perenecabuto.catchcatch
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import io.socket.client.Socket
 import org.json.JSONArray
 import org.json.JSONObject
@@ -10,9 +9,9 @@ import org.json.JSONObject
 class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHandler {
     private val looper = Looper.myLooper()
     private val interval: Long = 30_000
-    private var running = false
+    override var running = false
 
-    override fun start() {
+    override fun onStart() {
         sock.off()
             .on(PLAYER_REGISTERED) finish@ { args: Array<Any?>? ->
                 val json = args?.get(0) as JSONObject? ?: return@finish

@@ -16,10 +16,26 @@ internal val REMOTE_PLAYER_DESTROY = "remote-player:destroy"
 internal val CHECKPOINT_DETECTED = "checkpoint:detected"
 
 interface EventHandler {
-    fun start()
-    fun stop()
+    var running: Boolean
+    fun onStart()
+    fun onStop() {}
+
+    fun start() {
+        if (!running) {
+            running = true
+            onStart()
+        }
+    }
+
+    fun stop() {
+        if (running) {
+            running = false
+            onStop()
+        }
+    }
+
     fun switchTo(handler: EventHandler) {
-        this.stop()
+        stop()
         handler.start()
     }
 }
