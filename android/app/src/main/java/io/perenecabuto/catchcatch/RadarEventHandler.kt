@@ -45,12 +45,13 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
 
     private fun radar() {
         if (!running) return
-        Log.d(javaClass.simpleName, "searching for games around...")
+        activity.showInfo("searching for games around...")
         sock.emit("player:request-games")
         Handler(looper).postDelayed(this::radar, interval)
     }
 
     private fun onGamesAround(games: FeatureList) {
+        activity.showInfo("found ${games.list.size} games near you")
         activity.showFeatures(games.list)
     }
 
@@ -61,7 +62,7 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
 
     private fun onRegistered(p: Player) {
         activity.player = p
-        activity.showMessage("Connected as\n${p.id}")
+        activity.showInfo("Connected as ${p.id}")
     }
 
     private fun onDisconnect() {

@@ -7,6 +7,7 @@ class GameEventHandler(val sock: Socket, val info: GameInfo, val activity: HomeA
     override var running = false
 
     override fun onStart() {
+        activity.showInfo("Game:${info.game} Role:${info.role}")
         sock.off()
             .on(GAME_LOOSE) finish@ { args: Array<Any?>? ->
                 val gameID = args?.get(0) as String? ?: return@finish
@@ -29,6 +30,7 @@ class GameEventHandler(val sock: Socket, val info: GameInfo, val activity: HomeA
     }
 
     override fun onStop() {
+        activity.showInfo("Game ${info.game} just finished")
         activity.gameOver()
     }
 
