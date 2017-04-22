@@ -14,7 +14,6 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
-        android:fontFamily="sans-serif-light"
         android:shadowColor="@color/colorAccent"
         android:shadowDx="1"
         android:shadowDy="1"

@@ -7,6 +7,7 @@
         <item name="android:colorPrimary">@color/colorPrimary</item>
         <item name="android:colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="android:colorAccent">@color/colorAccent</item>
+        <item name="android:fontFamily">@string/catchcatch_font</item>
     </style>
 
     <style name="PopUpDialog">
@@ -14,4 +15,5 @@
         <item name="android:windowExitAnimation">@anim/slide_down</item>
     </style>
 
+    <string name="catchcatch_font">sans-serif-condensed</string>
 </resources>
