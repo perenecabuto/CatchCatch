@@ -47,7 +47,7 @@ class GameEventHandler(val sock: Socket, val info: GameInfo, val activity: HomeA
     }
 
     fun onGameLoose(gameID: String) {
-        activity.showMessage("You loose =/")
+        activity.showMessage("Holy shit!\nYou loose")
         stop()
     }
 

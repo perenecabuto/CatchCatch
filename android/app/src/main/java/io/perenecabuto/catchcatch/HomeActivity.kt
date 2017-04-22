@@ -30,6 +30,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     private var radar: RadarEventHandler? = null
     private var game: GameEventHandler? = null
 
+    private var tts: GameVoice? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,13 +46,16 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
         val app = application as CatchCatch
         radar = RadarEventHandler(app.socket!!, this)
-        radar!!.start()
+
+        tts = GameVoice(this) {
+            radar!!.start()
+            showMessage("Welcome to CatchCatch!")
+        }
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
 
-        showMessage("welcome!")
         Handler().postDelayed({
             showRank(GameRank("CatchCatch", (0..10).map { PlayerRank("Player $it", Random().nextInt()) }))
         }, dialogsDelay)
@@ -102,6 +106,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     fun showMessage(msg: String) = runOnUiThread {
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         vibrator.vibrate(100)
+        tts?.speak(msg)
         TransparentDialog(this, msg).showWithTimeout(dialogsDelay)
     }
 
@@ -112,7 +117,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     }
 
     fun showRank(rank: GameRank) = runOnUiThread {
-        RankDialog(this, rank).showWithTimeout(dialogsDelay*2)
+        RankDialog(this, rank).showWithTimeout(dialogsDelay * 2)
     }
 
     fun showFeatures(games: List<Feature>) = runOnUiThread finish@ {
