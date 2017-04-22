@@ -8,7 +8,7 @@ import org.json.JSONObject
 
 class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHandler {
     private val looper = Looper.myLooper()
-    private val interval: Long = 30_000
+    private val interval: Long = 20_000
     override var running = false
 
     override fun onStart() {
