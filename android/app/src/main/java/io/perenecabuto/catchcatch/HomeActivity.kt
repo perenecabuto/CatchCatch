@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+import android.view.animation.AnimationUtils
 import android.widget.TextView
 import io.nlopez.smartlocation.OnLocationUpdatedListener
 import io.nlopez.smartlocation.SmartLocation
@@ -106,6 +107,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
     fun showInfo(text: String) = runOnUiThread {
         val info = findViewById(R.id.home_activity_info) as TextView
+        info.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
         info.text = text
     }
 
