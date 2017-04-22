@@ -40,7 +40,7 @@ class TransparentDialog(activity: Activity, val msg: String) : BaseDialog(activi
     }
 }
 
-class RankDialog(activity: Activity, val rank: GameRank) : BaseDialog(activity) {
+class RankDialog(activity: Activity, val rank: GameRank, val you: Player) : BaseDialog(activity) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.dialog_rank)
@@ -62,10 +62,10 @@ class RankDialog(activity: Activity, val rank: GameRank) : BaseDialog(activity) 
     }
 
     @SuppressLint("ViewConstructor")
-    private class PlayerRankRow(context: Context, position: Int, player: String, points: Int) : TableRow(context) {
+    private inner class PlayerRankRow(context: Context, position: Int, playerID: String, points: Int) : TableRow(context) {
         init {
             addView(LabelTextView(context, position.toString()))
-            addView(LabelTextView(context, player))
+            addView(LabelTextView(context, if (you.id == playerID) "you" else playerID))
             addView(LabelTextView(context, points.toString()))
         }
     }
