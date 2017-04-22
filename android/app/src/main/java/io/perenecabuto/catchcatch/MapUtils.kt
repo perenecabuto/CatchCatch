@@ -84,8 +84,8 @@ class PolygonAnimator(val map: MapView, val overlay: PolygonWithID) {
     internal var running = false
 
     fun start(): PolygonAnimator {
-        animate()
         running = true
+        animate()
         return this
     }
 
