@@ -64,6 +64,10 @@ object OSMShortcuts {
         map.controller?.animateTo(point)
     }
 
+    fun  focus(map: MapView, bbox: BoundingBox) {
+        map.zoomToBoundingBox(bbox, true)
+    }
+
     fun refreshGeojsonFeaturesOnMap(map: MapView, geojsons: List<GeoJsonPolygon>) {
         val gameOverlays = map.overlays.filter { it is GeoJsonPolygon }
         map.overlays.removeAll(gameOverlays)

@@ -85,7 +85,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     fun startGame(info: GameInfo) = runOnUiThread finish@ {
         val map = map ?: return@finish
         animator = OSMShortcuts.animatePolygonOverlay(map, info.game)
-        animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox.center, 23) }
+        animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox) }
 
         val app = application as CatchCatch
         game = GameEventHandler(app.socket!!, info, this)
