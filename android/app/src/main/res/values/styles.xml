@@ -1,14 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="android:Theme.Black.NoTitleBar" tools:ignore="NewApi">
-        <!-- Customize your theme here. -->
-        <item name="android:actionBarStyle">@android:color/transparent</item>
+    <style name="AppTheme" parent="android:Theme.NoTitleBar" tools:ignore="NewApi">
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:fitsSystemWindows">true</item>
         <item name="android:colorPrimary">@color/colorPrimary</item>
         <item name="android:colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="android:colorAccent">@color/colorAccent</item>
     </style>
-
 
     <style name="PopUpDialog">
         <item name="android:windowEnterAnimation">@anim/slide_up</item>

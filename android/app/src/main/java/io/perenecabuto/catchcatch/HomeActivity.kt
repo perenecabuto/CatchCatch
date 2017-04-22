@@ -5,7 +5,7 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
-import android.view.Window
+import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 import io.nlopez.smartlocation.OnLocationUpdatedListener
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
@@ -32,7 +32,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         super.onCreate(savedInstanceState)
         OSMShortcuts.onCreate(this)
 
-        requestWindowFeature(Window.FEATURE_NO_TITLE)
+        window.setFlags(FLAG_LAYOUT_NO_LIMITS, FLAG_LAYOUT_NO_LIMITS)
         setContentView(R.layout.activity_home)
 
         map = OSMShortcuts.findMapById(this, R.id.home_activity_map)

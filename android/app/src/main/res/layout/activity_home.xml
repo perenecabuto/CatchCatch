@@ -1,11 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="io.perenecabuto.catchcatch.HomeActivity"
     >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#99666666"
+        android:orientation="horizontal"
+        android:padding="5dp"
+        android:translationZ="1dp"
+        >
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:fontFamily="casual"
+            android:paddingTop="30dp"
+            android:textColor="@android:color/primary_text_dark"
+            android:textSize="18sp"
+            tools:text="Connected as: somebody"
+            />
+    </LinearLayout>
 
     <org.osmdroid.views.MapView
         android:id="@+id/home_activity_map"
@@ -14,4 +34,4 @@
         android:background="@mipmap/home_map"
         />
 
-</RelativeLayout>
+</FrameLayout>
