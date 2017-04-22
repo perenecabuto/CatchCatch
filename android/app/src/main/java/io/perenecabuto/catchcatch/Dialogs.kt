@@ -33,8 +33,6 @@ open class BaseDialog(val activity: Activity) : android.app.Dialog(activity) {
 class TransparentDialog(activity: Activity, val msg: String) : BaseDialog(activity) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.attributes.windowAnimations = R.style.PopUpDialog
-        window.setBackgroundDrawableResource(android.R.color.transparent)
         setContentView(R.layout.dialog_transparent)
 
         val container = findViewById(R.id.dialog_transparent_text) as TextView
