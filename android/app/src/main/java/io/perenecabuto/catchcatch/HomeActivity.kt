@@ -77,21 +77,6 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         map!!.overlays.clear()
     }
 
-    fun showMessage(msg: String) = runOnUiThread {
-        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        vibrator.vibrate(100)
-        TransparentDialog(this, msg).showWithTimeout(dialogsDelay)
-    }
-
-    fun showRank(rank: GameRank) = runOnUiThread {
-        RankDialog(this, rank).showWithTimeout(dialogsDelay)
-    }
-
-    fun showFeatures(games: List<Feature>) = runOnUiThread finish@ {
-        val map = map ?: return@finish
-        OSMShortcuts.refreshGeojsonFeaturesOnMap(map, games.map { GeoJsonPolygon(it.id, it.geojson) })
-    }
-
     fun startGame(info: GameInfo) = runOnUiThread finish@ {
         val map = map ?: return@finish
         animator = OSMShortcuts.animatePolygonOverlay(map, info.game)
@@ -100,11 +85,6 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         val app = application as CatchCatch
         game = GameEventHandler(app.socket!!, info, this)
         radar!!.switchTo(game!!)
-    }
-
-    fun showCircleAroundPlayer(meters: Double) = runOnUiThread finish@ {
-        val map = map ?: return@finish
-        OSMShortcuts.drawCircleOnMap(map, "player-circle", player.point(), meters, 1000.0)
     }
 
     fun gameOver() = runOnUiThread {
@@ -118,8 +98,28 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         sock.emit("player:update", coords.toString())
     }
 
+    fun showMessage(msg: String) = runOnUiThread {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        vibrator.vibrate(100)
+        TransparentDialog(this, msg).showWithTimeout(dialogsDelay)
+    }
+
     fun showInfo(text: String) = runOnUiThread {
         val info = findViewById(R.id.home_activity_info) as TextView
         info.text = text
+    }
+
+    fun showRank(rank: GameRank) = runOnUiThread {
+        RankDialog(this, rank).showWithTimeout(dialogsDelay)
+    }
+
+    fun showFeatures(games: List<Feature>) = runOnUiThread finish@ {
+        val map = map ?: return@finish
+        OSMShortcuts.refreshGeojsonFeaturesOnMap(map, games.map { GeoJsonPolygon(it.id, it.geojson) })
+    }
+
+    fun showCircleAroundPlayer(meters: Double) = runOnUiThread finish@ {
+        val map = map ?: return@finish
+        OSMShortcuts.drawCircleOnMap(map, "player-circle", player.point(), meters, 1000.0)
     }
 }
