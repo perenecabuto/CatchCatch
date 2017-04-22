@@ -1,13 +1,14 @@
 package io.perenecabuto.catchcatch
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
 
-open class BaseDialog(context: android.content.Context) : android.app.Dialog(context) {
+open class BaseDialog(val activity: Activity) : android.app.Dialog(activity) {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         window.attributes.windowAnimations = io.perenecabuto.catchcatch.R.style.PopUpDialog
@@ -15,21 +16,21 @@ open class BaseDialog(context: android.content.Context) : android.app.Dialog(con
     }
 
     override fun show() {
+        if (activity.isDestroyed || activity.isFinishing) return
         try {
             super.show()
         } catch (e: Throwable) {
             e.printStackTrace()
-            return
         }
     }
 
     fun showWithTimeout(millis: Long) {
-        show()
         android.os.Handler().postDelayed(this::dismiss, millis)
+        show()
     }
 }
 
-class TransparentDialog(context: Context, val msg: String) : BaseDialog(context) {
+class TransparentDialog(activity: Activity, val msg: String) : BaseDialog(activity) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.attributes.windowAnimations = R.style.PopUpDialog
@@ -41,7 +42,7 @@ class TransparentDialog(context: Context, val msg: String) : BaseDialog(context)
     }
 }
 
-class RankDialog(context: Context, val rank: GameRank) : BaseDialog(context) {
+class RankDialog(activity: Activity, val rank: GameRank) : BaseDialog(activity) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.dialog_rank)
