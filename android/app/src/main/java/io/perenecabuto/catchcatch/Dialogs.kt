@@ -52,8 +52,6 @@ class RankDialog(activity: Activity, val rank: GameRank) : BaseDialog(activity) 
         rank.pointsPerPlayer.forEachIndexed { i, (player, points) ->
             rankTable.addView(PlayerRankRow(context, i + 1, player, points))
         }
-
-        findViewById(R.id.dialog_rank).setOnClickListener { dismiss() }
     }
 
     @SuppressLint("ViewConstructor")
