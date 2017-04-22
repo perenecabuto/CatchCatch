@@ -19,7 +19,7 @@
         android:shadowDx="1"
         android:shadowDy="1"
         android:shadowRadius="5"
-        android:textSize="40sp"
+        android:textSize="32sp"
         tools:ignore="HardcodedText"
         tools:text="Game started.\nYour role is: Targe"
         />
