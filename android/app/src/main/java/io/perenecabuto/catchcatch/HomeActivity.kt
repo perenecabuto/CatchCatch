@@ -54,9 +54,11 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         radar = RadarEventHandler(app.socket!!, this)
 
         tts = GameVoice(this) {
+            showMessage("welcome to CatchCatch!")
             radar!!.start()
-            showMessage("Welcome to CatchCatch!")
         }
+
+        showInfo("starting...")
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
