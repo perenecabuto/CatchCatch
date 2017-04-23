@@ -1,6 +1,7 @@
 package io.perenecabuto.catchcatch
 
 import android.content.Context
+import android.hardware.SensorManager
 import android.location.Location
 import android.os.Bundle
 import android.os.Handler
@@ -38,6 +39,13 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         setContentView(R.layout.activity_home)
 
         map = OSMShortcuts.findMapById(this, R.id.home_activity_map)
+
+        val sensors = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        CompassEventListener.listenCompass(sensors) { heading ->
+            if (animator?.running != true) {
+                map!!.mapOrientation = heading
+            }
+        }
 
         val conf = LocationParams.Builder().setAccuracy(LocationAccuracy.HIGH).build()
         SmartLocation.with(this).location().continuous().config(conf).start(this)
