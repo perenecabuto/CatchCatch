@@ -64,7 +64,7 @@ object OSMShortcuts {
         map.controller?.animateTo(point)
     }
 
-    fun  focus(map: MapView, bbox: BoundingBox) {
+    fun focus(map: MapView, bbox: BoundingBox) {
         map.zoomToBoundingBox(bbox, true)
     }
 

@@ -135,6 +135,6 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
     fun showCircleAroundPlayer(meters: Double) = runOnUiThread finish@ {
         val map = map ?: return@finish
-        OSMShortcuts.drawCircleOnMap(map, "player-circle", player.point(), meters, 1000.0)
+        OSMShortcuts.drawCircleOnMap(map, "player-circle", player.point(), meters, 100.0)
     }
 }
