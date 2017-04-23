@@ -26,10 +26,8 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     internal var player = Player("", 0.0, 0.0)
     private var animator: PolygonAnimator? = null
     private var map: MapView? = null
-
     private var radar: RadarEventHandler? = null
     private var game: GameEventHandler? = null
-
     private var tts: GameVoice? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,7 +63,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         player.updateLocation(l)
         sendPosition(l)
 
-        if (animator == null || animator!!.running.not()) {
+        if (animator?.running != true) {
             val point = GeoPoint(l.latitude, l.longitude)
             OSMShortcuts.focus(map!!, point, 18)
             OSMShortcuts.showMarkerOnMap(map!!, "me", point)
