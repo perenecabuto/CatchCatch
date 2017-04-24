@@ -57,7 +57,6 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
         val app = application as CatchCatch
         radar = RadarEventHandler(app.socket!!, this)
-
         tts = GameVoice(this) {
             showMessage("welcome to CatchCatch!")
             radar!!.start()
@@ -77,11 +76,11 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     override fun onLocationUpdated(l: Location) {
         player.updateLocation(l)
         sendPosition(l)
+        val point = GeoPoint(l.latitude, l.longitude)
+        OSMShortcuts.showMarkerOnMap(map!!, "me", point)
 
         if (animator?.running != true) {
-            val point = GeoPoint(l.latitude, l.longitude)
             OSMShortcuts.focus(map!!, point, 18)
-            OSMShortcuts.showMarkerOnMap(map!!, "me", point)
         }
     }
 
