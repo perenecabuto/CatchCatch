@@ -42,6 +42,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         setContentView(R.layout.activity_home)
 
         map = OSMShortcuts.findMapById(this, R.id.home_activity_map)
+        map!!.setOnTouchListener({ _, _ -> true })
         radarView = findViewById(R.id.home_activity_radar) as RadarView
 
         val sensors = getSystemService(Context.SENSOR_SERVICE) as SensorManager
