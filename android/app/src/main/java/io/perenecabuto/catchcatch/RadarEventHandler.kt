@@ -46,6 +46,7 @@ class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHan
     private fun radar() {
         if (!running) return
         activity.showInfo("searching for games around...")
+        activity.showRadar()
         sock.emit("player:request-games")
         Handler(looper).postDelayed(this::radar, interval)
     }

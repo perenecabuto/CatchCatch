@@ -6,6 +6,8 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
+import android.view.View.GONE
+import android.view.View.VISIBLE
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 import android.view.animation.AnimationUtils
 import android.widget.TextView
@@ -30,6 +32,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     private var radar: RadarEventHandler? = null
     private var game: GameEventHandler? = null
     private var tts: GameVoice? = null
+    private var radarView: RadarView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +42,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         setContentView(R.layout.activity_home)
 
         map = OSMShortcuts.findMapById(this, R.id.home_activity_map)
+        radarView = findViewById(R.id.home_activity_radar) as RadarView
 
         val sensors = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         CompassEventListener.listenCompass(sensors) { heading ->
@@ -91,6 +95,8 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     }
 
     fun startGame(info: GameInfo) = runOnUiThread finish@ {
+        hideRadar()
+
         val map = map ?: return@finish
         animator = OSMShortcuts.animatePolygonOverlay(map, info.game)
         animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox) }
@@ -136,5 +142,13 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     fun showCircleAroundPlayer(meters: Double) = runOnUiThread finish@ {
         val map = map ?: return@finish
         OSMShortcuts.drawCircleOnMap(map, "player-circle", player.point(), meters, 100.0)
+    }
+
+    fun showRadar() = runOnUiThread {
+        radarView?.visibility = VISIBLE
+    }
+
+    fun hideRadar() = runOnUiThread {
+        radarView?.visibility = GONE
     }
 }

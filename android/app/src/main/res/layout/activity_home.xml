@@ -37,9 +37,12 @@
         />
 
     <io.perenecabuto.catchcatch.RadarView
+        android:id="@+id/home_activity_radar"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="20dp"
-        tools:background="@android:color/transparent"
+        android:background="@android:color/transparent"
+        android:visibility="gone"
+        tools:visibility="visible"
         />
 </FrameLayout>
