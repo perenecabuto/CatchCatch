@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.Handler
 import android.util.AttributeSet
 import android.view.View
 import java.lang.Math.abs
@@ -18,7 +19,9 @@ class RadarView(context: Context, val attrs: AttributeSet?) : View(context, attr
         it
     }
 
-    val steps = 0.6f
+    val drawHandler = Handler()
+    val fps = 60L
+    val steps = 2f
     var angle = 0.0f
     var r: Float = 0.0f
     var center: List<Float> = listOf(0f, 0f)
@@ -32,18 +35,14 @@ class RadarView(context: Context, val attrs: AttributeSet?) : View(context, attr
         super.onSizeChanged(w, h, oldw, oldh)
         r = (w / 2).toFloat()
         center = listOf((w / 2).toFloat(), (h / 2).toFloat())
-        topOffset = abs(height/2 - width/2).toFloat()
+        topOffset = abs(height / 2 - width / 2).toFloat()
     }
 
-    override fun onDraw(_canvas: Canvas?) {
-        val canvas = _canvas ?: return
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         angle = if (angle >= 360) 0.0f else angle + steps
-
-        canvas.drawColor(Color.TRANSPARENT)
-        canvas.drawCircle(center[0], center[1], r, paint)
         canvas.drawArc(0f, topOffset, width.toFloat(), width + topOffset, angle, 60f, true, paint)
-
-        if (!isInEditMode) invalidate()
+        canvas.drawCircle(center[0], center[1], r, paint)
+        if (!isInEditMode) drawHandler.postDelayed(this::invalidate, 1000 / fps)
     }
 }
