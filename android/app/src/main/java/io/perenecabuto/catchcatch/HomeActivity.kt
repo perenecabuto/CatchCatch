@@ -16,7 +16,6 @@ import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
 import org.json.JSONObject
-import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import java.util.*
 
@@ -74,11 +73,9 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     }
 
     override fun onLocationUpdated(l: Location) {
-        player.updateLocation(l)
         sendPosition(l)
-        val point = GeoPoint(l.latitude, l.longitude)
+        val point = player.updateLocation(l).point()
         OSMShortcuts.showMarkerOnMap(map!!, "me", point)
-
         if (animator?.running != true) {
             OSMShortcuts.focus(map!!, point, 18)
         }
