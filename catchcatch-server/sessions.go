@@ -26,19 +26,23 @@ type SessionManager struct {
 // NewSessionManager create a new SessionManager
 func NewSessionManager(ctx context.Context) *SessionManager {
 	sessions := &SessionManager{make(connStore), make(chan conn), make(chan string)}
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case conn := <-sessions.addCH:
-				sessions.connections[conn.id] = conn
-			case id := <-sessions.delCH:
-				delete(sessions.connections, id)
-			}
-		}
-	}()
+	go sessions.watchConnections(ctx)
 	return sessions
+}
+
+func (sm *SessionManager) watchConnections(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			close(sm.addCH)
+			close(sm.delCH)
+			return
+		case conn := <-sm.addCH:
+			sm.connections[conn.id] = conn
+		case id := <-sm.delCH:
+			delete(sm.connections, id)
+		}
+	}
 }
 
 // Get engineio.Conn by session id
