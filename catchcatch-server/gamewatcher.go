@@ -49,6 +49,7 @@ func (gw *GameWatcher) WatchGamesForever(ctx context.Context) {
 }
 
 func (gw *GameWatcher) WatchGames(ctx context.Context) error {
+	defer gw.Clear()
 	err := gw.stream.StreamNearByEvents(ctx, "player", "geofences", 0, func(d *Detection) {
 		_, exists := gw.games[d.NearByFeatID]
 		if !exists {

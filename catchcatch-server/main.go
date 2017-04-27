@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -44,7 +46,9 @@ func main() {
 		log.Println("WS error:", err)
 	})
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	onExit(cancel)
+
 	watcher := NewGameWatcher(stream, sessions)
 	go watcher.WatchGames(ctx)
 	go watcher.WatchCheckpoints(ctx, server)
@@ -94,4 +98,15 @@ func withRecover(fn func() error) (err error) {
 		}
 	}()
 	return fn()
+}
+
+func onExit(fn func()) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, os.Kill)
+	go func() {
+		<-c
+		fn()
+		time.Sleep(2 * time.Second)
+		os.Exit(0)
+	}()
 }
