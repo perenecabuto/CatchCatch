@@ -17,21 +17,17 @@ func NewGameWatcher(stream EventStream, sessions *SessionManager) *GameWatcher {
 	return &GameWatcher{make(map[string]*Game), sessions, stream}
 }
 
-// WatchPlayers events
-func (gw *GameWatcher) WatchPlayers(g *Game) error {
-	return gw.stream.StreamIntersects("player", "geofences", g.ID, func(d *Detection) {
+// WatchGamePlayers events
+func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
+	return gw.stream.StreamIntersects(ctx, "player", "geofences", g.ID, func(d *Detection) {
 		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		switch d.Intersects {
 		case Enter:
 			g.SetPlayerUntilReady(p, gw.sessions)
+		case Inside:
+			g.SetPlayerUntilReady(p, gw.sessions)
 		case Exit:
 			g.RemovePlayer(p, gw.sessions)
-		case Inside:
-			if !g.started {
-				g.SetPlayerUntilReady(p, gw.sessions)
-			} else if g.HasPlayer(p.ID) {
-				g.UpdateAndNofityPlayer(p, gw.sessions)
-			}
 		}
 	})
 }

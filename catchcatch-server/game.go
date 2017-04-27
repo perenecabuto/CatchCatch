@@ -133,10 +133,10 @@ func (g Game) Ready() bool {
 
 func (g *Game) SetPlayerUntilReady(p *Player, sessions *SessionManager) {
 	if g.started {
+		if g.HasPlayer(p.ID) {
+			g.updateAndNofityPlayer(p, sessions)
+		}
 		return
-	}
-	if !g.HasPlayer(p.ID) {
-		log.Println("game:"+g.ID+":detect=enter:", p)
 	}
 	g.SetPlayer(p)
 	if g.Ready() {
@@ -144,7 +144,7 @@ func (g *Game) SetPlayerUntilReady(p *Player, sessions *SessionManager) {
 	}
 }
 
-func (g *Game) UpdateAndNofityPlayer(p *Player, sessions *SessionManager) {
+func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	g.SetPlayer(p)
 	if p.ID == g.targetPlayer.ID {
 		return
