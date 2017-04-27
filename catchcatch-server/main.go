@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -43,9 +44,10 @@ func main() {
 		log.Println("WS error:", err)
 	})
 
+	ctx := context.Background()
 	watcher := NewGameWatcher(stream, sessions)
-	go watcher.WatchGames()
-	go watcher.WatchCheckpoints(server)
+	go watcher.WatchGames(ctx)
+	go watcher.WatchCheckpoints(ctx, server)
 
 	eventH := NewEventHandler(server, service, sessions)
 	http.Handle("/ws/", recoverWrapper(eventH))

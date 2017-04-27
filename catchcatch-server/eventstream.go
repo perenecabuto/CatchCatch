@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -14,8 +15,8 @@ import (
 
 // EventStream listen to geofence events and notifiy detection
 type EventStream interface {
-	StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error
-	StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error
+	StreamNearByEvents(ctx context.Context, nearByKey, roamKey string, meters int, callback DetectionHandler) error
+	StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback DetectionHandler) error
 }
 
 // Tile38EventStream Tile38 implementation of EventStream
@@ -29,15 +30,16 @@ func NewEventStream(addr string) EventStream {
 }
 
 // StreamNearByEvents stream proximation events
-func (es *Tile38EventStream) StreamNearByEvents(nearByKey, roamKey string, meters int, callback DetectionHandler) error {
+func (es *Tile38EventStream) StreamNearByEvents(ctx context.Context, nearByKey, roamKey string, meters int, callback DetectionHandler) error {
 	cmd := query{"NEARBY", nearByKey, "FENCE", "ROAM", roamKey, "*", meters}
-	return streamDetection(es.addr, cmd, callback)
+	return streamDetection(ctx, es.addr, cmd, callback)
 }
 
 // StreamIntersects stream intersection events
-func (es *Tile38EventStream) StreamIntersects(intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
+func (es *Tile38EventStream) StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
 	cmd := query{"INTERSECTS", intersectKey, "FENCE", "DETECT", "inside,enter,exit", "GET", onKey, onKeyID}
-	return streamDetection(es.addr, cmd, overrideNearByFeatIDWrapper(onKeyID, callback))
+	callback = overrideNearByFeatIDWrapper(onKeyID, callback)
+	return streamDetection(ctx, es.addr, cmd, callback)
 }
 
 func overrideNearByFeatIDWrapper(nearByFeatID string, handler DetectionHandler) DetectionHandler {
@@ -84,7 +86,7 @@ func (err DetectionError) Error() string {
 	return string("DetectionError: " + err)
 }
 
-func streamDetection(addr string, q query, callback DetectionHandler) error {
+func streamDetection(ctx context.Context, addr string, q query, callback DetectionHandler) error {
 	conn, err := listenTo(addr, q)
 	if err != nil {
 		return err
@@ -93,23 +95,28 @@ func streamDetection(addr string, q query, callback DetectionHandler) error {
 
 	buf, n := make([]byte, 4096), 0
 	t := time.NewTicker(100 * time.Microsecond)
-	for range t.C {
-		if n, err = conn.Read(buf); err != nil {
-			return err
-		}
-		for _, line := range strings.Split(string(buf[:n]), "\n") {
-			if len(line) == 0 || line[0] != '{' {
-				continue
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-t.C:
+			if n, err = conn.Read(buf); err != nil {
+				return err
 			}
-			detected, err := handleDetection(line)
-			if err != nil {
-				log.Println("Failed to handleDetection:", err)
-				continue
+			for _, line := range strings.Split(string(buf[:n]), "\n") {
+				if len(line) == 0 || line[0] != '{' {
+					continue
+				}
+				detected, err := handleDetection(line)
+				if err != nil {
+					log.Println("Failed to handleDetection:", err)
+					continue
+				}
+				withRecover(func() error {
+					callback(detected)
+					return nil
+				})
 			}
-			withRecover(func() error {
-				callback(detected)
-				return nil
-			})
 		}
 	}
 

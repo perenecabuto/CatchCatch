@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -32,8 +33,8 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 	})
 }
 
-func (gw *GameWatcher) WatchGames() {
-	err := gw.stream.StreamNearByEvents("player", "geofences", 0, func(d *Detection) {
+func (gw *GameWatcher) WatchGames(ctx context.Context) {
+	err := gw.stream.StreamNearByEvents(ctx, "player", "geofences", 0, func(d *Detection) {
 		gameID := d.NearByFeatID
 		game, exists := gw.games[gameID]
 		if !exists {
@@ -43,10 +44,10 @@ func (gw *GameWatcher) WatchGames() {
 			gw.games[gameID] = game
 
 			go func() {
-				if err := gw.WatchPlayers(game); err != nil {
-					delete(gw.games, gameID)
+				if err := gw.WatchGamePlayers(ctx, game); err != nil {
 					log.Printf("Error to start gamewatcher:%s - err: %v", game.ID, err)
 				}
+				delete(gw.games, gameID)
 			}()
 		}
 	})
@@ -55,8 +56,8 @@ func (gw *GameWatcher) WatchGames() {
 	}
 }
 
-func (gw *GameWatcher) WatchCheckpoints(server *io.Server) {
-	err := gw.stream.StreamNearByEvents("player", "checkpoint", 1000, func(d *Detection) {
+func (gw *GameWatcher) WatchCheckpoints(ctx context.Context, server *io.Server) {
+	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", 1000, func(d *Detection) {
 		if err := gw.sessions.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
 			log.Println("Error to notify player", d.FeatID, err)
 		}
