@@ -133,9 +133,7 @@ func (g Game) Ready() bool {
 
 func (g *Game) SetPlayerUntilReady(p *Player, sessions *SessionManager) {
 	if g.started {
-		if g.HasPlayer(p.ID) {
-			g.updateAndNofityPlayer(p, sessions)
-		}
+		g.updateAndNofityPlayer(p, sessions)
 		return
 	}
 	if _, exists := g.players[p.ID]; !exists {
