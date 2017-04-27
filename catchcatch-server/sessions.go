@@ -1,47 +1,62 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
 	"strconv"
-	"sync/atomic"
 
 	engineio "github.com/googollee/go-engine.io"
 )
 
-type connStore map[string]engineio.Conn
+type conn struct {
+	id   string
+	conn engineio.Conn
+}
+type connStore map[string]conn
 
 // SessionManager manage websocket connections
 type SessionManager struct {
-	connections atomic.Value
+	connections connStore
+	addCH       chan conn
+	delCH       chan string
 }
 
 // NewSessionManager create a new SessionManager
-func NewSessionManager() *SessionManager {
-	sessions := &SessionManager{}
-	sessions.connections.Store(make(connStore))
+func NewSessionManager(ctx context.Context) *SessionManager {
+	sessions := &SessionManager{make(connStore), make(chan conn), make(chan string)}
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case conn := <-sessions.addCH:
+				sessions.connections[conn.id] = conn
+			case id := <-sessions.delCH:
+				delete(sessions.connections, id)
+			}
+		}
+	}()
 	return sessions
 }
 
 // Get engineio.Conn by session id
 func (sm *SessionManager) Get(id string) engineio.Conn {
-	conns := sm.connections.Load().(connStore)
-	return conns[id]
+	if conn, exists := sm.connections[id]; exists {
+		return conn.conn
+	}
+	return nil
 }
 
 // Set engineio.Conn for session id
-func (sm *SessionManager) Set(id string, conn engineio.Conn) {
-	conns := sm.copyConns()
-	conns[id] = conn
-	sm.connections.Store(conns)
+func (sm *SessionManager) Set(id string, c engineio.Conn) {
+	sm.addCH <- conn{id, c}
 }
 
 // Remove engineio.Conn by session id
 func (sm *SessionManager) Remove(id string) {
-	conns := sm.copyConns()
-	delete(conns, id)
-	sm.connections.Store(conns)
+	sm.delCH <- id
 }
 
 // Emit send payload on eventX to socket id
@@ -77,19 +92,9 @@ func (sm *SessionManager) BroadcastTo(ids []string, event string, message interf
 
 // CloseAll engineio.Conn
 func (sm *SessionManager) CloseAll() {
-	conns := sm.connections.Load().(connStore)
-	for _, c := range conns {
-		c.Close()
+	for _, c := range sm.connections {
+		c.conn.Close()
 	}
-}
-
-func (sm *SessionManager) copyConns() connStore {
-	conns := sm.connections.Load().(connStore)
-	newConns := make(connStore)
-	for k, v := range conns {
-		newConns[k] = v
-	}
-	return newConns
 }
 
 func messagePayload(msg interface{}) (string, error) {

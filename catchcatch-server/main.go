@@ -32,8 +32,8 @@ func main() {
 		defer zcServer.Shutdown()
 	}
 
-	sessions := NewSessionManager()
 	ctx, cancel := context.WithCancel(context.Background())
+	sessions := NewSessionManager(ctx)
 	stream := NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debug)
 	onExit(func() {
