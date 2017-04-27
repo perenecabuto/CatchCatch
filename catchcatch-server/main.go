@@ -33,9 +33,13 @@ func main() {
 	}
 
 	sessions := NewSessionManager()
+	ctx, cancel := context.WithCancel(context.Background())
 	stream := NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debug)
-	defer client.Close()
+	onExit(func() {
+		cancel()
+		client.Close()
+	})
 
 	service := &PlayerLocationService{client}
 	server, err := io.NewServer(nil)
@@ -45,9 +49,6 @@ func main() {
 	server.On("error", func(so io.Socket, err error) {
 		log.Println("WS error:", err)
 	})
-
-	ctx, cancel := context.WithCancel(context.Background())
-	onExit(cancel)
 
 	watcher := NewGameWatcher(stream, sessions)
 	go watcher.WatchGames(ctx)
