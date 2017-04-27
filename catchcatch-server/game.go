@@ -138,6 +138,9 @@ func (g *Game) SetPlayerUntilReady(p *Player, sessions *SessionManager) {
 		}
 		return
 	}
+	if _, exists := g.players[p.ID]; !exists {
+		log.Printf("game:%s:detect=enter:%s\n", g.ID, p.ID)
+	}
 	g.SetPlayer(p)
 	if g.Ready() {
 		g.Start(sessions)
@@ -145,6 +148,9 @@ func (g *Game) SetPlayerUntilReady(p *Player, sessions *SessionManager) {
 }
 
 func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
+	if _, exists := g.players[p.ID]; !exists {
+		return
+	}
 	g.SetPlayer(p)
 	if p.ID == g.targetPlayer.ID {
 		return
@@ -174,7 +180,7 @@ func (g *Game) SetPlayer(p *Player) {
 }
 
 func (g *Game) RemovePlayer(p *Player, sessions *SessionManager) {
-	if !g.HasPlayer(p.ID) {
+	if _, exists := g.players[p.ID]; !exists {
 		return
 	}
 
@@ -199,11 +205,6 @@ func (g *Game) RemovePlayer(p *Player, sessions *SessionManager) {
 		log.Println("game:"+g.ID+":detect=loose:", p)
 		sessions.Emit(p.ID, "game:loose", g.ID)
 	}
-}
-
-func (g *Game) HasPlayer(id string) bool {
-	_, exists := g.players[id]
-	return exists
 }
 
 func (g *Game) playerIDs() []string {
