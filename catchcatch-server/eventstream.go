@@ -87,6 +87,7 @@ func (err DetectionError) Error() string {
 }
 
 func streamDetection(ctx context.Context, addr string, q query, callback DetectionHandler) error {
+	interval := 100 * time.Microsecond
 	conn, err := listenTo(addr, q)
 	if err != nil {
 		return err
@@ -94,14 +95,16 @@ func streamDetection(ctx context.Context, addr string, q query, callback Detecti
 	defer conn.Close()
 
 	buf, n := make([]byte, 4096), 0
-	t := time.NewTicker(100 * time.Microsecond)
+	t := time.NewTicker(interval)
 	for {
 		select {
 		case <-ctx.Done():
+			log.Printf("eventscream:query:stop:%s", q.String())
 			return nil
 		case <-t.C:
+			conn.SetReadDeadline(time.Now().Add(interval))
 			if n, err = conn.Read(buf); err != nil {
-				return err
+				continue
 			}
 			for _, line := range strings.Split(string(buf[:n]), "\n") {
 				if len(line) == 0 || line[0] != '{' {
