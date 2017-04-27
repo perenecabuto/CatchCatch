@@ -14,12 +14,13 @@ type EventHandler struct {
 	server   *io.Server
 	service  *PlayerLocationService
 	sessions *SessionManager
+	games    *GameWatcher
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *io.Server, service *PlayerLocationService, sessions *SessionManager) *EventHandler {
+func NewEventHandler(server *io.Server, service *PlayerLocationService, sessions *SessionManager, gw *GameWatcher) *EventHandler {
 	server.SetSessionManager(sessions)
-	handler := &EventHandler{server, service, sessions}
+	handler := &EventHandler{server, service, sessions, gw}
 	server.On("connection", handler.onConnection)
 	return handler
 }
@@ -106,6 +107,7 @@ func (h *EventHandler) onDisconnectByID(channel string) func(string) {
 
 func (h *EventHandler) onClear() func(string) {
 	return func(string) {
+		h.games.Clear()
 		h.service.client.FlushDb()
 		h.sessions.CloseAll()
 	}

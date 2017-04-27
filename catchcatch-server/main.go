@@ -49,7 +49,7 @@ func main() {
 	go watcher.WatchGames(ctx)
 	go watcher.WatchCheckpoints(ctx, server)
 
-	eventH := NewEventHandler(server, service, sessions)
+	eventH := NewEventHandler(server, service, sessions, watcher)
 	http.Handle("/ws/", recoverWrapper(eventH))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 
