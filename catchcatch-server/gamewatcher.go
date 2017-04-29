@@ -34,22 +34,14 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		switch d.Intersects {
 		case Enter:
-			g.SetPlayerUntilReady(p, gw.sessions)
+			g.SetPlayer(p, gw.sessions)
 		case Inside:
-			g.SetPlayerUntilReady(p, gw.sessions)
+			g.SetPlayer(p, gw.sessions)
 		case Exit:
 			g.RemovePlayer(p, gw.sessions)
 		}
 	})
 	return err
-}
-
-func (gw *GameWatcher) WatchGamesForever(ctx context.Context) {
-	for {
-		if err := gw.WatchGames(ctx); err != nil {
-			panic(err)
-		}
-	}
 }
 
 // WatchGames starts this gamewatcher to listen to player events over games

@@ -150,7 +150,7 @@ func (g *Game) SetPlayer(p *Player, sessions *SessionManager) {
 	if _, exists := g.players[p.ID]; !exists {
 		log.Printf("game:%s:detect=enter:%s\n", g.ID, p.ID)
 	}
-	g.SetPlayer(p)
+	g.updatePlayer(p)
 	if g.Ready() {
 		g.Start(sessions)
 	}
@@ -160,7 +160,7 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	if _, exists := g.players[p.ID]; !exists {
 		return
 	}
-	g.SetPlayer(p)
+	g.updatePlayer(p)
 	if p.ID == g.targetPlayer.ID {
 		return
 	}
@@ -179,7 +179,7 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
 	}
 }
 
-func (g *Game) SetPlayer(p *Player) {
+func (g *Game) updatePlayer(p *Player) {
 	if player, exists := g.players[p.ID]; exists {
 		player.Lon = p.Lon
 		player.Lat = p.Lat
