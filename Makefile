@@ -7,6 +7,7 @@ DOKKU_ROOT_CMD = ssh root@$(DOKKU_HOST) dokku
 
 DOKKU_HOST = 50.116.10.21
 DOMAIN = catchcatch.pointto.us
+LOCAL_BRANCH = master
 
 %-digitalocean: DOKKU_HOST=192.34.56.53
 %-digitalocean: DOMAIN=catchcatch.ddns.net
@@ -32,7 +33,7 @@ deploy-beta: deploy
 deploy-linode: deploy
 deploy-digitalocean: deploy
 deploy:
-	git push dokku@$(DOKKU_HOST):catchcatch master
+	git push dokku@$(DOKKU_HOST):catchcatch $(LOCAL_BRANCH):master
 
 setup-ssl-beta: setup-ssl
 setup-ssl-linode: setup-ssl
