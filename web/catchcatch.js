@@ -24,7 +24,7 @@ function log(msg) {
 };
 
 
-function WSS(address) {
+function WSS(address, reconnect) {
     let eventCallbacks = {}
     let ws;
 
@@ -56,6 +56,7 @@ function WSS(address) {
         }
         ws.onclose = function () {
             triggerEvent('disconnect');
+            if (!reconnect) return;
             try {
                 init();
             } catch (e) {
@@ -79,7 +80,7 @@ function WSS(address) {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
-    let socket = new WSS(location.href.replace("http", "ws") + "ws");
+    let socket = new WSS(location.href.replace("http", "ws") + "ws", true);
     let source = new ol.source.Vector({ wrapX: false });
     let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     let vector = new ol.layer.Vector({ source: source });
