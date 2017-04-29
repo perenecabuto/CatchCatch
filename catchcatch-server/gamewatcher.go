@@ -5,8 +5,6 @@ import (
 	"errors"
 	"log"
 	"time"
-
-	io "github.com/googollee/go-socket.io"
 )
 
 // GameContext stores game and its canel (and stop eventualy) function
@@ -18,14 +16,14 @@ type GameContext struct {
 // GameWatcher is made to start/stop games by player presence
 // and notify players events to each game by geo position
 type GameWatcher struct {
-	games    map[string]*GameContext
-	sessions *SessionManager
-	stream   EventStream
+	games  map[string]*GameContext
+	wss    *WebSocketServer
+	stream EventStream
 }
 
 // NewGameWatcher builds GameWatecher
-func NewGameWatcher(stream EventStream, sessions *SessionManager) *GameWatcher {
-	return &GameWatcher{make(map[string]*GameContext), sessions, stream}
+func NewGameWatcher(stream EventStream, wss *WebSocketServer) *GameWatcher {
+	return &GameWatcher{make(map[string]*GameContext), wss, stream}
 }
 
 // WatchGamePlayers events
@@ -34,11 +32,11 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		switch d.Intersects {
 		case Enter:
-			g.SetPlayer(p, gw.sessions)
+			g.SetPlayer(p, gw.wss)
 		case Inside:
-			g.SetPlayer(p, gw.sessions)
+			g.SetPlayer(p, gw.wss)
 		case Exit:
-			g.RemovePlayer(p, gw.sessions)
+			g.RemovePlayer(p, gw.wss)
 		}
 	})
 	return err
@@ -92,12 +90,12 @@ func (gw *GameWatcher) StopGame(gameID string) {
 }
 
 // WatchCheckpoints ...
-func (gw *GameWatcher) WatchCheckpoints(ctx context.Context, server *io.Server) {
+func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", 1000, func(d *Detection) {
-		if err := gw.sessions.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
+		if err := gw.wss.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
 			log.Println("Error to notify player", d.FeatID, err)
 		}
-		server.BroadcastTo("main", "admin:feature:checkpoint", d)
+		gw.wss.Broadcast("admin:feature:checkpoint", d)
 	})
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)

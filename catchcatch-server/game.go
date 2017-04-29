@@ -38,7 +38,7 @@ func (g Game) String() string {
 Start the game
 Note: for while keep it simple, as possible
 */
-func (g *Game) Start(sessions *SessionManager) {
+func (g *Game) Start(sessions *WebSocketServer) {
 	if g.started {
 		g.Stop()
 	}
@@ -142,7 +142,7 @@ The rule is:
 	- it can send messages to the player
 	- it receives sessions to notify anything to this player games
 */
-func (g *Game) SetPlayer(p *Player, sessions *SessionManager) {
+func (g *Game) SetPlayer(p *Player, sessions *WebSocketServer) {
 	if g.started {
 		g.updateAndNofityPlayer(p, sessions)
 		return
@@ -156,7 +156,7 @@ func (g *Game) SetPlayer(p *Player, sessions *SessionManager) {
 	}
 }
 
-func (g *Game) updateAndNofityPlayer(p *Player, sessions *SessionManager) {
+func (g *Game) updateAndNofityPlayer(p *Player, sessions *WebSocketServer) {
 	if _, exists := g.players[p.ID]; !exists {
 		return
 	}
@@ -195,7 +195,7 @@ The role is:
 	- it receives sessions to send messages to its players
 	- it must remove players from the game
 */
-func (g *Game) RemovePlayer(p *Player, sessions *SessionManager) {
+func (g *Game) RemovePlayer(p *Player, sessions *WebSocketServer) {
 	if _, exists := g.players[p.ID]; !exists {
 		return
 	}

@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	io "github.com/googollee/go-socket.io"
 	zconf "github.com/grandcat/zeroconf"
 	redis "gopkg.in/redis.v5"
 )
@@ -33,7 +32,6 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	sessions := NewSessionManager(ctx)
 	stream := NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debug)
 	onExit(func() {
@@ -42,20 +40,13 @@ func main() {
 	})
 
 	service := &PlayerLocationService{client}
-	server, err := io.NewServer(nil)
-	if err != nil {
-		log.Fatal("Could not start WS server", err)
-	}
-	server.On("error", func(so io.Socket, err error) {
-		log.Println("WS error:", err)
-	})
-
-	watcher := NewGameWatcher(stream, sessions)
+	server := NewWebSocketServer(ctx)
+	watcher := NewGameWatcher(stream, server)
 	go watcher.WatchGames(ctx)
-	go watcher.WatchCheckpoints(ctx, server)
+	go watcher.WatchCheckpoints(ctx)
 
-	eventH := NewEventHandler(server, service, sessions, watcher)
-	http.Handle("/ws/", recoverWrapper(eventH))
+	eventH := NewEventHandler(server, service, watcher)
+	http.Handle("/ws", recoverWrapper(eventH.Listen(ctx)))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
