@@ -24,8 +24,54 @@ function log(msg) {
 };
 
 
+function WSS(address) {
+    let eventCallbacks = {}
+
+    this.on = function(event, callback) {
+        console.log("wss on", event, callback)
+        eventCallbacks[event] = callback;
+    }
+    this.emit = function(event, message) {
+        console.log("wss emit", event + "," + message);
+        ws.send(event + "," + message);
+    }
+
+    this.close = function() {
+        console.log("wss close");
+    }
+
+    let ws = new WebSocket("ws://" + address);
+    ws.onopen = function(event) {
+        triggerEvent('connect')
+    }
+    ws.onmessage = function(event) {
+        let evtName = event.data.split(",", 1)[0];
+        let evtMsg = event.data.replace(evtName + ",", "");
+        try {
+            evtMsg = JSON.parse(evtMsg);
+        } catch (e) {
+            console.debug(e);
+        }
+        console.log("onmessage", evtName, evtMsg);
+        triggerEvent(evtName, evtMsg);
+    }
+    ws.onclose = function() {
+        triggerEvent('disconnect');
+        ws.connect();
+    }
+
+    function triggerEvent(event, message) {
+        if (eventCallbacks[event]) {
+            console.log("triggerEvent", event, message)
+            eventCallbacks[event].call(null, message);
+        }
+    }
+
+    console.log("wss start", ws)
+}
+
 window.addEventListener("DOMContentLoaded", function () {
-    let socket = io(location.host, { path: "/ws" });
+    let socket = new WSS(location.host + "/ws");
     let source = new ol.source.Vector({ wrapX: false });
     let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     let vector = new ol.layer.Vector({ source: source });
@@ -76,7 +122,7 @@ window.addEventListener("DOMContentLoaded", function () {
 
     let evtHandler = new EventHandler(controller);
     socket.on('connect', evtHandler.onConnect);
-    socket.on('player:registered', evtHandler.onPlayerRegistred)
+    socket.on('player:registered', evtHandler.onPlayerRegistered)
     socket.on('player:updated', evtHandler.onPlayerUpdated)
     socket.on('disconnect', evtHandler.onDisconnected)
 
@@ -101,7 +147,7 @@ let Player = function (x, y) {
             disconnectedCallback();
         }
     }
-    function onPlayerRegistred(p) {
+    function onPlayerRegistered(p) {
         player = p;
         updatePosition(x, y);
         if (registeredCallback !== undefined) {
@@ -125,8 +171,8 @@ let Player = function (x, y) {
     function connect(registeredFn, disconnectedFn) {
         registeredCallback = registeredFn;
         disconnectedCallback = disconnectedFn;
-        socket = io(location.host, { reconnection: false, path: "/ws" });
-        socket.on('player:registered', onPlayerRegistred)
+        socket = new WSS(location.host + "/ws");
+        socket.on('player:registered', onPlayerRegistered)
         socket.on('player:updated', onPlayerUpdated)
 
         socket.on('game:started', function (info) {
@@ -372,7 +418,8 @@ let EventHandler = function (controller) {
         log("disconnected");
         controller.resetInterface();
     };
-    this.onPlayerRegistred = function (p) {
+    this.onPlayerRegistered = function (p) {
+        console.log("onPlayerRegistered", p);
         controller.setPlayer(p);
         log("connected as " + p.id);
         controller.updatePosition({ coords: { latitude: p.lat, longitude: p.lon } })
