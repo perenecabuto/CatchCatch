@@ -49,11 +49,8 @@ func (c *Conn) Emit(event string, message interface{}) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Send event to", event, payload)
-	if _, err := c.conn.Write([]byte(event + "," + payload)); err != nil {
-		return err
-	}
-	return nil
+	_, err = c.conn.Write([]byte(event + "," + payload))
+	return err
 }
 
 func (c *Conn) close() {
