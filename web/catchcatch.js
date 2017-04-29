@@ -119,15 +119,16 @@ window.addEventListener("DOMContentLoaded", function () {
             console.log("add feat", feat);
             let coords = feat.getGeometry().getCoordinates();
             let p = new Player(coords[1], coords[0]);
-            p.connect(function (id) {
-                let playerFeat = source.getFeatureById(id);
+            map.addInteraction(p.getInteraction());
+            p.connect(function (p) {
+                controller.updatePlayer(p);
+                let playerFeat = source.getFeatureById(p.id);
                 playerFeat.setStyle(groupStyles.fakePlayer.clone());
-                playerFeat.getStyle().setText(makeText(playerFeat, id));
+                playerFeat.getStyle().setText(makeText(playerFeat, p.id));
             }, function () {
                 map.removeInteraction(p.getInteraction());
                 p = null;
             });
-            map.addInteraction(p.getInteraction());
         });
 
     let evtHandler = new EventHandler(controller);
@@ -161,7 +162,7 @@ let Player = function (x, y) {
         player = p;
         updatePosition(x, y);
         if (registeredCallback !== undefined) {
-            registeredCallback(p.id);
+            registeredCallback(p);
         }
     }
     function onPlayerUpdated(p) {
