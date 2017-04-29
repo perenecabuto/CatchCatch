@@ -26,6 +26,7 @@ function log(msg) {
 
 function WSS(address) {
     let eventCallbacks = {}
+    let ws;
 
     this.on = function(event, callback) {
         console.log("wss on", event, callback)
@@ -40,24 +41,34 @@ function WSS(address) {
         console.log("wss close");
     }
 
-    let ws = new WebSocket(address);
-    ws.onopen = function(event) {
-        triggerEvent('connect')
-    }
-    ws.onmessage = function(event) {
-        let evtName = event.data.split(",", 1)[0];
-        let evtMsg = event.data.replace(evtName + ",", "");
-        try {
-            evtMsg = JSON.parse(evtMsg);
-        } catch (e) {
-            console.debug(e);
+    function init() {
+        ws = new WebSocket(address);
+        ws.onopen = function(event) {
+            triggerEvent('connect')
         }
-        console.log("onmessage", evtName, evtMsg);
-        triggerEvent(evtName, evtMsg);
-    }
-    ws.onclose = function() {
-        triggerEvent('disconnect');
-        ws.connect();
+        ws.onmessage = function(event) {
+            let evtName = event.data.split(",", 1)[0];
+            let evtMsg = event.data.replace(evtName + ",", "");
+            try {
+                evtMsg = JSON.parse(evtMsg);
+            } catch (e) {
+                console.debug(e);
+            }
+            console.log("onmessage", evtName, evtMsg);
+            triggerEvent(evtName, evtMsg);
+        }
+        ws.onclose = function() {
+            triggerEvent('disconnect');
+            try {
+                init();            
+            } catch(e) {
+                ws.onclose();
+            }
+        }
+        ws.onerror = function(event) {
+            triggerEvent('onerror');        
+            ws = new WebSocket(address);        
+        }
     }
 
     function triggerEvent(event, message) {
@@ -67,6 +78,7 @@ function WSS(address) {
         }
     }
 
+    init();
     console.log("wss start", ws)
 }
 
