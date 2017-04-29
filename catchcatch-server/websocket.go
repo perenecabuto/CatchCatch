@@ -15,10 +15,12 @@ import (
 
 // Conn represents a websocket connection
 type Conn struct {
-	ID             string
-	conn           *websocket.Conn
+	ID   string
+	conn *websocket.Conn
+
 	messagebuf     string
 	eventCallbacks map[string]evtCallback
+	onDisconnected func()
 }
 
 type evtCallback func(string)
@@ -43,6 +45,13 @@ func (c *Conn) On(event string, callback evtCallback) {
 	c.eventCallbacks[event] = callback
 }
 
+// OnDisconnected register event callback to closed connections
+func (c *Conn) OnDisconnected(fn func()) {
+	if fn != nil {
+		c.onDisconnected = fn
+	}
+}
+
 // Emit send payload on eventX to socket id
 func (c *Conn) Emit(event string, message interface{}) error {
 	payload, err := parsePayload(message)
@@ -55,6 +64,7 @@ func (c *Conn) Emit(event string, message interface{}) error {
 
 func (c *Conn) close() {
 	c.conn.Close()
+	c.onDisconnected()
 }
 
 func (c *Conn) readMessage() error {
@@ -102,22 +112,13 @@ func (wss *WebSocketServer) OnConnected(fn func(c *Conn)) {
 func (wss *WebSocketServer) Listen(ctx context.Context) websocket.Handler {
 	// websocket handler
 	return websocket.Handler(func(c *websocket.Conn) {
-		defer func() {
-			err := c.Close()
-			if err != nil {
-				log.Println("Error to close ws:", c)
-				return
-			}
-		}()
-
 		conn := wss.Add(c)
-
+		defer wss.Remove(conn.ID)
 		wss.onConnected(conn)
 		conn.listen(ctx, func(err error) {
 			if err != nil {
 				log.Println("WebSocketServer: read error", err)
 			}
-			wss.Remove(conn.ID)
 		})
 	})
 }
@@ -133,8 +134,8 @@ func (wss *WebSocketServer) watchConnections(ctx context.Context) {
 			wss.connections[conn.ID] = conn
 		case id := <-wss.delCH:
 			if c, exists := wss.connections[id]; exists {
-				c.close()
 				delete(wss.connections, id)
+				c.close()
 			}
 		}
 	}
@@ -151,7 +152,7 @@ func (wss *WebSocketServer) Get(id string) *Conn {
 // Add Conn for session id
 func (wss *WebSocketServer) Add(c *websocket.Conn) *Conn {
 	id := uuid.NewV4().String()
-	conn := &Conn{id, c, "", make(map[string]evtCallback)}
+	conn := &Conn{id, c, "", make(map[string]evtCallback), func() {}}
 	wss.addCH <- conn
 	return conn
 }

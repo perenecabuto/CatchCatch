@@ -43,7 +43,7 @@ func (h *EventHandler) onConnection(c *Conn) {
 	c.On("player:request-games", h.onPlayerRequestGames(player, c))
 	c.On("player:request-remotes", h.onPlayerRequestRemotes(c))
 	c.On("player:update", h.onPlayerUpdate(player, c))
-	c.On("disconnection", h.onPlayerDisconnect(player))
+	c.OnDisconnected(h.onPlayerDisconnect(player))
 
 	c.On("admin:disconnect", h.onDisconnectByID())
 	c.On("admin:feature:add", h.onAddFeature())
@@ -53,8 +53,8 @@ func (h *EventHandler) onConnection(c *Conn) {
 
 // Player events
 
-func (h *EventHandler) onPlayerDisconnect(player *Player) func(string) {
-	return func(string) {
+func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
+	return func() {
 		log.Println("player:disconnect", player.ID)
 		h.server.Broadcast("remote-player:destroy", player)
 		h.service.Remove(player)
@@ -100,7 +100,7 @@ func (h *EventHandler) onDisconnectByID() func(string) {
 	return func(id string) {
 		log.Println("admin:disconnect", id)
 		callback := h.onPlayerDisconnect(&Player{ID: id})
-		callback("")
+		callback()
 	}
 }
 
