@@ -4,55 +4,13 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
-			"ImportPath": "github.com/allegro/bigcache",
-			"Rev": "dedad99b9443f185104674c68892afb22fd464b2"
-		},
-		{
-			"ImportPath": "github.com/allegro/bigcache/queue",
-			"Rev": "dedad99b9443f185104674c68892afb22fd464b2"
-		},
-		{
 			"ImportPath": "github.com/cenkalti/backoff",
-			"Comment": "v1.0.0-7-gcdf48bb",
-			"Rev": "cdf48bbc1eb78d1349cbda326a4a037f7ba565c6"
+			"Comment": "v1.0.0-19-g5d150e7",
+			"Rev": "5d150e7eec023ce7a124856b37c68e54b4050ac7"
 		},
 		{
 			"ImportPath": "github.com/erikstmartin/go-testdb",
 			"Rev": "8d10e4a1bae52cd8b81ffdec3445890d6dccab3d"
-		},
-		{
-			"ImportPath": "github.com/googollee/go-engine.io",
-			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
-		},
-		{
-			"ImportPath": "github.com/googollee/go-engine.io/message",
-			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
-		},
-		{
-			"ImportPath": "github.com/googollee/go-engine.io/parser",
-			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
-		},
-		{
-			"ImportPath": "github.com/googollee/go-engine.io/polling",
-			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
-		},
-		{
-			"ImportPath": "github.com/googollee/go-engine.io/transport",
-			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
-		},
-		{
-			"ImportPath": "github.com/googollee/go-engine.io/websocket",
-			"Rev": "80ae0e43aca17b4c5a6834999d0f2eaa16b9afda"
-		},
-		{
-			"ImportPath": "github.com/googollee/go-socket.io",
-			"Comment": "0.9.x-63-ge9f0a9b",
-			"Rev": "e9f0a9b7a61267e1476f9f0a0429337813c39edd"
-		},
-		{
-			"ImportPath": "github.com/gorilla/websocket",
-			"Comment": "v1.1.0-27-gb258b4f",
-			"Rev": "b258b4fadb573ac412f187b9f31974ea99d32f50"
 		},
 		{
 			"ImportPath": "github.com/grandcat/zeroconf",
@@ -80,11 +38,20 @@
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
-			"Rev": "767422ac12884e2baed0afd7303cf06cff90fef6"
+			"Rev": "113c7538ea6d8f429071f901bd26af59cc9676fe"
+		},
+		{
+			"ImportPath": "github.com/quorzz/redis-protocol",
+			"Rev": "8cdae60e7b8a0435899eeeee0f40f2d2cd495aa3"
+		},
+		{
+			"ImportPath": "github.com/satori/go.uuid",
+			"Comment": "v1.1.0-8-g5bf94b6",
+			"Rev": "5bf94b69c6b68ee1b541973bb8e1144db23a194b"
 		},
 		{
 			"ImportPath": "github.com/tidwall/gjson",
-			"Rev": "09d1c5c5bc64e094394dfe2150220d906c55ac37"
+			"Rev": "e30a9c1037e0f9fbde93a6a9848a2dd5c59d3b91"
 		},
 		{
 			"ImportPath": "github.com/tidwall/match",
@@ -107,23 +74,31 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/bpf",
-			"Rev": "a6577fac2d73be281a500b310739095313165611"
+			"Rev": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344"
 		},
 		{
 			"ImportPath": "golang.org/x/net/internal/iana",
-			"Rev": "a6577fac2d73be281a500b310739095313165611"
+			"Rev": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344"
 		},
 		{
 			"ImportPath": "golang.org/x/net/internal/netreflect",
-			"Rev": "a6577fac2d73be281a500b310739095313165611"
+			"Rev": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344"
 		},
 		{
 			"ImportPath": "golang.org/x/net/ipv4",
-			"Rev": "a6577fac2d73be281a500b310739095313165611"
+			"Rev": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344"
 		},
 		{
 			"ImportPath": "golang.org/x/net/ipv6",
-			"Rev": "a6577fac2d73be281a500b310739095313165611"
+			"Rev": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "da118f7b8e5954f39d0d2130ab35d4bf0e3cb344"
 		},
 		{
 			"ImportPath": "gopkg.in/redis.v5",
