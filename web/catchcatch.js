@@ -40,7 +40,7 @@ function WSS(address) {
         console.log("wss close");
     }
 
-    let ws = new WebSocket("ws://" + address);
+    let ws = new WebSocket(address);
     ws.onopen = function(event) {
         triggerEvent('connect')
     }
@@ -71,7 +71,7 @@ function WSS(address) {
 }
 
 window.addEventListener("DOMContentLoaded", function () {
-    let socket = new WSS(location.host + "/ws");
+    let socket = new WSS(location.href.replace("http", "ws") + "ws");
     let source = new ol.source.Vector({ wrapX: false });
     let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     let vector = new ol.layer.Vector({ source: source });
