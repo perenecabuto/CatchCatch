@@ -28,25 +28,23 @@ function WSS(address) {
     let eventCallbacks = {}
     let ws;
 
-    this.on = function(event, callback) {
-        console.log("wss on", event, callback)
+    this.on = function (event, callback) {
         eventCallbacks[event] = callback;
     }
-    this.emit = function(event, message) {
-        console.log("wss emit", event + "," + message);
+    this.emit = function (event, message) {
         ws.send(event + "," + message);
     }
 
-    this.close = function() {
-        console.log("wss close");
+    this.close = function () {
+        ws.close();
     }
 
     function init() {
         ws = new WebSocket(address);
-        ws.onopen = function(event) {
+        ws.onopen = function (event) {
             triggerEvent('connect')
         }
-        ws.onmessage = function(event) {
+        ws.onmessage = function (event) {
             let evtName = event.data.split(",", 1)[0];
             let evtMsg = event.data.replace(evtName + ",", "");
             try {
@@ -54,26 +52,24 @@ function WSS(address) {
             } catch (e) {
                 console.debug(e);
             }
-            console.log("onmessage", evtName, evtMsg);
             triggerEvent(evtName, evtMsg);
         }
-        ws.onclose = function() {
+        ws.onclose = function () {
             triggerEvent('disconnect');
             try {
-                init();            
-            } catch(e) {
+                init();
+            } catch (e) {
                 ws.onclose();
             }
         }
-        ws.onerror = function(event) {
-            triggerEvent('onerror');        
-            ws = new WebSocket(address);        
+        ws.onerror = function (event) {
+            triggerEvent('onerror');
+            ws = new WebSocket(address);
         }
     }
 
     function triggerEvent(event, message) {
         if (eventCallbacks[event]) {
-            console.log("triggerEvent", event, message)
             eventCallbacks[event].call(null, message);
         }
     }
@@ -119,6 +115,7 @@ window.addEventListener("DOMContentLoaded", function () {
 
     controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player.clone(),
         function (feat) {
+            console.log("add feat", feat);
             let coords = feat.getGeometry().getCoordinates();
             let p = new Player(coords[1], coords[0]);
             p.connect(function (id) {
@@ -205,9 +202,8 @@ let Player = function (x, y) {
         socket.on('game:finish', function (rank) {
             log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.points_per_player));
         })
-
         socket.on('checkpoint:detected', function (detected) {
-            console.log(player.id + ':checkpoint:detected', detected);
+            log(player.id + ':checkpoint:detected:' + JSON.stringify(detected));
         })
         socket.on('disconnect', onDisconnected)
     }
@@ -431,7 +427,6 @@ let EventHandler = function (controller) {
         controller.resetInterface();
     };
     this.onPlayerRegistered = function (p) {
-        console.log("onPlayerRegistered", p);
         controller.setPlayer(p);
         log("connected as " + p.id);
         controller.updatePosition({ coords: { latitude: p.lat, longitude: p.lon } })
