@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
-
 	"strings"
-
-	"fmt"
 
 	uuid "github.com/satori/go.uuid"
 	websocket "golang.org/x/net/websocket"
@@ -40,6 +38,7 @@ func (c *Conn) listen(ctx context.Context, doneFunc func(error)) {
 	}
 }
 
+// On this connection event trigger callback with its message
 func (c *Conn) On(event string, callback evtCallback) {
 	c.eventCallbacks[event] = callback
 }
@@ -65,7 +64,6 @@ func (c *Conn) readMessage() error {
 	if err := websocket.Message.Receive(c.conn, &c.messagebuf); err != nil {
 		return err
 	}
-
 	data := strings.SplitN(c.messagebuf, ",", 2)
 	if len(data) == 0 {
 		log.Println("message error:", c.messagebuf)
@@ -96,6 +94,7 @@ func NewWebSocketServer(ctx context.Context) *WebSocketServer {
 	return server
 }
 
+// OnConnected register event callback to new connections
 func (wss *WebSocketServer) OnConnected(fn func(c *Conn)) {
 	if fn != nil {
 		wss.onConnected = fn
@@ -183,6 +182,7 @@ func (wss *WebSocketServer) BroadcastTo(ids []string, event string, message inte
 	}
 }
 
+// Broadcast event message to all connections
 func (wss *WebSocketServer) Broadcast(event string, message interface{}) {
 	for id := range wss.connections {
 		if err := wss.Emit(id, event, message); err != nil {

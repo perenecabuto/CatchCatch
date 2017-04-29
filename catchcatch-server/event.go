@@ -23,6 +23,7 @@ func NewEventHandler(server *WebSocketServer, service *PlayerLocationService, gw
 	return handler
 }
 
+// Listen listen to websocket connections
 func (h *EventHandler) Listen(ctx context.Context) websocket.Handler {
 	return h.server.Listen(ctx)
 }
