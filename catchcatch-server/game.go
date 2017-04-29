@@ -34,7 +34,10 @@ func (g Game) String() string {
 	return fmt.Sprintf("%s(%d)started=%v", g.ID, len(g.players), g.started)
 }
 
-// Start the game
+/*
+Start the game
+Note: for while keep it simple, as possible
+*/
 func (g *Game) Start(sessions *SessionManager) {
 	if g.started {
 		g.Stop()
@@ -131,7 +134,15 @@ func (g Game) Ready() bool {
 	return !g.started && len(g.players) >= MinPlayersPerGame
 }
 
-func (g *Game) SetPlayerUntilReady(p *Player, sessions *SessionManager) {
+/*
+SetPlayer notify player updates to the game
+The rule is:
+	- the game changes what to do with the player
+	- it can ignore anything
+	- it can send messages to the player
+	- it receives sessions to notify anything to this player games
+*/
+func (g *Game) SetPlayer(p *Player, sessions *SessionManager) {
 	if g.started {
 		g.updateAndNofityPlayer(p, sessions)
 		return
@@ -177,6 +188,13 @@ func (g *Game) SetPlayer(p *Player) {
 	}
 }
 
+/*
+RemovePlayer revices notifications to remove player
+The role is:
+	- it can ignore everthing
+	- it receives sessions to send messages to its players
+	- it must remove players from the game
+*/
 func (g *Game) RemovePlayer(p *Player, sessions *SessionManager) {
 	if _, exists := g.players[p.ID]; !exists {
 		return

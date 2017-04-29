@@ -9,17 +9,21 @@ import (
 	io "github.com/googollee/go-socket.io"
 )
 
+// GameContext stores game and its canel (and stop eventualy) function
 type GameContext struct {
 	game   *Game
 	cancel context.CancelFunc
 }
 
+// GameWatcher is made to start/stop games by player presence
+// and notify players events to each game by geo position
 type GameWatcher struct {
 	games    map[string]*GameContext
 	sessions *SessionManager
 	stream   EventStream
 }
 
+// NewGameWatcher builds GameWatecher
 func NewGameWatcher(stream EventStream, sessions *SessionManager) *GameWatcher {
 	return &GameWatcher{make(map[string]*GameContext), sessions, stream}
 }
@@ -48,6 +52,7 @@ func (gw *GameWatcher) WatchGamesForever(ctx context.Context) {
 	}
 }
 
+// WatchGames starts this gamewatcher to listen to player events over games
 func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	defer gw.Clear()
 	err := gw.stream.StreamNearByEvents(ctx, "player", "geofences", 0, func(d *Detection) {
@@ -75,12 +80,15 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	return nil
 }
 
+// Clear stop all started games
 func (gw *GameWatcher) Clear() {
 	log.Printf("gamewatcher:clear:games")
 	for id := range gw.games {
 		gw.StopGame(id)
 	}
 }
+
+// StopGame stops a game and its watcher
 func (gw *GameWatcher) StopGame(gameID string) {
 	if _, exists := gw.games[gameID]; !exists {
 		return
@@ -91,6 +99,7 @@ func (gw *GameWatcher) StopGame(gameID string) {
 	delete(gw.games, gameID)
 }
 
+// WatchCheckpoints ...
 func (gw *GameWatcher) WatchCheckpoints(ctx context.Context, server *io.Server) {
 	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", 1000, func(d *Detection) {
 		if err := gw.sessions.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
