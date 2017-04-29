@@ -404,7 +404,8 @@ let AdminController = function (socket, sourceLayer, view) {
             function (feat) {
                 let geojson = new ol.format.GeoJSON().writeGeometry(feat.getGeometry());
                 let name = prompt("What is this " + group + " name?");
-                socket.emit('admin:feature:add', group, name, geojson);
+                let data = JSON.stringify({group, name, geojson})
+                socket.emit('admin:feature:add', data);
             }
         );
     };

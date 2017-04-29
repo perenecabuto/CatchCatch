@@ -77,7 +77,6 @@ func (c *Conn) readMessage() error {
 		return errors.New("Invalid payload: " + c.messagebuf)
 	}
 	if cb, exists := c.eventCallbacks[data[0]]; exists {
-		log.Println("message:", data)
 		cb(data[1])
 		return nil
 

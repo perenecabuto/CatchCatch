@@ -65,7 +65,6 @@ func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
 func (h *EventHandler) onPlayerUpdate(player *Player, c *Conn) func(string) {
 	return func(msg string) {
 		coords := gjson.GetMany(msg, "lat", "lon")
-		log.Println("---->###", coords, msg)
 		player.Lat, player.Lon = coords[0].Float(), coords[1].Float()
 		c.Emit("player:updated", player)
 		h.server.Broadcast("remote-player:updated", player)
@@ -116,8 +115,8 @@ func (h *EventHandler) onClear() func(string) {
 
 func (h *EventHandler) onAddFeature() func(string) {
 	return func(msg string) {
-		// TODO parse data in the new websocket server way
-		var group, name, geojson string
+		data := gjson.GetMany(msg, "group", "name", "geojson")
+		group, name, geojson := data[0].String(), data[1].String(), data[2].String()
 		feature, err := h.service.AddFeature(group, name, geojson)
 		if err != nil {
 			log.Println("Error to create feature:", err)
