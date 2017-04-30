@@ -96,6 +96,9 @@ func (gw *GameWatcher) StopGame(gameID string) {
 // WatchCheckpoints ...
 func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", 1000, func(d *Detection) {
+		if d.Intersects == Exit {
+			return
+		}
 		if err := gw.wss.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
 			log.Println("Error to notify player", d.FeatID, err)
 		}
