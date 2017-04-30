@@ -25,6 +25,7 @@ type Conn struct {
 	cancelFN       context.CancelFunc
 }
 
+// NewConn creates ws client connection handler
 func NewConn(conn *websocket.Conn) *Conn {
 	id := uuid.NewV4().String()
 	return &Conn{id, conn, "", make(map[string]evtCallback), func() {}, func() {}}
