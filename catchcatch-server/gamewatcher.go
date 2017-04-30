@@ -46,13 +46,17 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	defer gw.Clear()
 	err := gw.stream.StreamNearByEvents(ctx, "player", "geofences", 0, func(d *Detection) {
-		_, exists := gw.games[d.NearByFeatID]
+		gameID := d.NearByFeatID
+		if gameID == "" {
+			return
+		}
+		_, exists := gw.games[gameID]
 		if !exists {
 			gameDuration := time.Minute
-			game := NewGame(d.NearByFeatID, gameDuration)
+			game := NewGame(gameID, gameDuration)
 			gctx, cancel := context.WithCancel(ctx)
-			log.Println("gamewatcher:create:game:", d.NearByFeatID, cancel)
-			gw.games[d.NearByFeatID] = &GameContext{game, cancel}
+			log.Println("gamewatcher:create:game:", gameID, d.FeatID)
+			gw.games[gameID] = &GameContext{game, cancel}
 
 			go func() {
 				if err := gw.WatchGamePlayers(gctx, game); err != nil {
