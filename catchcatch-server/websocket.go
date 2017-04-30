@@ -8,6 +8,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 
 	uuid "github.com/satori/go.uuid"
 	websocket "golang.org/x/net/websocket"
@@ -72,7 +73,7 @@ func (c *Conn) Emit(event string, message interface{}) error {
 func (c *Conn) close() {
 	c.cancelFN()
 	c.conn.Close()
-	c.onDisconnected()
+	go c.onDisconnected()
 }
 
 func (c *Conn) readMessage() error {
@@ -95,17 +96,14 @@ func (c *Conn) readMessage() error {
 // WebSocketServer manage websocket connections
 type WebSocketServer struct {
 	connections map[string]*Conn
-	addCH       chan *Conn
-	delCH       chan string
-
 	onConnected func(c *Conn)
+
+	sync.RWMutex
 }
 
 // NewWebSocketServer create a new WebSocketServer
 func NewWebSocketServer(ctx context.Context) *WebSocketServer {
-	server := &WebSocketServer{make(map[string]*Conn), make(chan *Conn, 1), make(chan string, 1), func(c *Conn) {}}
-	go server.watchConnections(ctx)
-	return server
+	return &WebSocketServer{connections: make(map[string]*Conn), onConnected: func(c *Conn) {}}
 }
 
 // OnConnected register event callback to new connections
@@ -120,53 +118,41 @@ func (wss *WebSocketServer) Listen(ctx context.Context) websocket.Handler {
 	// websocket handler
 	return websocket.Handler(func(c *websocket.Conn) {
 		conn := wss.Add(c)
-		defer wss.Remove(conn.ID)
 		wss.onConnected(conn)
 		conn.listen(ctx, func(err error) {
 			if err != nil {
 				log.Println("WebSocketServer: read error", err)
 			}
 		})
+		wss.Remove(conn.ID)
 	})
-}
-
-func (wss *WebSocketServer) watchConnections(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("Stop watch connections")
-			close(wss.addCH)
-			close(wss.delCH)
-			return
-		case conn := <-wss.addCH:
-			wss.connections[conn.ID] = conn
-		case id := <-wss.delCH:
-			log.Println("Delete conn", id)
-			if c, exists := wss.connections[id]; exists {
-				delete(wss.connections, id)
-				c.close()
-			}
-		}
-	}
-	log.Println("Stop watch connections!!!!")
-
 }
 
 // Get Conn by session id
 func (wss *WebSocketServer) Get(id string) *Conn {
-	return wss.connections[id]
+	wss.RLock()
+	conn := wss.connections[id]
+	wss.RUnlock()
+	return conn
 }
 
 // Add Conn for session id
 func (wss *WebSocketServer) Add(c *websocket.Conn) *Conn {
 	conn := NewConn(c)
-	wss.addCH <- conn
+	wss.Lock()
+	wss.connections[conn.ID] = conn
+	wss.Unlock()
 	return conn
 }
 
 // Remove Conn by session id
 func (wss *WebSocketServer) Remove(id string) {
-	wss.delCH <- id
+	wss.Lock()
+	if c, exists := wss.connections[id]; exists {
+		c.close()
+		delete(wss.connections, id)
+	}
+	wss.Unlock()
 }
 
 // Emit send payload on eventX to socket id
