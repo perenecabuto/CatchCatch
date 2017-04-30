@@ -103,7 +103,7 @@ type WebSocketServer struct {
 
 // NewWebSocketServer create a new WebSocketServer
 func NewWebSocketServer(ctx context.Context) *WebSocketServer {
-	server := &WebSocketServer{make(map[string]*Conn), make(chan *Conn), make(chan string), func(c *Conn) {}}
+	server := &WebSocketServer{make(map[string]*Conn), make(chan *Conn, 1), make(chan string, 1), func(c *Conn) {}}
 	go server.watchConnections(ctx)
 	return server
 }
