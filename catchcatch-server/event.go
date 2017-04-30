@@ -56,7 +56,6 @@ func (h *EventHandler) onConnection(c *Conn) {
 func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
 	return func() {
 		log.Println("player:disconnect", player.ID)
-		h.server.Remove(player.ID)
 		h.server.Broadcast("remote-player:destroy", player)
 		h.service.Remove(player)
 	}
@@ -98,8 +97,7 @@ func (h *EventHandler) onPlayerRequestGames(player *Player, c *Conn) func(string
 func (h *EventHandler) onDisconnectByID() func(string) {
 	return func(id string) {
 		log.Println("admin:disconnect", id)
-		callback := h.onPlayerDisconnect(&Player{ID: id})
-		callback()
+		h.server.Remove(id)
 	}
 }
 
