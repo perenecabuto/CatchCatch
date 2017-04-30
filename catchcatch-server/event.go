@@ -56,9 +56,9 @@ func (h *EventHandler) onConnection(c *Conn) {
 func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
 	return func() {
 		log.Println("player:disconnect", player.ID)
+		h.server.Remove(player.ID)
 		h.server.Broadcast("remote-player:destroy", player)
 		h.service.Remove(player)
-		log.Println("--> diconnected", player)
 	}
 }
 
