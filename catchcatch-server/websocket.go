@@ -24,6 +24,11 @@ type Conn struct {
 	cancelFN       context.CancelFunc
 }
 
+func NewConn(conn *websocket.Conn) *Conn {
+	id := uuid.NewV4().String()
+	return &Conn{id, conn, "", make(map[string]evtCallback), func() {}, func() {}}
+}
+
 type evtCallback func(string)
 
 func (c *Conn) listen(ctx context.Context, doneFunc func(error)) {
@@ -129,32 +134,32 @@ func (wss *WebSocketServer) watchConnections(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			log.Println("Stop watch connections")
 			close(wss.addCH)
 			close(wss.delCH)
 			return
 		case conn := <-wss.addCH:
 			wss.connections[conn.ID] = conn
 		case id := <-wss.delCH:
+			log.Println("Delete conn", id)
 			if c, exists := wss.connections[id]; exists {
 				delete(wss.connections, id)
 				c.close()
 			}
 		}
 	}
+	log.Println("Stop watch connections!!!!")
+
 }
 
 // Get Conn by session id
 func (wss *WebSocketServer) Get(id string) *Conn {
-	if c, exists := wss.connections[id]; exists {
-		return c
-	}
-	return nil
+	return wss.connections[id]
 }
 
 // Add Conn for session id
 func (wss *WebSocketServer) Add(c *websocket.Conn) *Conn {
-	id := uuid.NewV4().String()
-	conn := &Conn{id, c, "", make(map[string]evtCallback), func() {}}
+	conn := NewConn(c)
 	wss.addCH <- conn
 	return conn
 }
