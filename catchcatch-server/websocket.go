@@ -21,11 +21,13 @@ type Conn struct {
 	messagebuf     string
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
+	cancelFN       context.CancelFunc
 }
 
 type evtCallback func(string)
 
 func (c *Conn) listen(ctx context.Context, doneFunc func(error)) {
+	ctx, c.cancelFN = context.WithCancel(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -63,6 +65,7 @@ func (c *Conn) Emit(event string, message interface{}) error {
 }
 
 func (c *Conn) close() {
+	c.cancelFN()
 	c.conn.Close()
 	c.onDisconnected()
 }
