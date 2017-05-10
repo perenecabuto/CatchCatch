@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -115,18 +115,19 @@ func (wss *WebSocketServer) OnConnected(fn func(c *Conn)) {
 }
 
 // Listen to websocket connections
-func (wss *WebSocketServer) Listen(ctx context.Context) websocket.Handler {
-	// websocket handler
-	return websocket.Handler(func(c *websocket.Conn) {
-		conn := wss.Add(c)
-		wss.onConnected(conn)
-		conn.listen(ctx, func(err error) {
-			if err != nil {
-				log.Println("WebSocketServer: read error", err)
-			}
-		})
-		wss.Remove(conn.ID)
-	})
+func (wss *WebSocketServer) Listen(ctx context.Context) http.Handler {
+	return websocket.Server{
+		Handler: func(c *websocket.Conn) {
+			conn := wss.Add(c)
+			wss.onConnected(conn)
+			conn.listen(ctx, func(err error) {
+				if err != nil {
+					log.Println("WebSocketServer: read error", err)
+				}
+			})
+			wss.Remove(conn.ID)
+		},
+	}
 }
 
 // Get Conn by session id
