@@ -22,7 +22,7 @@ type Conn struct {
 	messagebuf     string
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
-	cancelFN       context.CancelFunc
+	stopFunc       context.CancelFunc
 }
 
 // NewConn creates ws client connection handler
@@ -34,7 +34,7 @@ func NewConn(conn *websocket.Conn) *Conn {
 type evtCallback func(string)
 
 func (c *Conn) listen(ctx context.Context, doneFunc func(error)) {
-	ctx, c.cancelFN = context.WithCancel(ctx)
+	ctx, c.stopFunc = context.WithCancel(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -72,7 +72,7 @@ func (c *Conn) Emit(event string, message interface{}) error {
 }
 
 func (c *Conn) close() {
-	c.cancelFN()
+	c.stopFunc()
 	c.conn.Close()
 	go c.onDisconnected()
 }
