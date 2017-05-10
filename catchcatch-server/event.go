@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net/http"
 
 	gjson "github.com/tidwall/gjson"
-	websocket "golang.org/x/net/websocket"
 )
 
 // EventHandler handle socket.io events
@@ -24,7 +24,7 @@ func NewEventHandler(server *WebSocketServer, service *PlayerLocationService, gw
 }
 
 // Listen listen to websocket connections
-func (h *EventHandler) Listen(ctx context.Context) websocket.Handler {
+func (h *EventHandler) Listen(ctx context.Context) http.Handler {
 	return h.server.Listen(ctx)
 }
 
@@ -84,7 +84,6 @@ func (h *EventHandler) onPlayerRequestGames(player *Player, c *Conn) func(string
 			if err != nil {
 				log.Println("Error to request games:", err)
 			}
-			log.Println("game:around", games)
 			if err = c.Emit("game:around", games); err != nil {
 				log.Println("Error to emit", "game:around", player)
 			}

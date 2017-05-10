@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
+	"net/http"
 	"strings"
 	"sync"
 
+	websocket "github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
-	websocket "golang.org/x/net/websocket"
 )
 
 // Conn represents a websocket connection
@@ -19,22 +19,25 @@ type Conn struct {
 	ID   string
 	conn *websocket.Conn
 
-	messagebuf     string
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
-	cancelFN       context.CancelFunc
+	stopFunc       context.CancelFunc
 }
+
+const (
+	sizeOfMessageBuffer = 1024
+)
 
 // NewConn creates ws client connection handler
 func NewConn(conn *websocket.Conn) *Conn {
 	id := uuid.NewV4().String()
-	return &Conn{id, conn, "", make(map[string]evtCallback), func() {}, func() {}}
+	return &Conn{ID: id, conn: conn, eventCallbacks: make(map[string]evtCallback)}
 }
 
 type evtCallback func(string)
 
 func (c *Conn) listen(ctx context.Context, doneFunc func(error)) {
-	ctx, c.cancelFN = context.WithCancel(ctx)
+	ctx, c.stopFunc = context.WithCancel(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -67,29 +70,34 @@ func (c *Conn) Emit(event string, message interface{}) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.conn.Write([]byte(event + "," + payload))
-	return err
+	return c.conn.WriteMessage(websocket.TextMessage, []byte(event+","+payload))
 }
 
 func (c *Conn) close() {
-	c.cancelFN()
+	c.stopFunc()
 	c.conn.Close()
 	go c.onDisconnected()
 }
 
 func (c *Conn) readMessage() error {
-	if err := websocket.Message.Receive(c.conn, &c.messagebuf); err != nil {
+	_, r, err := c.conn.NextReader()
+	if err != nil {
 		return err
 	}
-	data := strings.SplitN(c.messagebuf, ",", 2)
+
+	messagebuf, n := make([]byte, sizeOfMessageBuffer), 0
+	if n, err = r.Read(messagebuf); err != nil {
+		return err
+	}
+	data := strings.SplitN(string(messagebuf[:n]), ",", 2)
 	if len(data) == 0 {
-		log.Println("message error:", c.messagebuf)
-		return errors.New("Invalid payload: " + c.messagebuf)
+		log.Println("message error:", messagebuf)
+		return errors.New("Invalid payload: " + string(messagebuf))
 	}
 	if cb, exists := c.eventCallbacks[data[0]]; exists {
+		log.Println("gotten data:", data[1])
 		cb(data[1])
 		return nil
-
 	}
 	return fmt.Errorf("No callback found: %v", data)
 }
@@ -98,13 +106,20 @@ func (c *Conn) readMessage() error {
 type WebSocketServer struct {
 	connections map[string]*Conn
 	onConnected func(c *Conn)
-
+	upgrader    websocket.Upgrader
 	sync.RWMutex
 }
 
 // NewWebSocketServer create a new WebSocketServer
 func NewWebSocketServer(ctx context.Context) *WebSocketServer {
-	return &WebSocketServer{connections: make(map[string]*Conn), onConnected: func(c *Conn) {}}
+	return &WebSocketServer{
+		connections: make(map[string]*Conn),
+		onConnected: func(c *Conn) {},
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  sizeOfMessageBuffer,
+			WriteBufferSize: sizeOfMessageBuffer,
+		},
+	}
 }
 
 // OnConnected register event callback to new connections
@@ -115,26 +130,22 @@ func (wss *WebSocketServer) OnConnected(fn func(c *Conn)) {
 }
 
 // Listen to websocket connections
-func (wss *WebSocketServer) Listen(ctx context.Context) websocket.Handler {
-	// websocket handler
-	return websocket.Handler(func(c *websocket.Conn) {
+func (wss *WebSocketServer) Listen(ctx context.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c, err := wss.upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		conn := wss.Add(c)
 		wss.onConnected(conn)
 		conn.listen(ctx, func(err error) {
 			if err != nil {
-				log.Println("WebSocketServer: read error", err)
+				log.Println("WebSocketServer: exit - read error", err)
 			}
 		})
 		wss.Remove(conn.ID)
-	})
-}
-
-// Get Conn by session id
-func (wss *WebSocketServer) Get(id string) *Conn {
-	wss.RLock()
-	conn := wss.connections[id]
-	wss.RUnlock()
-	return conn
+	}
 }
 
 // Add Conn for session id
@@ -158,7 +169,9 @@ func (wss *WebSocketServer) Remove(id string) {
 
 // Emit send payload on eventX to socket id
 func (wss *WebSocketServer) Emit(id, event string, message interface{}) error {
-	if conn := wss.Get(id); conn != nil {
+	wss.RLock()
+	defer wss.RUnlock()
+	if conn := wss.connections[id]; conn != nil {
 		conn.Emit(event, message)
 		return nil
 	}
@@ -193,7 +206,7 @@ func (wss *WebSocketServer) CloseAll() {
 func parsePayload(msg interface{}) (string, error) {
 	switch msg.(type) {
 	case string:
-		return strconv.Quote(msg.(string)), nil
+		return msg.(string), nil
 	default:
 		jPayload, err := json.Marshal(msg)
 		if err != nil {
