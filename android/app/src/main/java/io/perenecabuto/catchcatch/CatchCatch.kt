@@ -5,7 +5,7 @@ import android.app.Application
 
 class CatchCatch : Application() {
     private var address = "https://beta-catchcatch.ddns.net/ws"
-    internal var socket: WebSocketClient = WebSocketClient("http://192.168.23.102:5000/ws")
+    internal var socket: WebSocketClient = WebSocketClient(address)
 
     override fun onCreate() {
         socket.onDisconnect({ socket.connect() })
