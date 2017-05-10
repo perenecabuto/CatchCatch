@@ -194,7 +194,7 @@ func (wss *WebSocketServer) CloseAll() {
 func parsePayload(msg interface{}) (string, error) {
 	switch msg.(type) {
 	case string:
-		return strconv.Quote(msg.(string)), nil
+		return msg.(string), nil
 	default:
 		jPayload, err := json.Marshal(msg)
 		if err != nil {
