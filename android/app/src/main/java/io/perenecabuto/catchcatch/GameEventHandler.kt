@@ -1,32 +1,30 @@
 package io.perenecabuto.catchcatch
 
-import io.socket.client.Socket
 import org.json.JSONObject
 
-class GameEventHandler(val sock: Socket, val info: GameInfo, val activity: HomeActivity) : EventHandler {
+class GameEventHandler(val sock: WebSocketClient, val info: GameInfo, val activity: HomeActivity) : EventHandler {
     override var running = false
 
     override fun onStart() {
         activity.showInfo("Game ${info.game} started you are ${info.role}")
         sock.off()
-            .on(GAME_LOOSE) finish@ { args: Array<Any?>? ->
-                val gameID = args?.get(0) as String? ?: return@finish
+            .on(GAME_LOOSE) finish@ { gameID:String ->
                 onGameLoose(gameID)
             }
-            .on(GAME_TARGET_NEAR) { args: Array<Any?>? ->
-                val dist = args?.get(0).toString().toDouble()
+            .on(GAME_TARGET_NEAR) finish@ { msg:String ->
+                val dist = msg.replace("\"", "").toDouble()
                 onGameTargetNear(dist)
             }
-            .on(GAME_TARGET_REACHED) { args: Array<Any?>? ->
-                val dist = args?.get(0).toString().toDouble()
+            .on(GAME_TARGET_REACHED) { msg:String ->
+                val dist = msg.toDouble()
                 onGameTargetReached(dist)
             }
             .on(GAME_TARGET_WIN) { onGameTargetWin() }
-            .on(GAME_FINISH) finish@ { args: Array<Any?>? ->
-                val json = args?.get(0) as? JSONObject ?: return@finish
+            .on(GAME_FINISH) finish@ { msg:String ->
+                val json = JSONObject(msg)
                 onGameFinish(GameRank(json))
             }
-            .on(Socket.EVENT_DISCONNECT) { onDisconnected() }
+            .onDisconnect { onDisconnected() }
     }
 
     override fun onStop() {

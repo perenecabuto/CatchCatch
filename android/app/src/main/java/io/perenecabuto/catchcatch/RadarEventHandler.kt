@@ -2,33 +2,32 @@ package io.perenecabuto.catchcatch
 
 import android.os.Handler
 import android.os.Looper
-import io.socket.client.Socket
 import org.json.JSONArray
 import org.json.JSONObject
 
-class RadarEventHandler(val sock: Socket, val activity: HomeActivity) : EventHandler {
+class RadarEventHandler(val sock: WebSocketClient, val activity: HomeActivity) : EventHandler {
     private val looper = Looper.myLooper()
     private val interval: Long = 20_000
     override var running = false
 
     override fun onStart() {
         sock.off()
-            .on(PLAYER_REGISTERED) finish@ { args: Array<Any?>? ->
-                val json = args?.get(0) as JSONObject? ?: return@finish
+            .on(PLAYER_REGISTERED) finish@ { msg: String ->
+                val json = JSONObject(msg)
                 onRegistered(Player(json))
             }
             .on(PLAYER_UPDATED) {
                 onUpdated()
             }
-            .on(GAME_AROUND) finish@ { args: Array<Any?>? ->
-                val items = args?.get(0) as? JSONArray ?: return@finish
+            .on(GAME_AROUND) finish@ { msg: String ->
+                val items = JSONArray(msg)
                 onGamesAround(FeatureList(items))
             }
-            .on(GAME_STARTED) finish@ { args: Array<Any?>? ->
-                val json = args?.get(0) as JSONObject? ?: return@finish
+            .on(GAME_STARTED) finish@ { msg: String ->
+                val json = JSONObject(msg)
                 onGameStarted(GameInfo(json))
             }
-            .on(Socket.EVENT_DISCONNECT) { onDisconnect() }
+            .onDisconnect { onDisconnect() }
     }
 
     override fun onStop() {
