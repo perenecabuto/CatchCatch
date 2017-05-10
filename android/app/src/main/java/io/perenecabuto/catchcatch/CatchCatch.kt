@@ -1,32 +1,20 @@
 package io.perenecabuto.catchcatch
 
 import android.app.Application
-import io.socket.client.IO
-import io.socket.client.Socket
 
 
 class CatchCatch : Application() {
-    private val TAG = HomeActivity::class.java.simpleName
-    private val address = "https://beta-catchcatch.ddns.net/"
-
-    internal var socket: Socket? = null
+    private var address = "https://beta-catchcatch.ddns.net/ws"
+    internal var socket: WebSocketClient = WebSocketClient("http://192.168.23.102:5000/ws")
 
     override fun onCreate() {
-        val socketOpts = object: IO.Options() {
-            init {
-                path = "/ws"
-                rememberUpgrade = true
-                timestampRequests = false
-                reconnection = true
-            }
-        }
-        socket = IO.socket(address, socketOpts)
-        socket!!.on(Socket.EVENT_DISCONNECT, { socket!!.connect() })
-        socket!!.connect()
+        socket.onDisconnect({ socket.connect() })
+        socket.connect()
     }
 
     override fun onTerminate() {
+        socket.shutdown()
         super.onTerminate()
-        socket?.close()
     }
 }
+
