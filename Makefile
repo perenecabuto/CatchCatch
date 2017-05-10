@@ -16,7 +16,7 @@ LOCAL_BRANCH = master
 %-linode: DOKKU_HOST=50.116.10.21
 %-linode: DOMAIN=catchcatch.pointto.us
 
-run:
+run: run-tile38
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
 
 run-debug:
