@@ -33,7 +33,7 @@ deploy-beta: deploy
 deploy-linode: deploy
 deploy-digitalocean: deploy
 deploy:
-	git push dokku@$(DOKKU_HOST):catchcatch $(LOCAL_BRANCH):master
+	git push -f dokku@$(DOKKU_HOST):catchcatch $(LOCAL_BRANCH):master
 
 setup-ssl-beta: setup-ssl
 setup-ssl-linode: setup-ssl
