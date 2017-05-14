@@ -23,62 +23,6 @@ function log(msg) {
     logEl.innerHTML = msg;
 };
 
-
-function WSS(address, reconnect) {
-    let eventCallbacks = {}
-    let ws;
-
-    this.on = function (event, callback) {
-        eventCallbacks[event] = callback;
-    }
-    this.emit = function (event, message) {
-        ws.send(event + "," + message);
-    }
-
-    this.close = function () {
-        ws.close();
-    }
-
-    function init() {
-        ws = new WebSocket(address);
-        ws.onopen = function (event) {
-            triggerEvent('connect')
-        }
-        ws.onmessage = function (event) {
-            let evtName = event.data.split(",", 1)[0];
-            let evtMsg = event.data.replace(evtName + ",", "");
-            try {
-                evtMsg = JSON.parse(evtMsg);
-            } catch (e) {
-                console.debug(e);
-            }
-            triggerEvent(evtName, evtMsg);
-        }
-        ws.onclose = function () {
-            triggerEvent('disconnect');
-            if (!reconnect) return;
-            try {
-                init();
-            } catch (e) {
-                ws.onclose();
-            }
-        }
-        ws.onerror = function (event) {
-            triggerEvent('onerror');
-            ws = new WebSocket(address);
-        }
-    }
-
-    function triggerEvent(event, message) {
-        if (eventCallbacks[event]) {
-            eventCallbacks[event].call(null, message);
-        }
-    }
-
-    init();
-    console.log("wss start", ws)
-}
-
 window.addEventListener("DOMContentLoaded", function () {
     let socket = new WSS(location.href.replace("http", "ws") + "ws", true);
     let source = new ol.source.Vector({ wrapX: false });
@@ -470,3 +414,58 @@ let EventHandler = function (controller) {
         controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.near_by_meters);
     }
 };
+
+function WSS(address, reconnect) {
+    let eventCallbacks = {}
+    let ws;
+
+    this.on = function (event, callback) {
+        eventCallbacks[event] = callback;
+    }
+    this.emit = function (event, message) {
+        ws.send(event + "," + message);
+    }
+
+    this.close = function () {
+        ws.close();
+    }
+
+    function init() {
+        ws = new WebSocket(address);
+        ws.onopen = function (event) {
+            triggerEvent('connect')
+        }
+        ws.onmessage = function (event) {
+            let evtName = event.data.split(",", 1)[0];
+            let evtMsg = event.data.replace(evtName + ",", "");
+            try {
+                evtMsg = JSON.parse(evtMsg);
+            } catch (e) {
+                console.debug(e);
+            }
+            triggerEvent(evtName, evtMsg);
+        }
+        ws.onclose = function () {
+            triggerEvent('disconnect');
+            if (!reconnect) return;
+            try {
+                init();
+            } catch (e) {
+                ws.onclose();
+            }
+        }
+        ws.onerror = function (event) {
+            triggerEvent('onerror');
+            ws = new WebSocket(address);
+        }
+    }
+
+    function triggerEvent(event, message) {
+        if (eventCallbacks[event]) {
+            eventCallbacks[event].call(null, message);
+        }
+    }
+
+    init();
+    console.log("wss start", ws)
+}
