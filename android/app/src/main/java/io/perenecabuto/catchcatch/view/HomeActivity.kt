@@ -51,14 +51,16 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         window.setFlags(FLAG_LAYOUT_NO_LIMITS, FLAG_LAYOUT_NO_LIMITS)
         setContentView(R.layout.activity_home)
 
-        map = OSMShortcuts.findMapById(this, R.id.activity_home_map)
-        map!!.setOnTouchListener({ _, _ -> true })
+        val map = OSMShortcuts.findMapById(this, R.id.activity_home_map)
+        this.map = map
+
+        map.setOnTouchListener({ _, _ -> true })
         radarView = findViewById(R.id.activity_home_radar) as RadarView
 
         val sensors = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         CompassEventListener.listenCompass(sensors) { heading ->
             if (animator?.running != true) {
-                map!!.mapOrientation = heading
+                map.mapOrientation = heading
             }
         }
 
@@ -66,10 +68,10 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         SmartLocation.with(this).location().continuous().config(conf).start(this)
 
         val app = application as CatchCatch
-        radar = RadarEventHandler(app.socket!!, this)
+        radar = RadarEventHandler(app.socket, this)
         tts = GameVoice(this) {
             showMessage("welcome to CatchCatch!")
-            radar!!.start()
+            radar?.start()
         }
 
         showInfo("starting...")
@@ -86,9 +88,10 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     override fun onLocationUpdated(l: Location) {
         sendPosition(l)
         val point = player.updateLocation(l).point()
-        OSMShortcuts.showMarkerOnMap(map!!, "me", point)
+        val map = map ?: return
+        OSMShortcuts.showMarkerOnMap(map, "me", point)
         if (animator?.running != true) {
-            OSMShortcuts.focus(map!!, point, 18)
+            OSMShortcuts.focus(map, point, 18)
         }
     }
 
@@ -99,7 +102,8 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
     override fun onDestroy() {
         super.onDestroy()
-        map!!.overlays.clear()
+        val map = map ?: return
+        map.overlays.clear()
     }
 
     fun showSettings(view: View) {
@@ -114,19 +118,22 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         animator = OSMShortcuts.animatePolygonOverlay(map, info.game)
         animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox) }
 
-        val app = application as CatchCatch
-        game = GameEventHandler(app.socket!!, info, this)
-        radar!!.switchTo(game!!)
+        val sock = (application as CatchCatch).socket
+        val radar = radar ?: return@finish
+        GameEventHandler(sock, info, this).let {
+            game = it
+            radar.switchTo(it)
+        }
     }
 
-    fun gameOver() = runOnUiThread {
+    fun gameOver() = runOnUiThread finish@ {
         animator?.stop()
-        game!!.switchTo(radar!!)
+        game?.switchTo(radar ?: return@finish)
     }
 
     fun sendPosition(l: Location) {
-        val sock = (application as CatchCatch).socket!!
         val coords = JSONObject(mapOf("lat" to l.latitude, "lon" to l.longitude))
+        val sock = (application as CatchCatch).socket
         sock.emit("player:update", coords.toString())
     }
 
