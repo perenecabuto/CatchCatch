@@ -2,6 +2,7 @@ package io.perenecabuto.catchcatch.drivers
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
+import android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID
 import android.widget.Toast
 import java.util.*
 
@@ -14,10 +15,11 @@ class GameVoice(context: Context, onComplete: () -> Unit) {
             "teen" to mapOf("lang" to Locale.CANADA, "speech_rate" to 1F, "pitch" to 2.1F),
             "light_robot" to mapOf("lang" to Locale.ENGLISH, "speech_rate" to 1F, "pitch" to 0.7F)
         )
-        private var voice = voices["light_robot"]!!
+        private val default = voices["light_robot"]!!
+        private var voice = default
 
         fun changeVoice(name: String) {
-            voice = voices[name] ?: return
+            voice = voices[name] ?: default
         }
 
         fun voices(): Set<String> {
@@ -39,5 +41,5 @@ class GameVoice(context: Context, onComplete: () -> Unit) {
         })
     }
 
-    fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null)
+    fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null, KEY_PARAM_UTTERANCE_ID)
 }
