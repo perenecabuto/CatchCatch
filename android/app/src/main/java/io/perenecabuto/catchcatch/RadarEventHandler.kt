@@ -2,6 +2,7 @@ package io.perenecabuto.catchcatch
 
 import android.os.Handler
 import android.os.Looper
+import io.perenecabuto.catchcatch.view.HomeActivity
 import org.json.JSONArray
 import org.json.JSONObject
 

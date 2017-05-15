@@ -1,4 +1,4 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.view
 
 import android.content.Context
 import android.graphics.Canvas

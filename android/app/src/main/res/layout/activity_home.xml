@@ -4,10 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="io.perenecabuto.catchcatch.HomeActivity"
+    tools:context="io.perenecabuto.catchcatch.view.HomeActivity"
     >
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#99666666"
@@ -19,15 +19,25 @@
         android:translationZ="1dp"
         >
 
+        <Button
+            android:id="@+id/home_activity_open_settings"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_alignParentEnd="true"
+            android:background="@android:drawable/ic_menu_preferences"
+            android:onClick="showSettings"
+            />
+
         <TextView
             android:id="@+id/home_activity_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_toStartOf="@id/home_activity_open_settings"
             android:textColor="@android:color/primary_text_dark"
             android:textSize="18sp"
             tools:text="Connected as: somebody"
             />
-    </LinearLayout>
+    </RelativeLayout>
 
     <org.osmdroid.views.MapView
         android:id="@+id/home_activity_map"
@@ -36,7 +46,7 @@
         android:background="@mipmap/home_map"
         />
 
-    <io.perenecabuto.catchcatch.RadarView
+    <io.perenecabuto.catchcatch.view.RadarView
         android:id="@+id/home_activity_radar"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

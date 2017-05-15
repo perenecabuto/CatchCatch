@@ -1,4 +1,4 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.view
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -7,11 +7,14 @@ import android.os.Bundle
 import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
+import io.perenecabuto.catchcatch.GameRank
+import io.perenecabuto.catchcatch.Player
+import io.perenecabuto.catchcatch.R
 
 open class BaseDialog(val activity: Activity) : android.app.Dialog(activity) {
-    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.attributes.windowAnimations = io.perenecabuto.catchcatch.R.style.PopUpDialog
+        window.attributes.windowAnimations = R.style.PopUpDialog
         window.setBackgroundDrawableResource(android.R.color.transparent)
     }
 

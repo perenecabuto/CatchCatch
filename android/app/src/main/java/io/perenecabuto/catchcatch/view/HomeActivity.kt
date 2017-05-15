@@ -1,11 +1,13 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.view
 
 import android.content.Context
+import android.content.Intent
 import android.hardware.SensorManager
 import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Vibrator
+import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
@@ -15,6 +17,7 @@ import io.nlopez.smartlocation.OnLocationUpdatedListener
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
+import io.perenecabuto.catchcatch.*
 import org.json.JSONObject
 import org.osmdroid.views.MapView
 import java.util.*
@@ -89,6 +92,11 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     override fun onDestroy() {
         super.onDestroy()
         map!!.overlays.clear()
+    }
+
+    fun showSettings(view: View) {
+        val intent = Intent(this, SettingsActivity::class.java)
+        startActivity(intent)
     }
 
     fun startGame(info: GameInfo) = runOnUiThread finish@ {
