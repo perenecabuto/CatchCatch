@@ -1,4 +1,4 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.sensors
 
 import android.location.Location
 import android.location.LocationListener

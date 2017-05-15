@@ -1,6 +1,7 @@
 package io.perenecabuto.catchcatch
 
 import android.app.Application
+import io.perenecabuto.catchcatch.drivers.WebSocketClient
 
 
 class CatchCatch : Application() {

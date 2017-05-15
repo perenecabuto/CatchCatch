@@ -1,4 +1,4 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.events
 
 internal val GAME_AROUND = "game:around"
 internal val GAME_STARTED = "game:started"

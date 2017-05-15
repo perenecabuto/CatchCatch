@@ -1,4 +1,4 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.sensors
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent

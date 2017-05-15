@@ -1,4 +1,4 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.sensors
 
 import android.content.Context
 import android.net.nsd.NsdManager

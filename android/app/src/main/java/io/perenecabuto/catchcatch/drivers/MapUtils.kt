@@ -1,4 +1,4 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.drivers
 
 import android.app.Activity
 import android.content.Context
@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.os.Handler
 import android.preference.PreferenceManager
 import com.google.gson.JsonParser
+import io.perenecabuto.catchcatch.BuildConfig
+import io.perenecabuto.catchcatch.R
 import org.osmdroid.bonuspack.kml.KmlGeometry
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory

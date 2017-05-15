@@ -18,6 +18,14 @@ import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
 import io.perenecabuto.catchcatch.*
+import io.perenecabuto.catchcatch.drivers.GameVoice
+import io.perenecabuto.catchcatch.drivers.GeoJsonPolygon
+import io.perenecabuto.catchcatch.drivers.OSMShortcuts
+import io.perenecabuto.catchcatch.drivers.PolygonAnimator
+import io.perenecabuto.catchcatch.sensors.CompassEventListener
+import io.perenecabuto.catchcatch.events.GameEventHandler
+import io.perenecabuto.catchcatch.events.RadarEventHandler
+import io.perenecabuto.catchcatch.model.*
 import org.json.JSONObject
 import org.osmdroid.views.MapView
 import java.util.*
@@ -43,9 +51,9 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         window.setFlags(FLAG_LAYOUT_NO_LIMITS, FLAG_LAYOUT_NO_LIMITS)
         setContentView(R.layout.activity_home)
 
-        map = OSMShortcuts.findMapById(this, R.id.home_activity_map)
+        map = OSMShortcuts.findMapById(this, R.id.activity_home_map)
         map!!.setOnTouchListener({ _, _ -> true })
-        radarView = findViewById(R.id.home_activity_radar) as RadarView
+        radarView = findViewById(R.id.activity_home_radar) as RadarView
 
         val sensors = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         CompassEventListener.listenCompass(sensors) { heading ->
@@ -130,7 +138,7 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     }
 
     fun showInfo(text: String) = runOnUiThread {
-        val info = findViewById(R.id.home_activity_info) as TextView
+        val info = findViewById(R.id.activity_home_info) as TextView
         info.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
         info.text = text.capitalize()
     }

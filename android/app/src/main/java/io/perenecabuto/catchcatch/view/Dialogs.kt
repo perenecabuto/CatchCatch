@@ -7,8 +7,8 @@ import android.os.Bundle
 import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
-import io.perenecabuto.catchcatch.GameRank
-import io.perenecabuto.catchcatch.Player
+import io.perenecabuto.catchcatch.model.GameRank
+import io.perenecabuto.catchcatch.model.Player
 import io.perenecabuto.catchcatch.R
 
 open class BaseDialog(val activity: Activity) : android.app.Dialog(activity) {

@@ -1,5 +1,8 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.events
 
+import io.perenecabuto.catchcatch.drivers.WebSocketClient
+import io.perenecabuto.catchcatch.model.GameInfo
+import io.perenecabuto.catchcatch.model.GameRank
 import io.perenecabuto.catchcatch.view.HomeActivity
 import org.json.JSONObject
 
@@ -13,7 +16,7 @@ class GameEventHandler(val sock: WebSocketClient, val info: GameInfo, val activi
                 onGameLoose(gameID)
             }
             .on(GAME_TARGET_NEAR) finish@ { msg:String ->
-                val dist = msg.replace("\"", "").toDouble()
+                val dist = msg.toDouble()
                 onGameTargetNear(dist)
             }
             .on(GAME_TARGET_REACHED) { msg:String ->

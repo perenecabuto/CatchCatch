@@ -1,7 +1,11 @@
-package io.perenecabuto.catchcatch
+package io.perenecabuto.catchcatch.events
 
 import android.os.Handler
 import android.os.Looper
+import io.perenecabuto.catchcatch.drivers.WebSocketClient
+import io.perenecabuto.catchcatch.model.FeatureList
+import io.perenecabuto.catchcatch.model.GameInfo
+import io.perenecabuto.catchcatch.model.Player
 import io.perenecabuto.catchcatch.view.HomeActivity
 import org.json.JSONArray
 import org.json.JSONObject
