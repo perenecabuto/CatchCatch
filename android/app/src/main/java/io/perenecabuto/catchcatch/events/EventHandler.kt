@@ -1,5 +1,7 @@
 package io.perenecabuto.catchcatch.events
 
+import io.perenecabuto.catchcatch.drivers.WebSocketClient
+
 internal val GAME_AROUND = "game:around"
 internal val GAME_STARTED = "game:started"
 internal val GAME_LOOSE = "game:loose"
@@ -17,6 +19,7 @@ internal val REMOTE_PLAYER_DESTROY = "remote-player:destroy"
 internal val CHECKPOINT_DETECTED = "checkpoint:detected"
 
 interface EventHandler {
+    val sock: WebSocketClient
     var running: Boolean
     fun onStart()
     fun onStop() {}
@@ -24,6 +27,7 @@ interface EventHandler {
     fun start() {
         if (!running) {
             running = true
+            sock.off()
             onStart()
         }
     }

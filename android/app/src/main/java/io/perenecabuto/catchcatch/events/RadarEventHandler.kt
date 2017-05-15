@@ -10,14 +10,13 @@ import io.perenecabuto.catchcatch.view.HomeActivity
 import org.json.JSONArray
 import org.json.JSONObject
 
-class RadarEventHandler(val sock: WebSocketClient, val activity: HomeActivity) : EventHandler {
+class RadarEventHandler(override val sock: WebSocketClient, val activity: HomeActivity) : EventHandler {
     private val looper = Looper.myLooper()
     private val interval: Long = 20_000
     override var running = false
 
     override fun onStart() {
-        sock.off()
-            .on(PLAYER_REGISTERED) finish@ { msg: String ->
+        sock.on(PLAYER_REGISTERED) finish@ { msg: String ->
                 val json = JSONObject(msg)
                 onRegistered(Player(json))
             }

@@ -6,13 +6,12 @@ import io.perenecabuto.catchcatch.model.GameRank
 import io.perenecabuto.catchcatch.view.HomeActivity
 import org.json.JSONObject
 
-class GameEventHandler(val sock: WebSocketClient, val info: GameInfo, val activity: HomeActivity) : EventHandler {
+class GameEventHandler(override val sock: WebSocketClient, val info: GameInfo, val activity: HomeActivity) : EventHandler {
     override var running = false
 
     override fun onStart() {
         activity.showInfo("Game ${info.game} started you are ${info.role}")
-        sock.off()
-            .on(GAME_LOOSE) finish@ { gameID:String ->
+        sock.on(GAME_LOOSE) finish@ { gameID:String ->
                 onGameLoose(gameID)
             }
             .on(GAME_TARGET_NEAR) finish@ { msg:String ->
