@@ -17,4 +17,3 @@ class CatchCatch : Application() {
         super.onTerminate()
     }
 }
-
