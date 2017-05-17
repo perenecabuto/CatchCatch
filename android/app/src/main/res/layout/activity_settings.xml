@@ -26,4 +26,9 @@
         tools:ignore="HardcodedText"
         android:onClick="autoDiscover"
         />
+
+    <ListView
+        android:id="@+id/activity_settings_voice_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 </LinearLayout>

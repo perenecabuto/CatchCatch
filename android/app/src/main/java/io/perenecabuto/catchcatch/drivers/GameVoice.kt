@@ -24,13 +24,7 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
         )
         private val default = voices["darkness female"]!!
 
-        fun changeVoice(name: String) {
-            voice = voices[name] ?: default
-        }
-
-        fun voices(): Set<String> {
-            return voices.keys
-        }
+        fun voices(): Set<String> = voices.keys
     }
 
     init {
