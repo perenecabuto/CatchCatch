@@ -12,12 +12,17 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
 
     companion object {
         private val voices = mapOf(
-            "darkness" to mapOf("lang" to Locale.UK, "speech_rate" to 0.9F, "pitch" to 0.2F),
-            "teen" to mapOf("lang" to Locale.CANADA, "speech_rate" to 1F, "pitch" to 2.1F),
-            "light_robot" to mapOf("lang" to Locale.ENGLISH, "speech_rate" to 1F, "pitch" to 0.7F)
+            "darkness female" to mapOf("lang" to Locale.UK, "speech_rate" to 0.8F, "pitch" to 0.2F),
+            "teen female" to mapOf("lang" to Locale.CANADA, "speech_rate" to 1.2F, "pitch" to 2.1F),
+            "light robot female" to mapOf("lang" to Locale.ENGLISH, "speech_rate" to 1F, "pitch" to 0.7F),
+
+            // English male it would be: "en-us-x-sfg#male_1-local"
+            // http://stackoverflow.com/questions/9815245/android-text-to-speech-male-voice
+            "darkness male" to mapOf("lang" to Locale.UK, "speech_rate" to 0.9F, "pitch" to 0.2F, "voice" to "en-us-x-sfg#male_1-local"),
+            "teen male" to mapOf("lang" to Locale.CANADA, "speech_rate" to 1F, "pitch" to 2.1F, "voice" to "en-us-x-sfg#male_1-local"),
+            "light robot male" to mapOf("lang" to Locale.ENGLISH, "speech_rate" to 1F, "pitch" to 0.7F, "voice" to "en-us-x-sfg#male_1-local")
         )
-        private val default = voices["light_robot"]!!
-        private var voice = default
+        private val default = voices["darkness female"]!!
 
         fun changeVoice(name: String) {
             voice = voices[name] ?: default
