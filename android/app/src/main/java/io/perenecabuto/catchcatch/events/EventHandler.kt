@@ -24,19 +24,21 @@ interface EventHandler {
     fun onStart()
     fun onStop() {}
 
-    fun start() {
+    fun start(): EventHandler {
         if (!running) {
             running = true
             sock.off()
             onStart()
         }
+        return this
     }
 
-    fun stop() {
+    fun stop(): EventHandler {
         if (running) {
             running = false
             onStop()
         }
+        return this
     }
 
     fun switchTo(handler: EventHandler) {
