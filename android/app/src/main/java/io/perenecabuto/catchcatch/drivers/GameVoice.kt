@@ -40,12 +40,20 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
                 return@finish
             }
 
-            tts!!.language = voice["lang"] as Locale
-            tts!!.setSpeechRate(voice["speech_rate"] as Float)
-            tts!!.setPitch(voice["pitch"] as Float)
+            setupWithMap(default)
             onComplete()
         })
     }
 
     fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null, KEY_PARAM_UTTERANCE_ID)
+
+    private fun setupWithMap(settings: Map<String, Serializable>) {
+        tts?.let {
+            it.language = settings["lang"] as Locale
+            it.setSpeechRate(settings["speech_rate"] as Float)
+            it.setPitch(settings["pitch"] as Float)
+            it.voice = it.voices.firstOrNull { it.name == settings["voice"] as String? } ?: return
+            it.engines
+        }
+    }
 }
