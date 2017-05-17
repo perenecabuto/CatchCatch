@@ -4,9 +4,10 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID
 import android.widget.Toast
+import java.io.Serializable
 import java.util.*
 
-class GameVoice(context: Context, onComplete: () -> Unit) {
+class GameVoice(context: Context, onComplete: () -> Unit = {}) {
     private var tts: TextToSpeech? = null
 
     companion object {
