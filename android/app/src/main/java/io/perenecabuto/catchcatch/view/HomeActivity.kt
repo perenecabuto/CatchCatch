@@ -19,7 +19,6 @@ import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
 import io.perenecabuto.catchcatch.CatchCatch
 import io.perenecabuto.catchcatch.R
-import io.perenecabuto.catchcatch.drivers.GameVoice
 import io.perenecabuto.catchcatch.drivers.GeoJsonPolygon
 import io.perenecabuto.catchcatch.drivers.OSMShortcuts
 import io.perenecabuto.catchcatch.drivers.PolygonAnimator
@@ -42,7 +41,6 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     private var map: MapView? = null
     private var radar: RadarEventHandler? = null
     private var game: GameEventHandler? = null
-    private var tts: GameVoice? = null
     private var radarView: RadarView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,13 +67,10 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         SmartLocation.with(this).location().continuous().config(conf).start(this)
 
         val app = application as CatchCatch
-        radar = RadarEventHandler(app.socket, this)
-        tts = GameVoice(this) {
-            showMessage("welcome to CatchCatch!")
-            radar?.start()
-        }
+        radar = RadarEventHandler(app.socket, this).apply { start() }
 
         showInfo("starting...")
+        showMessage("welcome to CatchCatch!")
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
@@ -141,7 +136,9 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
     fun showMessage(msg: String) = runOnUiThread {
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         vibrator.vibrate(100)
-        tts?.speak(msg)
+
+        val app = application as CatchCatch
+        app.tts?.speak(msg)
         TransparentDialog(this, msg).showWithTimeout(dialogsDelay)
     }
 
