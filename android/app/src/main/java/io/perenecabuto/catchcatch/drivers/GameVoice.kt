@@ -34,7 +34,7 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
     }
 
     init {
-        tts = TextToSpeech(context, finish@ {
+        tts = TextToSpeech(context) finish@ {
             if (it == TextToSpeech.ERROR) {
                 Toast.makeText(context, "Failed to start TTS", Toast.LENGTH_LONG).show()
                 return@finish
@@ -42,7 +42,7 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
 
             setupWithMap(default)
             onComplete()
-        })
+        }
     }
 
     fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null, KEY_PARAM_UTTERANCE_ID)
