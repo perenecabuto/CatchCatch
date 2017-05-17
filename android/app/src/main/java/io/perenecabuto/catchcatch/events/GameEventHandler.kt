@@ -40,7 +40,7 @@ class GameEventHandler(override val sock: WebSocketClient, val info: GameInfo, v
     }
 
     fun onGameTargetReached(meters: Double) {
-        activity.showMessage("Congratulations!\nYou win!\nTarget was ${meters.toInt()}m closer")
+        activity.showMessage("Congratulations!\nYou win!\nTarget was ${meters.toInt()}m close.")
     }
 
     fun onGameTargetWin() {
