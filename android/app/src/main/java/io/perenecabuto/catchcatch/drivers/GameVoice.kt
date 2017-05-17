@@ -47,6 +47,11 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
 
     fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null, KEY_PARAM_UTTERANCE_ID)
 
+    fun changeVoice(name: String): GameVoice {
+        setupWithMap(voices[name] ?: default)
+        return this
+    }
+
     private fun setupWithMap(settings: Map<String, Serializable>) {
         tts?.let {
             it.language = settings["lang"] as Locale
