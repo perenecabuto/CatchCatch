@@ -107,6 +107,7 @@ class HomeActivity : ActivityWithLocationPermission(), ActivityWithApp, OnLocati
         map.overlays.clear()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun showSettings(view: View) {
         val intent = Intent(this, SettingsActivity::class.java)
         startActivity(intent)
