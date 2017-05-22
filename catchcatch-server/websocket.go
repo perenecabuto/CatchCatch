@@ -177,11 +177,13 @@ func (wss *WebSocketServer) BroadcastTo(ids []string, event string, message inte
 
 // Broadcast event message to all connections
 func (wss *WebSocketServer) Broadcast(event string, message interface{}) {
+	wss.RLock()
 	for id := range wss.connections {
 		if err := wss.Emit(id, event, message); err != nil {
 			log.Println("error to emit "+event, message, err)
 		}
 	}
+	wss.RUnlock()
 }
 
 // CloseAll Conn
