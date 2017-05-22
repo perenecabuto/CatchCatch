@@ -13,7 +13,7 @@ import io.perenecabuto.catchcatch.drivers.GameVoice
 import io.perenecabuto.catchcatch.sensors.ServerDiscoveryListener
 
 
-class SettingsActivity : Activity() {
+class SettingsActivity : Activity(), ActivityWithApp {
     private val TAG: String = SettingsActivity::class.java.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,7 +25,6 @@ class SettingsActivity : Activity() {
             it.adapter = ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, items)
             it.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
                 (it.adapter.getItem(position) as String).let { voice ->
-                    val app = application as CatchCatch
                     app.tts?.apply { changeVoice(voice).speak("Voice changed to $voice") }
                     finish()
                 }

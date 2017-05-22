@@ -17,7 +17,6 @@ import io.nlopez.smartlocation.OnLocationUpdatedListener
 import io.nlopez.smartlocation.SmartLocation
 import io.nlopez.smartlocation.location.config.LocationAccuracy
 import io.nlopez.smartlocation.location.config.LocationParams
-import io.perenecabuto.catchcatch.CatchCatch
 import io.perenecabuto.catchcatch.R
 import io.perenecabuto.catchcatch.drivers.GeoJsonPolygon
 import io.perenecabuto.catchcatch.drivers.OSMShortcuts
@@ -34,7 +33,7 @@ import java.util.*
 private val dialogsDelay: Long = 5000L
 
 
-class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener {
+class HomeActivity : ActivityWithLocationPermission(), ActivityWithApp, OnLocationUpdatedListener {
 
     internal var player = Player("", 0.0, 0.0)
     private var animator: PolygonAnimator? = null
@@ -66,7 +65,6 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
         val conf = LocationParams.Builder().setAccuracy(LocationAccuracy.HIGH).build()
         SmartLocation.with(this).location().continuous().config(conf).start(this)
 
-        val app = application as CatchCatch
         radar = RadarEventHandler(app.socket, this).apply { start() }
 
         showInfo("starting...")
@@ -112,11 +110,10 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
         val map = map ?: return@finish
         animator = OSMShortcuts.animatePolygonOverlay(map, info.game)
-        animator?.overlay?.let { OSMShortcuts.focus(map, it.boundingBox) }
+        animator?.overlay?.apply { OSMShortcuts.focus(map, boundingBox) }
 
-        val sock = (application as CatchCatch).socket
         val radar = radar ?: return@finish
-        GameEventHandler(sock, info, this).let {
+        GameEventHandler(app.socket, info, this).let {
             game = it
             radar.switchTo(it)
         }
@@ -129,15 +126,13 @@ class HomeActivity : ActivityWithLocationPermission(), OnLocationUpdatedListener
 
     fun sendPosition(l: Location) {
         val coords = JSONObject(mapOf("lat" to l.latitude, "lon" to l.longitude))
-        val sock = (application as CatchCatch).socket
-        sock.emit("player:update", coords.toString())
+        app.socket.emit("player:update", coords.toString())
     }
 
     fun showMessage(msg: String) = runOnUiThread {
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         vibrator.vibrate(100)
 
-        val app = application as CatchCatch
         app.tts?.speak(msg)
         TransparentDialog(this, msg).showWithTimeout(dialogsDelay)
     }
