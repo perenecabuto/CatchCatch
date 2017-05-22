@@ -13,23 +13,20 @@ class GameEventHandler(override val sock: WebSocketClient, val info: GameInfo, v
 
     override fun onStart() {
         activity.showInfo("Game ${info.game} started you are ${info.role}")
-        sock.on(GAME_LOOSE) finish@ { gameID:String ->
-                onGameLoose(gameID)
-            }
-            .on(GAME_TARGET_NEAR) finish@ { msg:String ->
-                val dist = msg.toDouble()
-                onGameTargetNear(dist)
-            }
-            .on(GAME_TARGET_REACHED) { msg:String ->
-                val dist = msg.toDouble()
-                onGameTargetReached(dist)
-            }
-            .on(GAME_TARGET_WIN) { onGameTargetWin() }
-            .on(GAME_FINISH) finish@ { msg:String ->
-                val json = JSONObject(msg)
-                onGameFinish(GameRank(json))
-            }
-            .onDisconnect { onDisconnected() }
+        sock.on(GAME_LOOSE) finish@ { gameID: String ->
+            onGameLoose(gameID)
+        }.on(GAME_TARGET_NEAR) finish@ { msg: String ->
+            val dist = msg.toDouble()
+            onGameTargetNear(dist)
+        }.on(GAME_TARGET_REACHED) { msg: String ->
+            val dist = msg.toDouble()
+            onGameTargetReached(dist)
+        }.on(GAME_TARGET_WIN) {
+            onGameTargetWin()
+        }.on(GAME_FINISH) finish@ { msg: String ->
+            val json = JSONObject(msg)
+            onGameFinish(GameRank(json))
+        }.onDisconnect { onDisconnected() }
     }
 
     override fun onStop() {
@@ -49,6 +46,7 @@ class GameEventHandler(override val sock: WebSocketClient, val info: GameInfo, v
         activity.showMessage("Congratulations!\nYou survived")
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun onGameLoose(gameID: String) {
         activity.showMessage("Holy shit!\nYou loose")
         stop()
