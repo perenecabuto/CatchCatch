@@ -13,6 +13,10 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
+    dataBinding {
+        enabled = true
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -23,6 +27,8 @@ android {
 
 
 dependencies {
+    kapt "com.android.databinding:compiler:2.3.2"
+
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
 
@@ -35,4 +41,8 @@ dependencies {
     }
 
     testCompile 'junit:junit:4.12'
+}
+
+kapt {
+    generateStubs = true
 }
