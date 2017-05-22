@@ -15,5 +15,12 @@
         <item name="android:windowExitAnimation">@anim/slide_down</item>
     </style>
 
+    <style name="ScreenTitle">
+        <item name="android:layout_marginBottom">20dp</item>
+    </style>
+
+    <style name="SessionSeparator">
+    </style>
+
     <string name="catchcatch_font">sans-serif-condensed</string>
 </resources>

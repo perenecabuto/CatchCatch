@@ -1,34 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context="io.perenecabuto.catchcatch.view.SettingsActivity"
-    android:padding="10dp"
-    >
-
-    <TextView
-        style="@android:style/TextAppearance.WindowTitle"
-        android:layout_width="368dp"
-        android:layout_height="wrap_content"
-        android:text="Settings"
-        tools:ignore="HardcodedText"
-        android:layout_marginBottom="20dp"
-        />
-
-    <Button
-        android:id="@+id/activity_settings_auto_discover"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="auto discover"
-        tools:ignore="HardcodedText"
-        android:onClick="autoDiscover"
-        />
-
-    <ListView
-        android:id="@+id/activity_settings_voice_list"
+<layout
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <data>
+        <variable
+            name="voice"
+            type="java.lang.String"
+            />
+    </data>
+    <LinearLayout
+        style="@android:style/Theme.Material"
+        xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-</LinearLayout>
+        android:layout_height="match_parent"
+        android:layout_margin="8dp"
+        android:orientation="vertical"
+        tools:context="io.perenecabuto.catchcatch.view.SettingsActivity"
+        tools:ignore="HardcodedText"
+        >
+        <TextView
+            style="@style/ScreenTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-condensed"
+            android:includeFontPadding="true"
+            android:text="Settings"
+            android:textColor="@color/colorAccent"
+            android:textSize="20sp"
+            />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?android:attr/listDivider"
+            android:orientation="horizontal"
+            >
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Voices"
+                />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="voice"
+                android:text="@{voice}"
+                />
+        </LinearLayout>
+        <ListView
+            android:id="@+id/activity_settings_voice_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:isScrollContainer="false"
+            />
+    </LinearLayout>
+</layout>

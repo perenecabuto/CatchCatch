@@ -1,6 +1,7 @@
 package io.perenecabuto.catchcatch.view
 
 import android.app.Activity
+import android.databinding.DataBindingUtil
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
@@ -9,6 +10,7 @@ import android.widget.ListView
 import android.widget.Toast
 import io.perenecabuto.catchcatch.CatchCatch
 import io.perenecabuto.catchcatch.R
+import io.perenecabuto.catchcatch.databinding.ActivitySettingsBinding
 import io.perenecabuto.catchcatch.drivers.GameVoice
 import io.perenecabuto.catchcatch.sensors.ServerDiscoveryListener
 
@@ -16,11 +18,15 @@ import io.perenecabuto.catchcatch.sensors.ServerDiscoveryListener
 class SettingsActivity : Activity(), ActivityWithApp {
     private val TAG: String = SettingsActivity::class.java.simpleName
 
+    private var binding: ActivitySettingsBinding? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        binding = DataBindingUtil.setContentView<ActivitySettingsBinding>(this, R.layout.activity_settings)
+        binding?.voice = app.tts?.voice
 
-        (findViewById(R.id.activity_settings_voice_list) as ListView).let {
+        binding?.activitySettingsVoiceList?.let {
             val items = GameVoice.voices().toList()
             it.adapter = ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, items)
             it.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
