@@ -3,10 +3,8 @@ package io.perenecabuto.catchcatch.view
 import android.app.Activity
 import android.databinding.DataBindingUtil
 import android.os.Bundle
-import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.ListView
 import android.widget.Toast
 import io.perenecabuto.catchcatch.CatchCatch
 import io.perenecabuto.catchcatch.R
