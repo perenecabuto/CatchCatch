@@ -45,7 +45,7 @@ class GameVoice(val context: Context, onComplete: () -> Unit = {}) {
         }
     }
 
-    fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null, KEY_PARAM_UTTERANCE_ID)
+    fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_ADD, null, KEY_PARAM_UTTERANCE_ID)
 
     fun changeVoice(name: String): GameVoice {
         voice = name

@@ -1,5 +1,7 @@
 package io.perenecabuto.catchcatch.events
 
+import android.os.Handler
+import android.os.Looper
 import io.perenecabuto.catchcatch.drivers.WebSocketClient
 import io.perenecabuto.catchcatch.model.GameInfo
 import io.perenecabuto.catchcatch.model.GameRank
@@ -53,9 +55,11 @@ class GameEventHandler(override val sock: WebSocketClient, val info: GameInfo, v
     }
 
     fun onGameFinish(rank: GameRank) {
-        activity.showMessage("This game is over")
-        activity.showRank(rank)
-        stop()
+        Handler(Looper.getMainLooper()).postDelayed({
+            activity.showMessage("This game is over")
+            activity.showRank(rank)
+            stop()
+        }, 3_000)
     }
 
     fun onDisconnected() {
