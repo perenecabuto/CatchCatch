@@ -3,6 +3,10 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
     <data>
         <variable
+            name="address"
+            type="java.lang.String"
+            />
+        <variable
             name="voice"
             type="java.lang.String"
             />
@@ -26,6 +30,39 @@
             android:text="Settings"
             android:textColor="@color/colorAccent"
             android:textSize="20sp"
+            />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?android:attr/listDivider"
+            android:orientation="horizontal"
+            >
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="ServerAddress"
+                />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="server address"
+                android:text="@{address}"
+                />
+        </LinearLayout>
+        <ListView
+            android:id="@+id/activity_settings_url_options"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:isScrollContainer="false"
+            tools:layout_height="100dp"
+            tools:listitem="@android:layout/simple_list_item_1"
+            />
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="30dp"
+            android:background="@android:color/transparent"
             />
         <LinearLayout
             android:layout_width="match_parent"

@@ -22,6 +22,7 @@ class SettingsActivity : Activity(), ActivityWithApp {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         binding = DataBindingUtil.setContentView<ActivitySettingsBinding>(this, R.layout.activity_settings)
+        binding?.address = app.address
         binding?.voice = app.tts?.voice
 
         binding?.activitySettingsVoiceList?.let {
@@ -34,12 +35,36 @@ class SettingsActivity : Activity(), ActivityWithApp {
                 }
             }
         }
+
+        binding?.activitySettingsUrlOptions?.let {
+            val autoDiscoverLabel = "auto discover"
+            val items = CatchCatch.serverAddresses.toMutableList()
+            items.add(autoDiscoverLabel)
+            it.adapter = ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, items)
+            it.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
+                (it.adapter.getItem(position) as String).let finish@ { address ->
+                    if (address == autoDiscoverLabel) {
+                        autoDiscover()
+                        return@finish
+                    }
+                    changeAddress(address)
+                }
+            }
+        }
     }
 
-    fun autoDiscover(view: View) {
+    fun autoDiscover() {
         ServerDiscoveryListener.listenServerAddress(this, { address ->
             Toast.makeText(this, "Discovered $address", Toast.LENGTH_LONG).show()
+            changeAddress(address)
         })
         Toast.makeText(this, "Auto discover started", Toast.LENGTH_LONG).show()
     }
+
+    private fun changeAddress(address: String) {
+        binding?.address = address
+        app.connectTo(address)
+        finish()
+    }
 }
+
