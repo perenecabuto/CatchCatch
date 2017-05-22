@@ -67,7 +67,6 @@ class HomeActivity : ActivityWithLocationPermission(), ActivityWithApp, OnLocati
 
         radar = RadarEventHandler(app.socket, this).apply { start() }
 
-        showInfo("starting...")
         showMessage("welcome to CatchCatch!")
     }
 
@@ -92,6 +91,14 @@ class HomeActivity : ActivityWithLocationPermission(), ActivityWithApp, OnLocati
     override fun onResume() {
         super.onResume()
         OSMShortcuts.onResume(this)
+        showInfo("starting...")
+        radar?.start()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        game?.stop()
+        radar?.stop()
     }
 
     override fun onDestroy() {
