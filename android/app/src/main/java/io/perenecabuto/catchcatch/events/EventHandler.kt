@@ -27,7 +27,6 @@ interface EventHandler {
     fun start(): EventHandler {
         if (!running) {
             running = true
-            sock.off()
             onStart()
         }
         return this
@@ -36,6 +35,7 @@ interface EventHandler {
     fun stop(): EventHandler {
         if (running) {
             running = false
+            sock.off()
             onStop()
         }
         return this

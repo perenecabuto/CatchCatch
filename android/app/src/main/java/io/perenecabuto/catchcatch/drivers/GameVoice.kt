@@ -1,14 +1,20 @@
 package io.perenecabuto.catchcatch.drivers
 
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.speech.tts.TextToSpeech
 import android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID
 import android.widget.Toast
 import java.io.Serializable
 import java.util.*
 
-class GameVoice(context: Context, onComplete: () -> Unit = {}) {
+class GameVoice(val context: Context, onComplete: () -> Unit = {}) {
     private var tts: TextToSpeech? = null
+    private val prefs = context.getSharedPreferences(javaClass.simpleName, MODE_PRIVATE)
+
+    internal var voice: String
+        get() = prefs.getString("voice", defaultVoice)
+        set(value) = prefs.edit().putString("voice", value).apply()
 
     companion object {
         private val voices = mapOf(
@@ -22,7 +28,7 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
             "teen male" to mapOf("lang" to Locale.CANADA, "speech_rate" to 1F, "pitch" to 2.1F, "voice" to "en-us-x-sfg#male_1-local"),
             "light robot male" to mapOf("lang" to Locale.ENGLISH, "speech_rate" to 1F, "pitch" to 0.7F, "voice" to "en-us-x-sfg#male_1-local")
         )
-        private val default = voices["darkness female"]!!
+        private val defaultVoice = "darkness female"
 
         fun voices(): Set<String> = voices.keys
     }
@@ -34,7 +40,7 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
                 return@finish
             }
 
-            setupWithMap(default)
+            voices[voice]?.let { setupWithMap(it) }
             onComplete()
         }
     }
@@ -42,7 +48,8 @@ class GameVoice(context: Context, onComplete: () -> Unit = {}) {
     fun speak(msg: String) = tts?.speak(msg, TextToSpeech.QUEUE_FLUSH, null, KEY_PARAM_UTTERANCE_ID)
 
     fun changeVoice(name: String): GameVoice {
-        setupWithMap(voices[name] ?: default)
+        voice = name
+        voices[voice]?.let { setupWithMap(it) }
         return this
     }
 
