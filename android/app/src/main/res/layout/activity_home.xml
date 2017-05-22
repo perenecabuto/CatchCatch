@@ -39,7 +39,7 @@
         android:id="@+id/activity_home_map"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@mipmap/home_map"
+        tools:background="@mipmap/home_map"
         />
     <io.perenecabuto.catchcatch.view.RadarView
         android:id="@+id/activity_home_radar"
