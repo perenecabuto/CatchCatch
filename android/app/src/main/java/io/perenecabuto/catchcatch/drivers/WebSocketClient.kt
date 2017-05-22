@@ -1,27 +1,28 @@
 package io.perenecabuto.catchcatch.drivers
 
+import android.os.Handler
+import android.os.Looper
 import okhttp3.*
 import okio.ByteString
 
 
-class WebSocketClient(val address: String) : WebSocketListener() {
+class WebSocketClient : WebSocketListener() {
     private var disconnectCallback: (() -> Unit)? = null
     private var ws: WebSocket? = null
-    private var client = OkHttpClient()
+    private var client: OkHttpClient? = null
+    private var connected = false
 
-    init {
-        client.retryOnConnectionFailure()
-    }
 
-    fun connect() {
+    fun connect(address: String) {
+        shutdown()
         val req = Request.Builder().url(address).build()
-        client = OkHttpClient()
-        client.retryOnConnectionFailure()
-        client.newWebSocket(req, this)
+        client = OkHttpClient.Builder().build()
+        client?.newWebSocket(req, this)
     }
 
     fun shutdown() {
-        client.dispatcher().executorService().shutdown()
+        close()
+        client?.apply { dispatcher().executorService().shutdown() }
     }
 
     fun close() {
@@ -29,11 +30,19 @@ class WebSocketClient(val address: String) : WebSocketListener() {
     }
 
     fun onDisconnect(callback: () -> Unit): WebSocketClient {
-        disconnectCallback = callback
+        disconnectCallback = {
+            if (connected) callback.invoke()
+            connected = false
+        }
         return this
     }
 
+    private fun reconnect() {
+        ws?.request()?.let { req -> client?.newWebSocket(req, this) }
+    }
+
     override fun onOpen(webSocket: WebSocket?, response: Response?) {
+        connected = true
         ws = webSocket
     }
 
@@ -43,11 +52,12 @@ class WebSocketClient(val address: String) : WebSocketListener() {
 
     override fun onFailure(webSocket: WebSocket?, t: Throwable?, response: Response?) {
         t?.printStackTrace()
+        Handler(Looper.getMainLooper()).postDelayed(this::reconnect, 2_000L)
         disconnectCallback?.invoke()
-        connect()
     }
 
     override fun onClosing(webSocket: WebSocket?, code: Int, reason: String?) {
+        disconnectCallback?.invoke()
     }
 
     override fun onMessage(webSocket: WebSocket?, bytes: ByteString?) {
