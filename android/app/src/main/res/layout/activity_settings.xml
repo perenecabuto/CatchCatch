@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="io.perenecabuto.catchcatch.view.SettingsActivity"
+    >
     <data>
         <variable
             name="address"
@@ -11,83 +14,85 @@
             type="java.lang.String"
             />
     </data>
-    <LinearLayout
+    <ScrollView
         style="@android:style/Theme.Material"
-        xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_margin="8dp"
-        android:orientation="vertical"
-        tools:context="io.perenecabuto.catchcatch.view.SettingsActivity"
-        tools:ignore="HardcodedText"
         >
-        <TextView
-            style="@style/ScreenTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-condensed"
-            android:includeFontPadding="true"
-            android:text="Settings"
-            android:textColor="@color/colorAccent"
-            android:textSize="20sp"
-            />
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?android:attr/listDivider"
-            android:orientation="horizontal"
+            android:layout_height="match_parent"
+            android:layout_margin="8dp"
+            android:orientation="vertical"
+            tools:ignore="HardcodedText"
             >
             <TextView
-                android:layout_width="100dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="ServerAddress"
-                />
-            <TextView
+                style="@style/ScreenTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="server address"
-                android:text="@{address}"
+                android:fontFamily="sans-serif-condensed"
+                android:includeFontPadding="true"
+                android:text="Settings"
+                android:textColor="@color/colorAccent"
+                android:textSize="20sp"
                 />
-        </LinearLayout>
-        <ListView
-            android:id="@+id/activity_settings_url_options"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:isScrollContainer="false"
-            tools:layout_height="100dp"
-            tools:listitem="@android:layout/simple_list_item_1"
-            />
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="30dp"
-            android:background="@android:color/transparent"
-            />
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?android:attr/listDivider"
-            android:orientation="horizontal"
-            >
-            <TextView
-                android:layout_width="100dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Voices"
-                />
-            <TextView
+            <!-- Addresses -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="voice"
-                android:text="@{voice}"
+                android:background="?android:attr/listDivider"
+                android:orientation="horizontal"
+                >
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="ServerAddress"
+                    />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="server address"
+                    android:text="@{address}"
+                    />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/activity_settings_url_options"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:isScrollContainer="false"
+                android:orientation="vertical"
+                tools:layout_height="100dp"
+                tools:listitem="@android:layout/simple_list_item_1"
+                />
+            <!-- Voices -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?android:attr/listDivider"
+                android:orientation="horizontal"
+                >
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="Voices"
+                    />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="voice"
+                    android:text="@{voice}"
+                    />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/activity_settings_voice_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:isScrollContainer="false"
+                android:orientation="vertical"
+                tools:layout_height="100dp"
                 />
         </LinearLayout>
-        <ListView
-            android:id="@+id/activity_settings_voice_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:isScrollContainer="false"
-            />
-    </LinearLayout>
+    </ScrollView>
 </layout>
