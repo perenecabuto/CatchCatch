@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	uuid "github.com/satori/go.uuid"
 	websocket "golang.org/x/net/websocket"
@@ -96,15 +97,19 @@ func (c *Conn) readMessage() error {
 
 // WebSocketServer manage websocket connections
 type WebSocketServer struct {
-	connections map[string]*Conn
+	connections atomic.Value
 	onConnected func(c *Conn)
 
-	sync.RWMutex
+	sync.Mutex
 }
+
+type connectionGroup map[string]*Conn
 
 // NewWebSocketServer create a new WebSocketServer
 func NewWebSocketServer(ctx context.Context) *WebSocketServer {
-	return &WebSocketServer{connections: make(map[string]*Conn), onConnected: func(c *Conn) {}}
+	wss := &WebSocketServer{onConnected: func(c *Conn) {}}
+	wss.connections.Store(make(connectionGroup))
+	return wss
 }
 
 // OnConnected register event callback to new connections
@@ -132,29 +137,38 @@ func (wss *WebSocketServer) Listen(ctx context.Context) http.Handler {
 
 // Get Conn by session id
 func (wss *WebSocketServer) Get(id string) *Conn {
-	wss.RLock()
-	conn := wss.connections[id]
-	wss.RUnlock()
-	return conn
+	connections := wss.connections.Load().(connectionGroup)
+	return connections[id]
 }
 
 // Add Conn for session id
 func (wss *WebSocketServer) Add(c *websocket.Conn) *Conn {
 	conn := NewConn(c)
-	wss.Lock()
-	wss.connections[conn.ID] = conn
-	wss.Unlock()
+	wss.withConnections(func(connections connectionGroup) {
+		connections[conn.ID] = conn
+	})
 	return conn
+}
+
+func (wss *WebSocketServer) withConnections(fn func(connectionGroup)) {
+	wss.Lock()
+	connections := wss.connections.Load().(connectionGroup)
+	fn(connections)
+	newGroup := make(connectionGroup)
+	for k, v := range connections {
+		newGroup[k] = v
+	}
+	wss.connections.Store(newGroup)
+	wss.Unlock()
 }
 
 // Remove Conn by session id
 func (wss *WebSocketServer) Remove(id string) {
-	wss.Lock()
-	if c, exists := wss.connections[id]; exists {
-		c.close()
-		delete(wss.connections, id)
+	if c := wss.Get(id); c != nil {
+		wss.withConnections(func(connections connectionGroup) {
+			delete(connections, id)
+		})
 	}
-	wss.Unlock()
 }
 
 // Emit send payload on eventX to socket id
@@ -177,18 +191,18 @@ func (wss *WebSocketServer) BroadcastTo(ids []string, event string, message inte
 
 // Broadcast event message to all connections
 func (wss *WebSocketServer) Broadcast(event string, message interface{}) {
-	wss.RLock()
-	for id := range wss.connections {
+	connections := wss.connections.Load().(connectionGroup)
+	for id := range connections {
 		if err := wss.Emit(id, event, message); err != nil {
 			log.Println("error to emit "+event, message, err)
 		}
 	}
-	wss.RUnlock()
 }
 
 // CloseAll Conn
 func (wss *WebSocketServer) CloseAll() {
-	for _, c := range wss.connections {
+	connections := wss.connections.Load().(connectionGroup)
+	for _, c := range connections {
 		c.conn.Close()
 	}
 }
