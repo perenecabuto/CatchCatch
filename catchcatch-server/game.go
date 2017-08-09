@@ -6,8 +6,10 @@ import (
 	"log"
 	"math/rand"
 	"sort"
-	"strconv"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
 // MinPlayersPerGame ...
@@ -172,13 +174,13 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *WebSocketServer) {
 	dist := p.DistTo(g.targetPlayer)
 	if dist <= 20 {
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
-		sessions.Emit(g.targetPlayer.ID, "game:loose", g.ID)
+		sessions.Emit(g.targetPlayer.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
 		delete(g.players, g.targetPlayer.ID)
-		go sessions.Emit(p.ID, "game:target:reached", strconv.FormatFloat(dist, 'f', 0, 64))
+		sessions.Emit(g.targetPlayer.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"), Dist: &dist})
 		g.Stop()
 	} else if dist <= 100 {
 		log.Printf("game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
-		sessions.Emit(p.ID, "game:target:near", strconv.FormatFloat(dist, 'f', 0, 64))
+		sessions.Emit(g.targetPlayer.ID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &dist})
 		// } else {
 		// log.Printf("game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
 	}
