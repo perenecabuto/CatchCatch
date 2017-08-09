@@ -5,6 +5,9 @@ import (
 	"errors"
 	"log"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
 // GameContext stores game and its canel (and stop eventualy) function
@@ -99,10 +102,15 @@ func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 		if d.Intersects == Exit {
 			return
 		}
-		if err := gw.wss.Emit(d.FeatID, "checkpoint:detected", d); err != nil {
+		payload := &protobuf.Detection{EventName: proto.String("checkpoint:detected"),
+			FeatId:     &d.FeatID,
+			Intersects: proto.String(string(d.Intersects)),
+		}
+		if err := gw.wss.Emit(d.FeatID, payload); err != nil {
 			log.Println("Error to notify player", d.FeatID, err)
 		}
-		gw.wss.Broadcast("admin:feature:checkpoint", d)
+		payload.EventName = proto.String("admin:feature:checkpoint")
+		gw.wss.Broadcast(payload)
 	})
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)
