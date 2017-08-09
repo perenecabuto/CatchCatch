@@ -67,7 +67,8 @@ func (g *Game) Start(sessions *WebSocketServer) {
 		if _, exists := g.players[g.targetPlayer.ID]; exists {
 			go sessions.Emit(g.targetPlayer.ID, "game:target:win", "")
 		}
-		sessions.BroadcastTo(g.playerIDs(), "game:finish", g.rank())
+		rank := NewGameRank(g.ID).ForPlayersWithTarget(g.players, g.targetPlayer)
+		sessions.BroadcastTo(g.playerIDs(), "game:finish", rank)
 
 		g.started = false
 		g.players = make(map[string]*Player)
@@ -93,12 +94,16 @@ type GameRank struct {
 	PlayerRank []PlayerRank `json:"points_per_player"`
 }
 
-func (g *Game) rank() *GameRank {
-	rank := &GameRank{Game: g.ID, PlayerRank: make([]PlayerRank, 0)}
+// NewGameRank creates a GameRank
+func NewGameRank(gameName string) *GameRank {
+	return &GameRank{Game: gameName, PlayerRank: make([]PlayerRank, 0)}
+}
 
+// ForPlayersWithTarget returns a game rank for players based on minimum distance to the target player
+func (rank GameRank) ForPlayersWithTarget(players map[string]*Player, targetPlayer *Player) GameRank {
 	playersDistToTarget := map[int]*Player{}
-	for _, p := range g.players {
-		dist := p.DistTo(g.targetPlayer)
+	for _, p := range players {
+		dist := p.DistTo(targetPlayer)
 		playersDistToTarget[int(dist)] = p
 	}
 	dists := make([]int, 0)
