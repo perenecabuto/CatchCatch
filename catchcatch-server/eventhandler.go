@@ -6,10 +6,12 @@ import (
 	"log"
 	"net/http"
 
+	protobuf "./protobuf"
+	"github.com/golang/protobuf/proto"
 	gjson "github.com/tidwall/gjson"
 )
 
-// EventHandler handle socket.io events
+// EventHandler handle websocket events
 type EventHandler struct {
 	server  *WebSocketServer
 	service *PlayerLocationService
@@ -23,7 +25,7 @@ func NewEventHandler(server *WebSocketServer, service *PlayerLocationService, gw
 	return handler
 }
 
-// Listen listen to websocket connections
+// Listen to websocket connections
 func (h *EventHandler) Listen(ctx context.Context) http.Handler {
 	return h.server.Listen(ctx)
 }
@@ -56,7 +58,8 @@ func (h *EventHandler) onConnection(c *Conn) {
 func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
 	return func() {
 		log.Println("player:disconnect", player.ID)
-		h.server.Broadcast("remote-player:destroy", player)
+		h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
+			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 		h.service.Remove(player)
 	}
 }
@@ -65,9 +68,12 @@ func (h *EventHandler) onPlayerUpdate(player *Player, c *Conn) func(string) {
 	return func(msg string) {
 		coords := gjson.GetMany(msg, "lat", "lon")
 		player.Lat, player.Lon = coords[0].Float(), coords[1].Float()
-		c.Emit("player:updated", player)
-		h.server.Broadcast("remote-player:updated", player)
 		h.service.Update(player)
+
+		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
+			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
+		h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:updated"),
+			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	}
 }
 
@@ -83,10 +89,14 @@ func (h *EventHandler) onPlayerRequestGames(player *Player, c *Conn) func(string
 			games, err := h.service.FeaturesAround("geofences", player.Point())
 			if err != nil {
 				log.Println("Error to request games:", err)
+				return
 			}
-			log.Println("game:around", games)
-			if err = c.Emit("game:around", games); err != nil {
-				log.Println("Error to emit", "game:around", player)
+			event := proto.String("game:around")
+			for _, f := range games {
+				err := c.Emit(&protobuf.Feature{EventName: event, Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
+				if err != nil {
+					log.Println("Error to emit", *event, player)
+				}
 			}
 		}()
 	}
@@ -115,12 +125,11 @@ func (h *EventHandler) onAddFeature() func(string) {
 	return func(msg string) {
 		data := gjson.GetMany(msg, "group", "name", "geojson")
 		group, name, geojson := data[0].String(), data[1].String(), data[2].String()
-		feature, err := h.service.AddFeature(group, name, geojson)
+		f, err := h.service.AddFeature(group, name, geojson)
 		if err != nil {
 			log.Println("Error to create feature:", err)
 		}
-		log.Println("Added feature", feature)
-		h.server.Broadcast("admin:feature:added", feature)
+		h.server.Broadcast(&protobuf.Feature{EventName: proto.String("admin:feature:added"), Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
 	}
 }
 
@@ -131,7 +140,10 @@ func (h *EventHandler) onRequestFeatures(c *Conn) func(string) {
 			log.Println("Error on sendFeatures:", err)
 
 		}
-		c.Emit("admin:feature:list", features)
+		event := "admin:feature:added"
+		for _, f := range features {
+			c.Emit(&protobuf.Feature{EventName: &event, Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
+		}
 	}
 }
 
@@ -142,16 +154,22 @@ func (h *EventHandler) newPlayer(c *Conn) (player *Player, err error) {
 	if err := h.service.Register(player); err != nil {
 		return nil, errors.New("could not register: " + err.Error())
 	}
-
-	c.Emit("player:registered", player)
-	h.server.Broadcast("remote-player:new", player)
+	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
+	h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:new"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	return player, nil
 }
 
 func (h *EventHandler) sendPlayerList(c *Conn) {
-	if players, err := h.service.Players(); err != nil {
+	players, err := h.service.Players()
+	if err != nil {
 		log.Println("player:request-remotes event error: " + err.Error())
-	} else if err := c.Emit("remote-player:list", players); err != nil {
-		log.Println("player:request-remotes event error: " + err.Error())
+		return
+	}
+	event := "remote-player:new"
+	for _, p := range players {
+		err := c.Emit(&protobuf.Player{EventName: &event, Id: &p.ID, Lon: &p.Lon, Lat: &p.Lat})
+		if err != nil {
+			log.Println("player:request-remotes event error: " + err.Error())
+		}
 	}
 }
