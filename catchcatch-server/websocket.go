@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -11,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/golang/protobuf/proto"
 	uuid "github.com/satori/go.uuid"
 	websocket "golang.org/x/net/websocket"
 )
@@ -62,14 +62,20 @@ func (c *Conn) OnDisconnected(fn func()) {
 	}
 }
 
+// Message represent protobuf message with event name
+type Message interface {
+	proto.Message
+	GetEventName() string
+}
+
 // Emit send payload on eventX to socket id
-func (c *Conn) Emit(event string, message interface{}) error {
-	payload, err := parsePayload(message)
+func (c *Conn) Emit(message Message) error {
+	payload, err := proto.Marshal(message)
 	if err != nil {
 		return err
 	}
-	_, err = c.conn.Write([]byte(event + "," + payload))
-	return err
+
+	return websocket.Message.Send(c.conn, payload)
 }
 
 func (c *Conn) close() {
@@ -172,29 +178,29 @@ func (wss *WebSocketServer) Remove(id string) {
 }
 
 // Emit send payload on eventX to socket id
-func (wss *WebSocketServer) Emit(id, event string, message interface{}) error {
+func (wss *WebSocketServer) Emit(id string, message Message) error {
 	if conn := wss.Get(id); conn != nil {
-		conn.Emit(event, message)
+		conn.Emit(message)
 		return nil
 	}
 	return errors.New("connection not found")
 }
 
 // BroadcastTo ids event message
-func (wss *WebSocketServer) BroadcastTo(ids []string, event string, message interface{}) {
+func (wss *WebSocketServer) BroadcastTo(ids []string, message Message) {
 	for _, id := range ids {
-		if err := wss.Emit(id, event, message); err != nil {
-			log.Println("error to emit "+event, message, err)
+		if err := wss.Emit(id, message); err != nil {
+			log.Println("error to emit ", message, message, err)
 		}
 	}
 }
 
 // Broadcast event message to all connections
-func (wss *WebSocketServer) Broadcast(event string, message interface{}) {
+func (wss *WebSocketServer) Broadcast(message Message) {
 	connections := wss.connections.Load().(connectionGroup)
 	for id := range connections {
-		if err := wss.Emit(id, event, message); err != nil {
-			log.Println("error to emit "+event, message, err)
+		if err := wss.Emit(id, message); err != nil {
+			log.Println("error to emit ", message, err)
 		}
 	}
 }
@@ -204,18 +210,5 @@ func (wss *WebSocketServer) CloseAll() {
 	connections := wss.connections.Load().(connectionGroup)
 	for _, c := range connections {
 		c.conn.Close()
-	}
-}
-
-func parsePayload(msg interface{}) (string, error) {
-	switch msg.(type) {
-	case string:
-		return msg.(string), nil
-	default:
-		jPayload, err := json.Marshal(msg)
-		if err != nil {
-			return "", err
-		}
-		return string(jPayload), nil
 	}
 }
