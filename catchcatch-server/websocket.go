@@ -65,7 +65,6 @@ func (c *Conn) OnDisconnected(fn func()) {
 // Message represent protobuf message with event name
 type Message interface {
 	proto.Message
-	GetId() string
 	GetEventName() string
 }
 
