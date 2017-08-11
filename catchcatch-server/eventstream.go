@@ -122,8 +122,6 @@ func streamDetection(ctx context.Context, addr string, q query, callback Detecti
 			}
 		}
 	}
-
-	return nil
 }
 
 func handleDetection(msg string) (*Detection, error) {
