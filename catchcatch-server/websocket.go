@@ -20,7 +20,7 @@ type Conn struct {
 	ID   string
 	conn *websocket.Conn
 
-	messagebuf     string
+	messagebuf     []byte
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
 	stopFunc       context.CancelFunc
@@ -29,7 +29,7 @@ type Conn struct {
 // NewConn creates ws client connection handler
 func NewConn(conn *websocket.Conn) *Conn {
 	id := uuid.NewV4().String()
-	return &Conn{id, conn, "", make(map[string]evtCallback), func() {}, func() {}}
+	return &Conn{id, conn, make([]byte, 0), make(map[string]evtCallback), func() {}, func() {}}
 }
 
 type evtCallback func(string)
