@@ -8,7 +8,6 @@ import (
 
 	protobuf "./protobuf"
 	"github.com/golang/protobuf/proto"
-	gjson "github.com/tidwall/gjson"
 )
 
 // EventHandler handle websocket events
@@ -64,10 +63,12 @@ func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
 	}
 }
 
-func (h *EventHandler) onPlayerUpdate(player *Player, c *Conn) func(string) {
-	return func(msg string) {
-		coords := gjson.GetMany(msg, "lat", "lon")
-		player.Lat, player.Lon = coords[0].Float(), coords[1].Float()
+func (h *EventHandler) onPlayerUpdate(player *Player, c *Conn) func([]byte) {
+	return func(buf []byte) {
+		msg := &protobuf.Player{}
+		proto.Unmarshal(buf, msg)
+
+		player.Lat, player.Lon = *msg.Lat, *msg.Lon
 		h.service.Update(player)
 
 		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
@@ -77,14 +78,14 @@ func (h *EventHandler) onPlayerUpdate(player *Player, c *Conn) func(string) {
 	}
 }
 
-func (h *EventHandler) onPlayerRequestRemotes(so *Conn) func(string) {
-	return func(string) {
+func (h *EventHandler) onPlayerRequestRemotes(so *Conn) func([]byte) {
+	return func([]byte) {
 		h.sendPlayerList(so)
 	}
 }
 
-func (h *EventHandler) onPlayerRequestGames(player *Player, c *Conn) func(string) {
-	return func(string) {
+func (h *EventHandler) onPlayerRequestGames(player *Player, c *Conn) func([]byte) {
+	return func([]byte) {
 		go func() {
 			games, err := h.service.FeaturesAround("geofences", player.Point())
 			if err != nil {
@@ -104,15 +105,17 @@ func (h *EventHandler) onPlayerRequestGames(player *Player, c *Conn) func(string
 
 // Admin events
 
-func (h *EventHandler) onDisconnectByID() func(string) {
-	return func(id string) {
-		log.Println("admin:disconnect", id)
-		h.server.Remove(id)
+func (h *EventHandler) onDisconnectByID() func([]byte) {
+	return func(buf []byte) {
+		msg := &protobuf.Simple{}
+		proto.Unmarshal(buf, msg)
+		log.Println("admin:disconnect", msg.GetId())
+		h.server.Remove(msg.GetId())
 	}
 }
 
-func (h *EventHandler) onClear() func(string) {
-	return func(string) {
+func (h *EventHandler) onClear() func([]byte) {
+	return func([]byte) {
 		h.games.Clear()
 		h.service.client.FlushDb()
 		h.server.CloseAll()
@@ -121,11 +124,12 @@ func (h *EventHandler) onClear() func(string) {
 
 // Map events
 
-func (h *EventHandler) onAddFeature() func(string) {
-	return func(msg string) {
-		data := gjson.GetMany(msg, "group", "name", "geojson")
-		group, name, geojson := data[0].String(), data[1].String(), data[2].String()
-		f, err := h.service.AddFeature(group, name, geojson)
+func (h *EventHandler) onAddFeature() func([]byte) {
+	return func(buf []byte) {
+		msg := &protobuf.Feature{}
+		proto.Unmarshal(buf, msg)
+
+		f, err := h.service.AddFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
 		if err != nil {
 			log.Println("Error to create feature:", err)
 		}
@@ -133,9 +137,12 @@ func (h *EventHandler) onAddFeature() func(string) {
 	}
 }
 
-func (h *EventHandler) onRequestFeatures(c *Conn) func(string) {
-	return func(group string) {
-		features, err := h.service.Features(group)
+func (h *EventHandler) onRequestFeatures(c *Conn) func([]byte) {
+	return func(buf []byte) {
+		msg := &protobuf.Feature{}
+		proto.Unmarshal(buf, msg)
+
+		features, err := h.service.Features(msg.GetGroup())
 		if err != nil {
 			log.Println("Error on sendFeatures:", err)
 

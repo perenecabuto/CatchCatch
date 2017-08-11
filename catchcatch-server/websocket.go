@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 	uuid "github.com/satori/go.uuid"
 	websocket "golang.org/x/net/websocket"
 )
@@ -32,7 +32,7 @@ func NewConn(conn *websocket.Conn) *Conn {
 	return &Conn{id, conn, make([]byte, 0), make(map[string]evtCallback), func() {}, func() {}}
 }
 
-type evtCallback func(string)
+type evtCallback func([]byte)
 
 func (c *Conn) listen(ctx context.Context, doneFunc func(error)) {
 	ctx, c.stopFunc = context.WithCancel(ctx)
@@ -65,6 +65,7 @@ func (c *Conn) OnDisconnected(fn func()) {
 // Message represent protobuf message with event name
 type Message interface {
 	proto.Message
+	GetId() string
 	GetEventName() string
 }
 
@@ -86,19 +87,21 @@ func (c *Conn) close() {
 
 func (c *Conn) readMessage() error {
 	if err := websocket.Message.Receive(c.conn, &c.messagebuf); err != nil {
+		log.Println("readMessage: " + err.Error())
 		return err
 	}
-	data := strings.SplitN(c.messagebuf, ",", 2)
-	if len(data) == 0 {
-		log.Println("message error:", c.messagebuf)
-		return errors.New("Invalid payload: " + c.messagebuf)
-	}
-	if cb, exists := c.eventCallbacks[data[0]]; exists {
-		cb(data[1])
-		return nil
 
+	msg := &protobuf.Simple{}
+	proto.Unmarshal(c.messagebuf, msg)
+	if len(msg.String()) == 0 {
+		log.Println("message error:", c.messagebuf)
+		return errors.New("Invalid payload: " + string(c.messagebuf))
 	}
-	return fmt.Errorf("No callback found: %v", data)
+	if cb, exists := c.eventCallbacks[msg.GetEventName()]; exists {
+		cb(c.messagebuf)
+		return nil
+	}
+	return fmt.Errorf("No callback found for: %v", msg)
 }
 
 // WebSocketServer manage websocket connections
