@@ -24,6 +24,9 @@ func (p *Player) String() string {
 	return fmt.Sprintln("id:", p.ID, "lat:", p.Lat, "lon:", p.Lon)
 }
 
+// PlayerList list is an alias to []*Player
+type PlayerList []*Player
+
 // Point returns geo.Point with coordinates
 func (p *Player) Point() *geo.Point {
 	return geo.NewPoint(p.Lat, p.Lon)
@@ -32,9 +35,4 @@ func (p *Player) Point() *geo.Point {
 // DistTo returns the distance to other player
 func (p *Player) DistTo(other *Player) float64 {
 	return p.Point().GreatCircleDistance(other.Point()) * 1000
-}
-
-// PlayerList payload for list of players
-type PlayerList struct {
-	Players []*Player `json:"players"`
 }

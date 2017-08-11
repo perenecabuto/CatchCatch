@@ -31,15 +31,15 @@ func (s *PlayerLocationService) Remove(p *Player) error {
 }
 
 // Players return all registered players
-func (s *PlayerLocationService) Players() (*PlayerList, error) {
+func (s *PlayerLocationService) Players() (PlayerList, error) {
 	features, err := s.Features("player")
 	if err != nil {
 		return nil, err
 	}
-	list := &PlayerList{make([]*Player, len(features))}
+	list := make(PlayerList, len(features))
 	for i, f := range features {
 		coords := gjson.Get(f.Coordinates, "coordinates").Array()
-		list.Players[i] = &Player{ID: f.ID, Lat: coords[1].Float(), Lon: coords[0].Float()}
+		list[i] = &Player{ID: f.ID, Lat: coords[1].Float(), Lon: coords[0].Float()}
 	}
 	return list, nil
 }
