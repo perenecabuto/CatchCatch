@@ -9,9 +9,9 @@ message Simple {
 
 message Feature {
     required string event_name = 1;
-    required string id = 2;
-    required string group = 3;
-    required string coords = 4;
+    required string group = 2;
+    optional string id = 3;
+    optional string coords = 4;
 }
 
 message Player {
