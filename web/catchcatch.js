@@ -23,6 +23,26 @@ function log(msg) {
     logEl.innerHTML = msg;
 };
 
+
+var messages = {
+
+    load: function(onLoaded) {
+        protobuf.load("/protobuf/message.proto",  function(err, root) {
+            if (err) throw err;
+
+            let entities = Object.keys(root.toJSON().nested.protobuf.nested);
+            for (var i in entities) {
+                let name = entities[i];
+                let namespace = "protobuf." + name;
+                console.log("creating " + namespace);
+                messages[name] = root.lookupType(namespace);
+            }
+
+            onLoaded();
+        });
+    }
+}
+
 function init() {
     let socket = new WSS(location.href.replace("http", "ws") + "ws", false);
     let source = new ol.source.Vector({ wrapX: false });
@@ -91,6 +111,9 @@ function init() {
 
     socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
 }
+
+
+window.addEventListener("DOMContentLoaded", messages.load(init));
 
 
 let Player = function (x, y) {
