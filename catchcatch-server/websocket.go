@@ -34,17 +34,15 @@ func NewConn(conn *websocket.Conn) *Conn {
 
 type evtCallback func([]byte)
 
-func (c *Conn) listen(ctx context.Context, doneFunc func(error)) {
+func (c *Conn) listen(ctx context.Context) error {
 	ctx, c.stopFunc = context.WithCancel(ctx)
 	for {
 		select {
 		case <-ctx.Done():
-			doneFunc(nil)
-			return
+			return nil
 		default:
 			if err := c.readMessage(); err != nil {
-				doneFunc(err)
-				return
+				return err
 			}
 		}
 	}
@@ -132,12 +130,13 @@ func (wss *WebSocketServer) Listen(ctx context.Context) http.Handler {
 	return websocket.Server{
 		Handler: func(c *websocket.Conn) {
 			conn := wss.Add(c)
-			wss.onConnected(conn)
-			conn.listen(ctx, func(err error) {
-				if err != nil {
-					log.Println("WebSocketServer: read error", err)
-				}
+			err := withRecover(func() error {
+				wss.onConnected(conn)
+				return conn.listen(ctx)
 			})
+			if err != nil {
+				log.Println("WebSocketServer: read error", err)
+			}
 			wss.Remove(conn.ID)
 		},
 	}
