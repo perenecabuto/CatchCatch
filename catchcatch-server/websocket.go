@@ -84,21 +84,28 @@ func (c *Conn) close() {
 
 func (c *Conn) readMessage() error {
 	if err := websocket.Message.Receive(c.conn, &c.messagebuf); err != nil {
-		log.Println("readMessage: " + err.Error())
+		log.Println("readMessage:", err.Error())
 		return err
 	}
 
 	msg := &protobuf.Simple{}
-	proto.Unmarshal(c.messagebuf, msg)
+	if err := proto.Unmarshal(c.messagebuf, msg); err != nil {
+		log.Println("readMessage: proto.Unmarshal -", c.messagebuf, err.Error())
+		return err
+	}
+
 	if len(msg.String()) == 0 {
 		log.Println("message error:", c.messagebuf)
 		return errors.New("Invalid payload: " + string(c.messagebuf))
 	}
-	if cb, exists := c.eventCallbacks[msg.GetEventName()]; exists {
+	cb, exists := c.eventCallbacks[msg.GetEventName()]
+	if !exists {
+		return fmt.Errorf("No callback found for: %v", msg)
+	}
+	return withRecover(func() error {
 		cb(c.messagebuf)
 		return nil
-	}
-	return fmt.Errorf("No callback found for: %v", msg)
+	})
 }
 
 // WebSocketServer manage websocket connections
