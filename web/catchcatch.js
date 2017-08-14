@@ -23,15 +23,15 @@ function log(msg) {
     logEl.innerHTML = msg;
 };
 
-window.addEventListener("DOMContentLoaded", function () {
-    let socket = new WSS(location.href.replace("http", "ws") + "ws", true);
+function init() {
+    let socket = new WSS(location.href.replace("http", "ws") + "ws", false);
     let source = new ol.source.Vector({ wrapX: false });
     let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     let vector = new ol.layer.Vector({ source: source });
     let view = new ol.View({ center: [0, 0], zoom: 15, projection: "EPSG:4326" })
     let map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
-
     let popup = new ol.Overlay({ element: document.getElementById("map-info") });
+
     map.addOverlay(popup);
 
     map.on('click', function (evt) {
@@ -90,7 +90,7 @@ window.addEventListener("DOMContentLoaded", function () {
     socket.on("admin:feature:added", evtHandler.onFeatureAdded);
 
     socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
-});
+}
 
 
 let Player = function (x, y) {
