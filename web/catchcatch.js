@@ -101,14 +101,11 @@ function init() {
     socket.on('player:updated', evtHandler.onPlayerUpdated)
     socket.on('disconnect', evtHandler.onDisconnected)
 
-    socket.on('remote-player:list', evtHandler.onRemotePlayerList);
     socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
     socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
     socket.on("remote-player:destroy", evtHandler.onRemotePlayerDestroy);
 
-    socket.on("admin:feature:list", evtHandler.onFeatureList);
     socket.on("admin:feature:added", evtHandler.onFeatureAdded);
-
     socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
 }
 
@@ -405,13 +402,6 @@ let EventHandler = function (controller) {
         controller.setPlayer(p);
         controller.updatePlayer(p);
     };
-
-    this.onRemotePlayerList = function (list) {
-        controller.resetInterface();
-        for (let i in list.players) {
-            controller.updatePlayer(list.players[i]);
-        }
-    };
     this.onRemotePlayerUpdated = function (player) {
         controller.updatePlayer(player);
     };
@@ -424,12 +414,6 @@ let EventHandler = function (controller) {
     this.onFeatureAdded = function (jsonF) {
         let feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
         controller.addFeature(jsonF.id, jsonF.group, feat);
-    };
-
-    this.onFeatureList = (features) => {
-        for (let i in features) {
-            this.onFeatureAdded(features[i]);
-        }
     };
 
     this.onFeatureCheckpoint = function (detection) {
