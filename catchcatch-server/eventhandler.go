@@ -132,6 +132,7 @@ func (h *EventHandler) onAddFeature() func([]byte) {
 		f, err := h.service.AddFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
 		if err != nil {
 			log.Println("Error to create feature:", err)
+			return
 		}
 		h.server.Broadcast(&protobuf.Feature{EventName: proto.String("admin:feature:added"), Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
 	}
@@ -166,17 +167,22 @@ func (h *EventHandler) newPlayer(c *Conn) (player *Player, err error) {
 	return player, nil
 }
 
-func (h *EventHandler) sendPlayerList(c *Conn) {
-	players, err := h.service.Players()
-	if err != nil {
-		log.Println("player:request-remotes event error: " + err.Error())
-		return
-	}
-	event := "remote-player:new"
-	for _, p := range players {
-		err := c.Emit(&protobuf.Player{EventName: &event, Id: &p.ID, Lon: &p.Lon, Lat: &p.Lat})
+func (h *EventHandler) sendPlayerList(c *Conn) error {
+	return withRecover(func() error {
+		players, err := h.service.Players()
 		if err != nil {
-			log.Println("player:request-remotes event error: " + err.Error())
+			return errors.New("player:request-remotes event error: " + err.Error())
 		}
-	}
+		event := "remote-player:new"
+		for _, p := range players {
+			if p == nil {
+				continue
+			}
+			err := c.Emit(&protobuf.Player{EventName: &event, Id: &p.ID, Lon: &p.Lon, Lat: &p.Lat})
+			if err != nil {
+				return errors.New("player:request-remotes event error: " + err.Error())
+			}
+		}
+		return nil
+	})
 }
