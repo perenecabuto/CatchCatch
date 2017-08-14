@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -21,7 +22,7 @@ var (
 	port           = flag.Int("port", 5000, "server port")
 	webDir         = flag.String("web-dir", "../web", "web files dir")
 	zconfEnabled   = flag.Bool("zconf", false, "start zeroconf server")
-	debug          = flag.Bool("debug", false, "debug")
+	debugMode      = flag.Bool("debug", false, "debug")
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	stream := NewEventStream(*tile38Addr)
-	client := mustConnectTile38(*debug)
+	client := mustConnectTile38(*debugMode)
 	onExit(func() {
 		cancel()
 		client.Close()
@@ -85,8 +86,10 @@ func withRecover(fn func() error) (err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
-			log.Println("panic withRecover:", r)
+			log.Println("", r)
 			err = fmt.Errorf("%v", r)
+			log.Printf("panic withRecover:\n[error] %v", err)
+			debug.PrintStack()
 		}
 	}()
 	return fn()
