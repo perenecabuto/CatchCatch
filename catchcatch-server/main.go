@@ -86,9 +86,8 @@ func withRecover(fn func() error) (err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
-			log.Println("", r)
 			err = fmt.Errorf("%v", r)
-			log.Printf("panic withRecover:\n[error] %v", err)
+			log.Printf("[panic withRecover] %v", err)
 			debug.PrintStack()
 		}
 	}()
