@@ -39,6 +39,9 @@ func (s *PlayerLocationService) Players() (PlayerList, error) {
 	list := make(PlayerList, len(features))
 	for i, f := range features {
 		coords := gjson.Get(f.Coordinates, "coordinates").Array()
+		if len(coords) != 2 {
+			coords = make([]gjson.Result, 2)
+		}
 		list[i] = &Player{ID: f.ID, Lat: coords[1].Float(), Lon: coords[0].Float()}
 	}
 	return list, nil
