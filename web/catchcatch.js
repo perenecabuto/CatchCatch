@@ -236,17 +236,17 @@ let AdminController = function (socket, sourceLayer, view) {
 
     this.reset = function () {
         console.log("admin:clear");
-        socket.emit('admin:clear');
+        socket.emit(messages.Simple.encode({eventName: 'admin:clear'}).finish());
     };
 
     this.disconnectPlayer = function (playerId) {
         console.log("admin:disconnect", playerId);
-        socket.emit('admin:disconnect', playerId);
+        socket.emit(messages.Simple.encode({eventName: 'admin:disconnect', id: playerId}).finish());
     };
 
     this.requestFeatures = function () {
-        socket.emit("admin:feature:request-list", "checkpoint");
-        socket.emit("admin:feature:request-list", "geofences");
+        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "checkpoint"}).finish());
+        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "geofences"}).finish());
     };
 
     this.removePlayer = function (player) {
@@ -367,11 +367,12 @@ let AdminController = function (socket, sourceLayer, view) {
 
     this.bindDrawGroupButton = function (group, map, type) {
         this.bindDrawFeatureButton("draw-" + group, map, type, groupStyles[group].clone(),
-            function (feat) {
-                let geojson = new ol.format.GeoJSON().writeGeometry(feat.getGeometry());
-                let name = prompt("What is this " + group + " name?");
-                let data = JSON.stringify({group, name, geojson})
-                socket.emit('admin:feature:add', data);
+        function (feat) {
+            let geojson = new ol.format.GeoJSON().writeGeometry(feat.getGeometry());
+            let name = prompt("What is this " + group + " name?");
+            let data = messages.Feature.encode({
+                eventName: "admin:feature:add", group: group, id: name, coords: geojson}).finish();
+                socket.emit(data);
             }
         );
     };
@@ -419,9 +420,10 @@ let EventHandler = function (controller) {
         let p = messages.Player.decode(msg);
         controller.removePlayer(p);
     };
-    this.onFeatureAdded = function (jsonF) {
-        let feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
-        controller.addFeature(jsonF.id, jsonF.group, feat);
+    this.onFeatureAdded = function (msg) {
+        let feat = messages.Feature.decode(msg);
+        let geojson = new ol.format.GeoJSON().readFeature(feat.coords);
+        controller.addFeature(feat.id, feat.group, geojson);
     };
 
     this.onFeatureCheckpoint = function (detection) {
