@@ -470,10 +470,12 @@ function WSS(address, reconnect) {
     function onError(event) {
         triggerEvent('onerror');
         ws = new WebSocket(address);
+        ws.binaryType = 'arraybuffer';
     }
 
     function init() {
         ws = new WebSocket(address);
+        ws.binaryType = 'arraybuffer';
         ws.onopen = onOpen;
         ws.onmessage = onMessage;
         ws.onclose = onClose;
