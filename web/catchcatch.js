@@ -278,7 +278,7 @@ let AdminController = function (socket, sourceLayer, view) {
                 connectionsEl.insertBefore(playerEl, connectionsEl.children[0]);
             } else {
                 playerEl.getElementsByClassName("disconnect-btn")[0]
-                    .addEventListener("click", () => this.disconnectPlayer(player.id));
+                .addEventListener("click", () => this.disconnectPlayer(player.id));
                 connectionsEl.appendChild(playerEl);
             }
         }
