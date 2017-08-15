@@ -439,42 +439,45 @@ function WSS(address, reconnect) {
     this.on = function (event, callback) {
         eventCallbacks[event] = callback;
     }
-    this.emit = function (event, message) {
-        ws.send(event + "," + message);
+    this.emit = function (message) {
+        ws.send(message);
     }
 
     this.close = function () {
         ws.close();
     }
 
+    function onOpen(event) {
+        triggerEvent('connect')
+    }
+
+    function onMessage(event) {
+        let payload = new Uint8Array(event.data);
+        let evt = messages.Simple.decode(payload);
+        triggerEvent(evt.eventName, payload);
+    }
+
+    function onClose() {
+        triggerEvent('disconnect');
+        if (!reconnect) return;
+        try {
+            init();
+        } catch (e) {
+            ws.onclose();
+        }
+    }
+
+    function onError(event) {
+        triggerEvent('onerror');
+        ws = new WebSocket(address);
+    }
+
     function init() {
         ws = new WebSocket(address);
-        ws.onopen = function (event) {
-            triggerEvent('connect')
-        }
-        ws.onmessage = function (event) {
-            let evtName = event.data.split(",", 1)[0];
-            let evtMsg = event.data.replace(evtName + ",", "");
-            try {
-                evtMsg = JSON.parse(evtMsg);
-            } catch (e) {
-                console.debug(e);
-            }
-            triggerEvent(evtName, evtMsg);
-        }
-        ws.onclose = function () {
-            triggerEvent('disconnect');
-            if (!reconnect) return;
-            try {
-                init();
-            } catch (e) {
-                ws.onclose();
-            }
-        }
-        ws.onerror = function (event) {
-            triggerEvent('onerror');
-            ws = new WebSocket(address);
-        }
+        ws.onopen = onOpen;
+        ws.onmessage = onMessage;
+        ws.onclose = onClose;
+        ws.onerror = onError;
     }
 
     function triggerEvent(event, message) {
