@@ -480,9 +480,9 @@ function WSS(address, reconnect) {
         ws.onerror = onError;
     }
 
-    function triggerEvent(event, message) {
-        if (eventCallbacks[event]) {
-            eventCallbacks[event].call(null, message);
+    function triggerEvent(eventName, message) {
+        if (eventCallbacks[eventName]) {
+            eventCallbacks[eventName].call(null, message);
         }
     }
 
