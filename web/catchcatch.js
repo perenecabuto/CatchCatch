@@ -79,21 +79,21 @@ function init() {
     controller.bindPosition();
 
     controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player.clone(),
-        function (feat) {
-            console.log("add feat", feat);
-            let coords = feat.getGeometry().getCoordinates();
-            let p = new Player(coords[1], coords[0]);
-            map.addInteraction(p.getInteraction());
-            p.connect(function (p) {
-                controller.updatePlayer(p);
-                let playerFeat = source.getFeatureById(p.id);
-                playerFeat.setStyle(groupStyles.fakePlayer.clone());
-                playerFeat.getStyle().setText(makeText(playerFeat, p.id));
-            }, function () {
-                map.removeInteraction(p.getInteraction());
-                p = null;
-            });
+    function (feat) {
+        console.log("add feat", feat);
+        let coords = feat.getGeometry().getCoordinates();
+        let fakePlayer = new Player(coords[1], coords[0]);
+        map.addInteraction(fakePlayer.getInteraction());
+        fakePlayer.connect(function (msg) {
+            let p = messages.Player.decode(msg);
+            controller.updatePlayer(p);
+            let playerFeat = source.getFeatureById(p.id);
+            playerFeat.setStyle(groupStyles.fakePlayer.clone());
+            playerFeat.getStyle().setText(makeText(playerFeat, p.id));
+        }, function () {
+            map.removeInteraction(fakePlayer.getInteraction());
         });
+    });
 
     let evtHandler = new EventHandler(controller);
     socket.on('connect', evtHandler.onConnect);
@@ -122,7 +122,8 @@ let Player = function (x, y) {
             disconnectedCallback();
         }
     }
-    function onPlayerRegistered(p) {
+    function onPlayerRegistered(msg) {
+        let p = messages.Player.decode(msg);
         player = p;
         updatePosition(x, y);
         if (registeredCallback !== undefined) {
@@ -133,7 +134,8 @@ let Player = function (x, y) {
         player = p;
     }
     function updatePosition(lat, lon) {
-        socket.emit('player:update', JSON.stringify({ lat: lat, lon: lon }));
+        let msg = messages.Player.encode({eventName: "player:update", id: player.id, lat: lat, lon: lon}).finish();
+        socket.emit(msg);
     }
     function coords() {
         return { lat: player.lat, lon: player.lon };
@@ -222,7 +224,8 @@ let AdminController = function (socket, sourceLayer, view) {
         }
         let coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         view.setCenter([coords.lon, coords.lat]);
-        socket.emit('player:update', JSON.stringify(coords));
+        let msg = messages.Player.encode({eventName: "player:update", id: "", lat: coords.lat, lon: coords.lon}).finish();
+        socket.emit(msg);
         lastPos = pos;
     };
 
@@ -392,24 +395,29 @@ let EventHandler = function (controller) {
         log("disconnected");
         controller.resetInterface();
     };
-    this.onPlayerRegistered = function (p) {
+    this.onPlayerRegistered = function (msg) {
+        let p = messages.Player.decode(msg);
         controller.setPlayer(p);
         log("connected as " + p.id);
         controller.updatePosition({ coords: { latitude: p.lat, longitude: p.lon } })
         controller.requestFeatures();
     };
-    this.onPlayerUpdated = function (p) {
+    this.onPlayerUpdated = function (msg) {
+        let p = messages.Player.decode(msg);
         controller.setPlayer(p);
         controller.updatePlayer(p);
     };
-    this.onRemotePlayerUpdated = function (player) {
-        controller.updatePlayer(player);
+    this.onRemotePlayerUpdated = function (msg) {
+        let p = messages.Player.decode(msg);
+        controller.updatePlayer(p);
     };
-    this.onRemotePlayerNew = function (player) {
-        controller.updatePlayer(player)
+    this.onRemotePlayerNew = function (msg) {
+        let p = messages.Player.decode(msg);
+        controller.updatePlayer(p)
     };
-    this.onRemotePlayerDestroy = function (player) {
-        controller.removePlayer(player);
+    this.onRemotePlayerDestroy = function (msg) {
+        let p = messages.Player.decode(msg);
+        controller.removePlayer(p);
     };
     this.onFeatureAdded = function (jsonF) {
         let feat = new ol.format.GeoJSON().readFeature(jsonF.coords);
