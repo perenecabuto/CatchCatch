@@ -156,10 +156,10 @@ func (g Game) Ready() bool {
 /*
 SetPlayer notify player updates to the game
 The rule is:
-	- the game changes what to do with the player
-	- it can ignore anything
-	- it can send messages to the player
-	- it receives sessions to notify anything to this player games
+    - the game changes what to do with the player
+    - it can ignore anything
+    - it can send messages to the player
+    - it receives sessions to notify anything to this player games
 */
 func (g *Game) SetPlayer(p *Player, sessions *WebSocketServer) {
 	if g.started {
@@ -214,9 +214,9 @@ func (g *Game) updatePlayer(p *Player) {
 /*
 RemovePlayer revices notifications to remove player
 The role is:
-	- it can ignore everthing
-	- it receives sessions to send messages to its players
-	- it must remove players from the game
+    - it can ignore everthing
+    - it receives sessions to send messages to its players
+    - it must remove players from the game
 */
 func (g *Game) RemovePlayer(p *Player, sessions *WebSocketServer) {
 	if _, exists := g.players[p.ID]; !exists {
