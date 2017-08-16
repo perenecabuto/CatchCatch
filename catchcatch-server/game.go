@@ -55,7 +55,10 @@ func (g *Game) Start(sessions *WebSocketServer) {
 		if id == g.targetPlayer.ID {
 			role = "target"
 		}
-		sessions.Emit(id, &protobuf.GameInfo{EventName: proto.String("game:started"), Game: &g.ID, Role: &role})
+		sessions.Emit(id, &protobuf.GameInfo{
+			EventName: proto.String("game:started"),
+			Id:        &g.ID,
+			Game:      &g.ID, Role: &role})
 	}
 	g.started = true
 
@@ -75,8 +78,10 @@ func (g *Game) Start(sessions *WebSocketServer) {
 		for i, pr := range rank.PlayerRank {
 			playersRank[i] = &protobuf.PlayerRank{Player: &pr.Player, Points: proto.Int32(int32(pr.Points))}
 		}
-		sessions.BroadcastTo(g.playerIDs(), &protobuf.GameRank{EventName: proto.String("game:finish"),
-			Game: &rank.Game, PlayersRank: playersRank,
+		sessions.BroadcastTo(g.playerIDs(), &protobuf.GameRank{
+			EventName: proto.String("game:finish"),
+			Id:        &rank.Game,
+			Game:      &rank.Game, PlayersRank: playersRank,
 		})
 
 		g.started = false
@@ -183,11 +188,15 @@ func (g *Game) updateAndNofityPlayer(p *Player, sessions *WebSocketServer) {
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
 		sessions.Emit(g.targetPlayer.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
 		delete(g.players, g.targetPlayer.ID)
-		sessions.Emit(g.targetPlayer.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"), Dist: &dist})
+		sessions.Emit(p.ID,
+			&protobuf.Distance{EventName: proto.String("game:target:reached"),
+				Dist: &dist})
 		g.Stop()
 	} else if dist <= 100 {
 		log.Printf("game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
-		sessions.Emit(g.targetPlayer.ID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &dist})
+		sessions.Emit(p.ID,
+			&protobuf.Distance{EventName: proto.String("game:target:near"),
+				Dist: &dist})
 		// } else {
 		// log.Printf("game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
 	}

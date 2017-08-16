@@ -84,8 +84,7 @@ function init() {
         let coords = feat.getGeometry().getCoordinates();
         let fakePlayer = new Player(coords[1], coords[0]);
         map.addInteraction(fakePlayer.getInteraction());
-        fakePlayer.connect(function (msg) {
-            let p = messages.Player.decode(msg);
+        fakePlayer.connect(function (p) {
             controller.updatePlayer(p);
             let playerFeat = source.getFeatureById(p.id);
             playerFeat.setStyle(groupStyles.fakePlayer.clone());
@@ -130,7 +129,8 @@ let Player = function (x, y) {
             registeredCallback(p);
         }
     }
-    function onPlayerUpdated(p) {
+    function onPlayerUpdated(msg) {
+        let p = messages.Player.decode(msg);
         player = p;
     }
     function updatePosition(lat, lon) {
@@ -138,7 +138,7 @@ let Player = function (x, y) {
         socket.emit(msg);
     }
     function coords() {
-        return { lat: player.lat, lon: player.lon };
+        return {lat: player.lat, lon: player.lon};
     }
     function disconnect() {
         socket.close();
@@ -152,26 +152,32 @@ let Player = function (x, y) {
         socket.on('player:registered', onPlayerRegistered)
         socket.on('player:updated', onPlayerUpdated)
 
-        socket.on('game:started', function (info) {
+        socket.on('game:started', function (msg) {
+            let info = messages.GameInfo.decode(msg);
             log(player.id + ':game:started:' + info.game + ":role:" + info.role);
         })
-        socket.on('game:loose', function (game) {
-            log(player.id + ':game:loose:' + game)
+        socket.on('game:loose', function (msg) {
+            let game = messages.Simple.decode(msg);
+            // log(player.id + ':game:loose:' + game.id)
         })
-        socket.on('game:target:near', function (distToTarget) {
-            log(player.id + ':target:near:' + distToTarget);
+        socket.on('game:target:near', function (msg) {
+            let near = messages.Distance.decode(msg);
+            log(player.id + ':target:near:' + near.dist);
         })
-        socket.on('game:target:reached', function (distToTarget) {
-            log(player.id + ':target:reached:' + distToTarget);
+        socket.on('game:target:reached', function (msg) {
+            let near = messages.Distance.decode(msg);
+            log(player.id + ':target:reached:' + near.dist);
         })
         socket.on('game:target:win', function () {
             log(player.id + ':target:win');
         })
-        socket.on('game:finish', function (rank) {
-            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.points_per_player));
+        socket.on('game:finish', function (msg) {
+            let rank = messages.GameRank.decode(msg);
+            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.playersRank));
         })
-        socket.on('checkpoint:detected', function (detected) {
-            log(player.id + ':checkpoint:detected:' + JSON.stringify(detected));
+        socket.on('checkpoint:detected', function (msg) {
+            let detection = messages.Detection.decode(msg);
+            log(player.id + ':checkpoint:detected:' + JSON.stringify(detection));
         })
         socket.on('disconnect', onDisconnected)
     }
@@ -426,9 +432,10 @@ let EventHandler = function (controller) {
         controller.addFeature(feat.id, feat.group, geojson);
     };
 
-    this.onFeatureCheckpoint = function (detection) {
-        var circleID = detection.near_by_feat_id + "-" + detection.feat_id;
-        controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.near_by_meters);
+    this.onFeatureCheckpoint = function (msg) {
+        var detection = messages.Detection.decode(msg);
+        var circleID = detection.nearByFeatId + "-" + detection.featId;
+        controller.showCircleOnMap(circleID, [detection.lon, detection.lat], detection.nearByMeters);
     }
 };
 

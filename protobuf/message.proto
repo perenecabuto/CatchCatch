@@ -4,7 +4,7 @@ package protobuf;
 
 message Simple {
     required string event_name = 1;
-    required string id = 2;
+    optional string id = 2;
 }
 
 message Feature {
@@ -42,17 +42,17 @@ message PlayerRank {
 
 message Distance {
     required string event_name = 1;
-    required string id = 2;
+    optional string id = 2;
     required double dist = 3;
 }
 
 message Detection {
     required string event_name = 1;
-    required string id = 3;
-    required string feat_id = 4;
-	required double lat = 5;
-	required double lon = 6;
-	required string near_by_feat_id = 7;
-	required double near_by_meters = 8;
-	required string intersects = 9;
+    required string id = 2;
+    required string feat_id = 3;
+    optional double lat = 4;
+    optional double lon = 5;
+    optional string near_by_feat_id = 6;
+    optional double near_by_meters = 7;
+    optional string intersects = 8;
 }
