@@ -6,8 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	protobuf "./protobuf"
 	"github.com/golang/protobuf/proto"
+
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
 // EventHandler handle websocket events

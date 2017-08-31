@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"./protobuf"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
 // MinPlayersPerGame ...
