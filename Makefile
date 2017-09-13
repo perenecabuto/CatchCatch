@@ -4,15 +4,12 @@ DOKKU_CMD = ssh dokku@$(DOKKU_HOST)
 DOKKU_ROOT_CMD = ssh root@$(DOKKU_HOST) dokku
 
 DOKKU_HOST = 50.116.10.21
-DOMAIN = catchcatch.pointto.us
 LOCAL_BRANCH = master
 
 %-digitalocean: DOKKU_HOST=192.34.56.53
 %-digitalocean: DOMAIN=catchcatch.ddns.net
 %-beta: DOKKU_HOST=159.203.15.29
 %-beta: DOMAIN=beta-catchcatch.ddns.net
-%-linode: DOKKU_HOST=50.116.10.21
-%-linode: DOMAIN=catchcatch.pointto.us
 
 run: run-tile38
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
@@ -38,13 +35,11 @@ run-tile38:
 	@docker run --rm --name tile38-local -v $(PWD):/data -p $(TILE38PORT):$(TILE38PORT) -P tile38/tile38
 
 deploy-beta: deploy
-deploy-linode: deploy
 deploy-digitalocean: deploy
 deploy:
 	git push -f dokku@$(DOKKU_HOST):catchcatch $(LOCAL_BRANCH):master
 
 setup-ssl-beta: setup-ssl
-setup-ssl-linode: setup-ssl
 setup-ssl-digitalocean: setup-ssl
 setup-ssl:
 	$(DOKKU_ROOT_CMD) plugin:install https://github.com/dokku/dokku-letsencrypt.git; echo
