@@ -11,6 +11,9 @@ LOCAL_BRANCH = master
 %-beta: DOKKU_HOST=159.203.15.29
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
+test:
+	cd catchcatch-server && CompileDaemon -color -command "go test -v ./..."
+
 run: run-tile38
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
 
