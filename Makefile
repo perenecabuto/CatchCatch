@@ -1,6 +1,4 @@
-INSTANCE_NAME := tile38-local
-TEMPLATE := tile38/tile38
-PORT := 9851
+TILE38PORT := 9851
 
 DOKKU_CMD = ssh dokku@$(DOKKU_HOST)
 DOKKU_ROOT_CMD = ssh root@$(DOKKU_HOST) dokku
@@ -22,12 +20,22 @@ run: run-tile38
 run-debug:
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf -debug"
 
+run-influxdb:
+	@-docker rm -f influxdb-local
+	@docker run --restart unless-stopped -p 8086:8086 \
+		--name influxdb-local \
+		-v $(PWD)/:/etc/influxdb/:ro \
+		-e INFLUXDB_ADMIN_ENABLED=true \
+		-d influxdb -config /etc/influxdb/influxdb.conf
+
+run-grafana:
+	@-#docker rm -f grafana-local
+	@-docker run -d --name=grafana-local -p 3000:3000 -P grafana/grafana
+	@docker start grfana-local
+
 run-tile38:
-	@if test "`docker ps -a | grep $(INSTANCE_NAME)`"; then \
-		docker start $(INSTANCE_NAME); \
-	else \
-		docker run --rm --name $(INSTANCE_NAME) -v $$PWD:/data -p $(PORT):$(PORT) -P $(TEMPLATE);\
-	fi
+	@-docker rm -f tile38-local
+	@docker run --rm --name tile38-local -v $(PWD):/data -p $(TILE38PORT):$(TILE38PORT) -P tile38/tile38
 
 deploy-beta: deploy
 deploy-linode: deploy
