@@ -35,14 +35,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	stream := NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debugMode)
-	onExit(func() {
-		cancel()
-		client.Close()
-	})
-
 	service := NewPlayerLocationService(client)
 	server := NewWebSocketServer(ctx)
 	watcher := NewGameWatcher(stream, server)
+	onExit(func() {
+		cancel()
+		client.Close()
+		server.CloseAll()
+	})
+
 	go watcher.WatchGames(ctx)
 	go watcher.WatchCheckpoints(ctx)
 

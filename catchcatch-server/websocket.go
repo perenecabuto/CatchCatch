@@ -179,6 +179,7 @@ func (wss *WebSocketServer) withConnections(fn func(connectionGroup)) {
 // Remove Conn by session id
 func (wss *WebSocketServer) Remove(id string) {
 	if c := wss.Get(id); c != nil {
+		c.close()
 		wss.withConnections(func(connections connectionGroup) {
 			delete(connections, id)
 		})
@@ -217,6 +218,6 @@ func (wss *WebSocketServer) Broadcast(message Message) {
 func (wss *WebSocketServer) CloseAll() {
 	connections := wss.connections.Load().(connectionGroup)
 	for _, c := range connections {
-		c.conn.Close()
+		c.close()
 	}
 }

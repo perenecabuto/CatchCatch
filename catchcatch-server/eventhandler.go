@@ -111,7 +111,12 @@ func (h *EventHandler) onDisconnectByID() func([]byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
 		log.Println("admin:disconnect", msg.GetId())
+		player := &Player{ID: msg.GetId()}
+		h.service.Remove(player)
 		h.server.Remove(msg.GetId())
+
+		h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
+			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	}
 }
 
