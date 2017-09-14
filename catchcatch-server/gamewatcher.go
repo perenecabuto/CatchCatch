@@ -35,11 +35,11 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		switch d.Intersects {
 		case Enter:
-			g.SetPlayer(p, gw.wss)
+			g.SetPlayer(p)
 		case Inside:
-			g.SetPlayer(p, gw.wss)
+			g.SetPlayer(p)
 		case Exit:
-			g.RemovePlayer(p, gw.wss)
+			g.RemovePlayer(p)
 		}
 	})
 	return err
@@ -56,7 +56,7 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 		_, exists := gw.games[gameID]
 		if !exists {
 			gameDuration := time.Minute
-			game := NewGame(gameID, gameDuration)
+			game := NewGame(gameID, gameDuration, gw)
 			gctx, cancel := context.WithCancel(ctx)
 			log.Println("gamewatcher:create:game:", gameID, d.FeatID)
 			gw.games[gameID] = &GameContext{game, cancel}
@@ -121,4 +121,43 @@ func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)
 	}
+}
+
+// game callbacks
+
+func (gw *GameWatcher) OnGameStarted(g *Game, p *Player, role string) {
+	gw.wss.Emit(p.ID, &protobuf.GameInfo{
+		EventName: proto.String("game:started"),
+		Id:        &g.ID,
+		Game:      &g.ID, Role: &role})
+}
+
+func (gw *GameWatcher) OnTargetWin(p *Player) {
+	gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:target:win")})
+}
+
+func (gw *GameWatcher) OnGameFinish(rank GameRank) {
+	playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
+	for i, pr := range rank.PlayerRank {
+		playersRank[i] = &protobuf.PlayerRank{Player: &pr.Player, Points: proto.Int32(int32(pr.Points))}
+	}
+	gw.wss.BroadcastTo(rank.PlayerIDs, &protobuf.GameRank{
+		EventName: proto.String("game:finish"),
+		Id:        &rank.Game,
+		Game:      &rank.Game, PlayersRank: playersRank,
+	})
+}
+
+func (gw *GameWatcher) OnPlayerLoose(g *Game, p *Player) {
+	gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
+}
+
+func (gw *GameWatcher) OnTargetReached(p *Player, dist float64) {
+	gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"),
+		Dist: &dist})
+}
+
+func (gw *GameWatcher) OnPlayerNearToTarget(p *Player, dist float64) {
+	gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:near"),
+		Dist: &dist})
 }
