@@ -6,32 +6,51 @@ import (
 	redis "gopkg.in/redis.v5"
 )
 
-// PlayerLocationService manages player locations
-type PlayerLocationService struct {
+// PlayerLocationService manage players and features
+type PlayerLocationService interface {
+	Register(p *Player) error
+	Update(p *Player) error
+	Remove(p *Player) error
+	Players() (PlayerList, error)
+
+	AddFeature(group, id, geojson string) (*Feature, error)
+	Features(group string) ([]*Feature, error)
+	FeaturesAround(group string, point *geo.Point) ([]*Feature, error)
+
+	Clear()
+}
+
+// Tile38PlayerLocationService manages player locations
+type Tile38PlayerLocationService struct {
 	client *redis.Client
 }
 
+// NewPlayerLocationService build a PlayerLocationService
+func NewPlayerLocationService(client *redis.Client) PlayerLocationService {
+	return &Tile38PlayerLocationService{client}
+}
+
 // Register add new player
-func (s *PlayerLocationService) Register(p *Player) error {
+func (s *Tile38PlayerLocationService) Register(p *Player) error {
 	return s.Update(p)
 }
 
 // Update player data
-func (s *PlayerLocationService) Update(p *Player) error {
+func (s *Tile38PlayerLocationService) Update(p *Player) error {
 	cmd := redis.NewStringCmd("SET", "player", p.ID, "POINT", p.Lat, p.Lon)
 	s.client.Process(cmd)
 	return cmd.Err()
 }
 
 // Remove player
-func (s *PlayerLocationService) Remove(p *Player) error {
+func (s *Tile38PlayerLocationService) Remove(p *Player) error {
 	cmd := redis.NewStringCmd("DEL", "player", p.ID)
 	s.client.Process(cmd)
 	return cmd.Err()
 }
 
 // Players return all registered players
-func (s *PlayerLocationService) Players() (PlayerList, error) {
+func (s *Tile38PlayerLocationService) Players() (PlayerList, error) {
 	features, err := s.Features("player")
 	if err != nil {
 		return nil, err
@@ -48,7 +67,7 @@ func (s *PlayerLocationService) Players() (PlayerList, error) {
 }
 
 // AddFeature persist features
-func (s *PlayerLocationService) AddFeature(group, id, geojson string) (*Feature, error) {
+func (s *Tile38PlayerLocationService) AddFeature(group, id, geojson string) (*Feature, error) {
 	cmd := redis.NewStringCmd("SET", group, id, "OBJECT", geojson)
 	s.client.Process(cmd)
 	if err := cmd.Err(); err != nil {
@@ -58,16 +77,21 @@ func (s *PlayerLocationService) AddFeature(group, id, geojson string) (*Feature,
 }
 
 // Features ...
-func (s *PlayerLocationService) Features(group string) ([]*Feature, error) {
+func (s *Tile38PlayerLocationService) Features(group string) ([]*Feature, error) {
 	cmd := redis.NewSliceCmd("SCAN", group)
 	return featuresFromSliceCmd(s.client, group, cmd)
 }
 
 // FeaturesAround return feature group near by point
-func (s *PlayerLocationService) FeaturesAround(group string, point *geo.Point) ([]*Feature, error) {
+func (s *Tile38PlayerLocationService) FeaturesAround(group string, point *geo.Point) ([]*Feature, error) {
 	dist := 1000
 	cmd := redis.NewSliceCmd("NEARBY", group, "POINT", point.Lat(), point.Lng(), dist)
 	return featuresFromSliceCmd(s.client, group, cmd)
+}
+
+// Clear the database
+func (s *Tile38PlayerLocationService) Clear() {
+	s.client.FlushDb()
 }
 
 func featuresFromSliceCmd(client *redis.Client, group string, cmd *redis.SliceCmd) ([]*Feature, error) {

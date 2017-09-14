@@ -14,12 +14,12 @@ import (
 // EventHandler handle websocket events
 type EventHandler struct {
 	server  *WebSocketServer
-	service *PlayerLocationService
+	service PlayerLocationService
 	games   *GameWatcher
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *WebSocketServer, service *PlayerLocationService, gw *GameWatcher) *EventHandler {
+func NewEventHandler(server *WebSocketServer, service PlayerLocationService, gw *GameWatcher) *EventHandler {
 	handler := &EventHandler{server, service, gw}
 	server.OnConnected(handler.onConnection)
 	return handler
@@ -118,7 +118,7 @@ func (h *EventHandler) onDisconnectByID() func([]byte) {
 func (h *EventHandler) onClear() func([]byte) {
 	return func([]byte) {
 		h.games.Clear()
-		h.service.client.FlushDb()
+		h.service.Clear()
 		h.server.CloseAll()
 	}
 }

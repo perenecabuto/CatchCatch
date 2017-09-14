@@ -40,7 +40,7 @@ func main() {
 		client.Close()
 	})
 
-	service := &PlayerLocationService{client}
+	service := NewPlayerLocationService(client)
 	server := NewWebSocketServer(ctx)
 	watcher := NewGameWatcher(stream, server)
 	go watcher.WatchGames(ctx)
