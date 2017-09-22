@@ -12,6 +12,7 @@ import (
 // MinPlayersPerGame ...
 const MinPlayersPerGame = 3
 
+// GameEvents interface for communication with external game watcher
 type GameEvents interface {
 	OnGameStarted(g *Game, p *Player, role string)
 	OnTargetWin(p *Player)
