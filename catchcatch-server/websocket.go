@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -22,6 +23,7 @@ type Conn struct {
 	ID   string
 	conn net.Conn
 
+	messagebuf     []byte
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
 	stopFunc       context.CancelFunc
@@ -30,7 +32,7 @@ type Conn struct {
 // NewConn creates ws client connection handler
 func NewConn(conn net.Conn) *Conn {
 	id := uuid.NewV4().String()
-	return &Conn{id, conn, make(map[string]evtCallback), func() {}, func() {}}
+	return &Conn{id, conn, make([]byte, 512), make(map[string]evtCallback), func() {}, func() {}}
 }
 
 type evtCallback func([]byte)
@@ -84,28 +86,37 @@ func (c *Conn) close() {
 }
 
 func (c *Conn) readMessage() error {
-	data, _, err := wsutil.ReadClientData(c.conn)
+	header, err := ws.ReadHeader(c.conn)
 	if err != nil {
-		log.Println("readMessage:", err.Error())
+		log.Println("readMessage(header):", err.Error())
+	}
+	if header.OpCode == ws.OpClose {
+		return errors.New("readMessage(closed): closed connection")
+	}
+	if _, err := io.ReadAtLeast(c.conn, c.messagebuf, int(header.Length)); err != nil {
+		log.Println("readMessage(body):", err.Error())
 		return err
+	}
+	if header.Masked {
+		ws.Cipher(c.messagebuf, header.Mask, 0)
 	}
 
 	msg := &protobuf.Simple{}
-	if err := proto.Unmarshal(data, msg); err != nil {
-		log.Println("readMessage: proto.Unmarshal -", msg, err.Error())
+	if err := proto.Unmarshal(c.messagebuf[:header.Length], msg); err != nil {
+		log.Println("readMessage(unmarshall):", msg, err.Error(), string(c.messagebuf))
 		return err
 	}
 
 	if len(msg.String()) == 0 {
 		log.Println("message error:", msg)
-		return errors.New("Invalid payload: " + string(data))
+		return errors.New("Invalid payload: " + string(c.messagebuf))
 	}
 	cb, exists := c.eventCallbacks[msg.GetEventName()]
 	if !exists {
 		return fmt.Errorf("No callback found for: %v", msg)
 	}
 	return withRecover(func() error {
-		cb(data)
+		cb(c.messagebuf)
 		return nil
 	})
 }
