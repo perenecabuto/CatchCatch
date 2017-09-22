@@ -30,6 +30,7 @@ func NewGameWatcher(stream EventStream, wss *WebSocketServer) *GameWatcher {
 }
 
 // WatchGamePlayers events
+// TODO: monitor game player watches
 func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 	err := gw.stream.StreamIntersects(ctx, "player", "geofences", g.ID, func(d *Detection) {
 		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
@@ -46,6 +47,8 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 }
 
 // WatchGames starts this gamewatcher to listen to player events over games
+// TODO: destroy the game after it finishes
+// TODO: monitor game watches
 func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	defer gw.Clear()
 	err := gw.stream.StreamNearByEvents(ctx, "player", "geofences", 0, func(d *Detection) {
@@ -78,6 +81,7 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 }
 
 // Clear stop all started games
+// TODO: monitor clear
 func (gw *GameWatcher) Clear() {
 	log.Printf("gamewatcher:clear:games")
 	for id := range gw.games {
@@ -86,6 +90,7 @@ func (gw *GameWatcher) Clear() {
 }
 
 // StopGame stops a game and its watcher
+// TODO: monitor game stop
 func (gw *GameWatcher) StopGame(gameID string) {
 	if _, exists := gw.games[gameID]; !exists {
 		return

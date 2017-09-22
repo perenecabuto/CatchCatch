@@ -47,6 +47,7 @@ func (g Game) String() string {
 /*
 Start the game
 Note: for while keep it simple, as possible
+TODO: separate methods and make it smaller
 */
 func (g *Game) Start() {
 	if g.started {
@@ -57,6 +58,7 @@ func (g *Game) Start() {
 	log.Println("game:", g.ID, ":start!!!!!!")
 	log.Println("---------------------------")
 	g.sortTargetPlayer()
+	// TODO: create GamePlayer to wrap its role
 	for id, p := range g.players {
 		role := "hunter"
 		if id == g.targetPlayer.ID {
@@ -79,7 +81,6 @@ func (g *Game) Start() {
 		}
 		rank := NewGameRank(g.ID).ForPlayersWithTarget(g.players, g.targetPlayer)
 		g.events.OnGameFinish(rank)
-
 		g.started = false
 		g.players = make(map[string]*Player)
 		g.targetPlayer = nil
