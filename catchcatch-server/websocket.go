@@ -5,31 +5,32 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
 
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 	uuid "github.com/satori/go.uuid"
-	websocket "golang.org/x/net/websocket"
 )
 
 // Conn represents a websocket connection
 type Conn struct {
 	ID   string
-	conn *websocket.Conn
+	conn net.Conn
 
-	messagebuf     []byte
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
 	stopFunc       context.CancelFunc
 }
 
 // NewConn creates ws client connection handler
-func NewConn(conn *websocket.Conn) *Conn {
+func NewConn(conn net.Conn) *Conn {
 	id := uuid.NewV4().String()
-	return &Conn{id, conn, make([]byte, 0), make(map[string]evtCallback), func() {}, func() {}}
+	return &Conn{id, conn, make(map[string]evtCallback), func() {}, func() {}}
 }
 
 type evtCallback func([]byte)
@@ -73,7 +74,7 @@ func (c *Conn) Emit(message Message) error {
 		return err
 	}
 
-	return websocket.Message.Send(c.conn, payload)
+	return wsutil.WriteServerMessage(c.conn, ws.OpBinary, payload)
 }
 
 func (c *Conn) close() {
@@ -83,27 +84,28 @@ func (c *Conn) close() {
 }
 
 func (c *Conn) readMessage() error {
-	if err := websocket.Message.Receive(c.conn, &c.messagebuf); err != nil {
+	data, _, err := wsutil.ReadClientData(c.conn)
+	if err != nil {
 		log.Println("readMessage:", err.Error())
 		return err
 	}
 
 	msg := &protobuf.Simple{}
-	if err := proto.Unmarshal(c.messagebuf, msg); err != nil {
-		log.Println("readMessage: proto.Unmarshal -", c.messagebuf, err.Error())
+	if err := proto.Unmarshal(data, msg); err != nil {
+		log.Println("readMessage: proto.Unmarshal -", msg, err.Error())
 		return err
 	}
 
 	if len(msg.String()) == 0 {
-		log.Println("message error:", c.messagebuf)
-		return errors.New("Invalid payload: " + string(c.messagebuf))
+		log.Println("message error:", msg)
+		return errors.New("Invalid payload: " + string(data))
 	}
 	cb, exists := c.eventCallbacks[msg.GetEventName()]
 	if !exists {
 		return fmt.Errorf("No callback found for: %v", msg)
 	}
 	return withRecover(func() error {
-		cb(c.messagebuf)
+		cb(data)
 		return nil
 	})
 }
@@ -134,19 +136,23 @@ func (wss *WebSocketServer) OnConnected(fn func(c *Conn)) {
 
 // Listen to websocket connections
 func (wss *WebSocketServer) Listen(ctx context.Context) http.Handler {
-	return websocket.Server{
-		Handler: func(c *websocket.Conn) {
-			conn := wss.Add(c)
-			err := withRecover(func() error {
-				wss.onConnected(conn)
-				return conn.listen(ctx)
-			})
-			if err != nil {
-				log.Println("WebSocketServer: read error", err)
-			}
-			wss.Remove(conn.ID)
-		},
-	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, _, _, err := ws.UpgradeHTTP(r, w, nil)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+		ctx := r.WithContext(ctx).Context()
+
+		conn := wss.Add(c)
+		err = withRecover(func() error {
+			wss.onConnected(conn)
+			return conn.listen(ctx)
+		})
+		if err != nil {
+			log.Println("WebSocketServer: read error", err)
+		}
+		wss.Remove(conn.ID)
+	})
 }
 
 // Get Conn by session id
@@ -156,7 +162,7 @@ func (wss *WebSocketServer) Get(id string) *Conn {
 }
 
 // Add Conn for session id
-func (wss *WebSocketServer) Add(c *websocket.Conn) *Conn {
+func (wss *WebSocketServer) Add(c net.Conn) *Conn {
 	conn := NewConn(c)
 	wss.withConnections(func(connections connectionGroup) {
 		connections[conn.ID] = conn
