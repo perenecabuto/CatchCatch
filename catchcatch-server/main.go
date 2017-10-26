@@ -44,7 +44,11 @@ func main() {
 		server.CloseAll()
 	})
 
-	go watcher.WatchGames(ctx)
+	go func() {
+		if err := watcher.WatchGames(ctx); err != nil {
+			log.Panic("gamewatcher:finish:watcher", err)
+		}
+	}()
 	go watcher.WatchCheckpoints(ctx)
 
 	eventH := NewEventHandler(server, service, watcher)
