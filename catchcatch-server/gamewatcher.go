@@ -81,6 +81,21 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	})
 }
 
+// WatchGamesForever restart game wachter util context done
+func (gw *GameWatcher) WatchGamesForever(ctx context.Context) error {
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			return nil
+		default:
+			if err := gw.WatchGames(ctx); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func (gw *GameWatcher) watchGame(ctx context.Context, gameID string) error {
 	_, exists := gw.games[gameID]
 	if exists {

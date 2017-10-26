@@ -47,10 +47,8 @@ func main() {
 	})
 
 	go func() {
-		for {
-			if err := watcher.WatchGames(ctx); err != nil {
-				log.Panic("gamewatcher:finish:watcher", err)
-			}
+		if err := watcher.WatchGamesForever(ctx); err != nil {
+			log.Panic("WatchGamesForever:error", err)
 		}
 	}()
 	go watcher.WatchCheckpoints(ctx)
