@@ -30,14 +30,12 @@ func NewGameWatcher(stream EventStream, wss *WebSocketServer) *GameWatcher {
 	return &GameWatcher{make(map[string]*GameContext), wss, stream, func() {}}
 }
 
-// WatchGamePlayers events
+// observeGamePlayers events
 // TODO: monitor game player watches
-func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
-	err := gw.stream.StreamIntersects(ctx, "player", "geofences", g.ID, func(d *Detection) {
-		p := &Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
+func (gw *GameWatcher) observeGamePlayers(ctx context.Context, g *Game) error {
+	return gw.stream.StreamIntersects(ctx, "player", "geofences", g.ID, func(d *Detection) error {
 		switch d.Intersects {
 		case Enter:
-			g.SetPlayer(p)
 			if err := g.SetPlayer(d.FeatID, d.Lat, d.Lon); err != nil {
 				return err
 			}
@@ -50,7 +48,6 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 		}
 		return nil
 	})
-	return err
 }
 
 // WatchGames starts this gamewatcher to listen to player events over games
@@ -60,54 +57,62 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	var watcherCtx context.Context
 	watcherCtx, gw.Clear = context.WithCancel(ctx)
 	defer gw.Clear()
-	err := gw.stream.StreamNearByEvents(ctx, "player", "geofences", 0, func(d *Detection) {
+
+	return gw.stream.StreamNearByEvents(watcherCtx, "player", "geofences", 0, func(d *Detection) error {
 		gameID := d.NearByFeatID
 		if gameID == "" {
-			return
+			return nil
 		}
-		_, exists := gw.games[gameID]
-		if !exists {
-			gameDuration := time.Minute
-			game := NewGame(gameID, gameDuration, gw)
-			gctx, cancel := context.WithCancel(ctx)
-			log.Println("gamewatcher:create:game:", gameID, d.FeatID)
-			gw.games[gameID] = &GameContext{game, cancel}
 
-			go func() {
-				if err := gw.WatchGamePlayers(gctx, game); err != nil {
-					log.Printf("Error to start gamewatcher:%s - err: %v", game.ID, err)
-				}
-
-				log.Println("gamewatcher:destroy:game:", game.ID)
-				gw.StopGame(game.ID)
-			}()
-		}
+		go func() {
+			if err := gw.watchGame(ctx, gameID); err != nil {
+				log.Println(err)
+			}
+		}()
+		return nil
 	})
-	if err != nil {
-		return errors.New("Error to stream geofence:event " + err.Error())
-	}
-	return nil
 }
 
-// Clear stop all started games
-// TODO: monitor clear
-func (gw *GameWatcher) Clear() {
-	log.Printf("gamewatcher:clear:games")
-	for id := range gw.games {
-		gw.StopGame(id)
+func (gw *GameWatcher) watchGame(ctx context.Context, gameID string) error {
+	_, exists := gw.games[gameID]
+	if exists {
+		return nil
 	}
+	g := NewGame(gameID, DefaultGameDuration, gw)
+	gCtx, cancel := context.WithCancel(ctx)
+	gw.games[gameID] = &GameContext{game: g, cancel: func() {
+		delete(gw.games, gameID)
+		cancel()
+	}}
+
+	errChan := make(chan error)
+	go func() {
+		errChan <- gw.observeGamePlayers(gCtx, g)
+	}()
+	go func() {
+		if err := gw.startGameWhenReady(gCtx, g); err != nil {
+			errChan <- err
+		}
+	}()
+	err := <-errChan
+	log.Println("Error on watch game!!!!!", err)
+	return err
 }
 
-// StopGame stops a game and its watcher
-// TODO: monitor game stop
-func (gw *GameWatcher) StopGame(gameID string) {
-	if _, exists := gw.games[gameID]; !exists {
-		return
+func (gw *GameWatcher) startGameWhenReady(ctx context.Context, g *Game) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			ready := len(g.players) >= MinPlayersPerGame
+			if ready {
+				return g.Start(ctx)
+			}
+		}
 	}
-	log.Printf("gamewatcher:stop:game:%s", gameID)
-	gw.games[gameID].cancel()
-	gw.games[gameID].game.Stop()
-	delete(gw.games, gameID)
 }
 
 // WatchCheckpoints ...
@@ -125,12 +130,11 @@ func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 			NearByFeatId: &d.NearByFeatID,
 			NearByMeters: &d.NearByMeters,
 		}
-
 		if err := gw.wss.Emit(d.FeatID, payload); err != nil {
 			log.Println("Error to notify player", d.FeatID, err)
 		}
 		payload.EventName = proto.String("admin:feature:checkpoint")
-		gw.wss.Broadcast(payload)
+		return gw.wss.Broadcast(payload)
 	})
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)
@@ -154,6 +158,9 @@ func (gw *GameWatcher) OnTargetWin(p *Player) {
 
 // OnGameFinish implements GameEvent.OnGameFinish
 func (gw *GameWatcher) OnGameFinish(rank GameRank) {
+	log.Printf("gamewatcher:stop:game:%s", rank.Game)
+	gw.games[rank.Game].cancel()
+
 	playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
 	for i, pr := range rank.PlayerRank {
 		playersRank[i] = &protobuf.PlayerRank{Player: &pr.Player, Points: proto.Int32(int32(pr.Points))}
