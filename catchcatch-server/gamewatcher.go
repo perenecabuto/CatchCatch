@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
+	"runtime/debug"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -142,6 +142,7 @@ func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 	})
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)
+		debug.PrintStack()
 	}
 }
 
