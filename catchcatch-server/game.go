@@ -160,50 +160,43 @@ The rule is:
     - it can send messages to the player
     - it receives sessions to notify anything to this player games
 */
-func (g *Game) SetPlayer(p *Player) {
-	if g.started {
-		g.updateAndNofityPlayer(p)
-		return
+func (g *Game) SetPlayer(id string, lon, lat float64) error {
+	if !g.started {
+		if _, exists := g.players[id]; !exists {
+			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
+			g.players[id] = &GamePlayer{Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined}
+		}
+		return nil
 	}
-	if _, exists := g.players[p.ID]; !exists {
-		log.Printf("game:%s:detect=enter:%s\n", g.ID, p.ID)
+	p, exists := g.players[id]
+	if !exists {
+		return nil
 	}
-	g.updatePlayer(p)
-	if g.Ready() {
-		g.Start()
+	p.Lon, p.Lat = lon, lat
+
+	if p.Role == GameRoleHunter {
+		return g.notifyToTheHunterTheDistanceToTheTarget(p)
 	}
+	return nil
 }
 
-func (g *Game) updateAndNofityPlayer(p *Player) {
-	if _, exists := g.players[p.ID]; !exists {
-		return
+func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) error {
+	target, exists := g.players[g.target.ID]
+	if !exists {
+		return ErrPlayerIsNotInTheGame
 	}
-	g.updatePlayer(p)
-	if p.ID == g.targetPlayer.ID {
-		return
-	}
-	dist := p.DistTo(g.targetPlayer)
+	dist := p.DistTo(target.Player)
+
 	if dist <= 20 {
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
-		g.events.OnPlayerLoose(g, g.targetPlayer)
-		delete(g.players, g.targetPlayer.ID)
-		g.events.OnTargetReached(p, dist)
-		g.Stop()
+		delete(g.players, target.ID)
+		g.events.OnPlayerLoose(g, *target)
+		g.events.OnTargetReached(*p, dist)
+		g.stop()
 	} else if dist <= 100 {
-		log.Printf("game:%s:detect=near:%s:dist:%f\n", g.ID, p.ID, dist)
-		g.events.OnPlayerNearToTarget(p, dist)
-		// } else {
-		// log.Printf("game:%s:detect=far:%s:dist:%f\n", g.ID, p.ID, dist)
+		g.events.OnPlayerNearToTarget(*p, dist)
 	}
-}
-
-func (g *Game) updatePlayer(p *Player) {
-	if player, exists := g.players[p.ID]; exists {
-		player.Lon = p.Lon
-		player.Lat = p.Lat
-	} else {
-		g.players[p.ID] = p
-	}
+	return nil
 }
 
 /*
