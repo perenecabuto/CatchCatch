@@ -22,11 +22,12 @@ type GameWatcher struct {
 	games  map[string]*GameContext
 	wss    *WebSocketServer
 	stream EventStream
+	Clear  context.CancelFunc
 }
 
 // NewGameWatcher builds GameWatecher
 func NewGameWatcher(stream EventStream, wss *WebSocketServer) *GameWatcher {
-	return &GameWatcher{make(map[string]*GameContext), wss, stream}
+	return &GameWatcher{make(map[string]*GameContext), wss, stream, func() {}}
 }
 
 // WatchGamePlayers events
@@ -50,6 +51,8 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 // TODO: destroy the game after it finishes
 // TODO: monitor game watches
 func (gw *GameWatcher) WatchGames(ctx context.Context) error {
+	var watcherCtx context.Context
+	watcherCtx, gw.Clear = context.WithCancel(ctx)
 	defer gw.Clear()
 	err := gw.stream.StreamNearByEvents(ctx, "player", "geofences", 0, func(d *Detection) {
 		gameID := d.NearByFeatID
