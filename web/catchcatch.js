@@ -460,24 +460,23 @@ function WSS(address, reconnect) {
 
     function onMessage(event) {
         let payload = new Uint8Array(event.data);
-        let evt = messages.Simple.decode(payload);
-        triggerEvent(evt.eventName, payload);
+        try {
+            let evt = messages.Simple.decode(payload);
+            triggerEvent(evt.eventName, payload);
+        } catch(e) {
+            console.error(e)
+        }
     }
 
     function onClose() {
         triggerEvent('disconnect');
         if (!reconnect) return;
-        try {
-            init();
-        } catch (e) {
-            ws.onclose();
-        }
+        ws.onclose();
     }
 
     function onError(event) {
+        console.log('onError', event);
         triggerEvent('onerror');
-        ws = new WebSocket(address);
-        ws.binaryType = 'arraybuffer';
     }
 
     function init() {
