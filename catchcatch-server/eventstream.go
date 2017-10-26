@@ -87,7 +87,7 @@ func (err DetectionError) Error() string {
 }
 
 func streamDetection(ctx context.Context, addr string, q query, callback DetectionHandler) error {
-	interval := 100 * time.Microsecond
+	interval := 300 * time.Microsecond
 	conn, err := listenTo(addr, q)
 	if err != nil {
 		return err
