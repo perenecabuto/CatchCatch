@@ -24,6 +24,11 @@ var (
 	zconfEnabled   = flag.Bool("zconf", false, "start zeroconf server")
 	debugMode      = flag.Bool("debug", false, "debug")
 	wsdriver       = flag.String("wsdriver", "xnet", "options: xnet, gobwas")
+
+	influxdbAddr = flag.String("influxdb-addr", "http://localhost:8086", "influxdb address")
+	influxdbDB   = flag.String("influxdb-db", "catchcatch", "influxdb database name")
+	influxdbUser = flag.String("influxdb-user", "", "influxdb user")
+	influxdbPass = flag.String("influxdb-pass", "", "influxdb password")
 )
 
 func main() {
@@ -31,6 +36,14 @@ func main() {
 	if *zconfEnabled {
 		zcServer, _ := zconf.Register("CatchCatch", "_catchcatch._tcp", "", *port, nil, nil)
 		defer zcServer.Shutdown()
+	}
+
+	metrics, err := NewMetricsCollector(*influxdbAddr, *influxdbDB, *influxdbUser, *influxdbPass)
+	if err != nil {
+		log.Panic(err)
+	}
+	if err := metrics.RunGlobalCollector(); err != nil {
+		log.Panic(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
