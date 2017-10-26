@@ -9,35 +9,46 @@ import (
 	"time"
 )
 
-// MinPlayersPerGame ...
-const MinPlayersPerGame = 3
 
 // GameEvents interface for communication with external game watcher
 type GameEvents interface {
-	OnGameStarted(g *Game, p *Player, role string)
-	OnTargetWin(p *Player)
+	OnGameStarted(g *Game, p GamePlayer)
+	OnTargetWin(p GamePlayer)
 	OnGameFinish(r GameRank)
-	OnPlayerLoose(g *Game, p *Player)
-	OnTargetReached(p *Player, dist float64)
-	OnPlayerNearToTarget(p *Player, dist float64)
+	OnPlayerLoose(g *Game, p GamePlayer)
+	OnTargetReached(p GamePlayer, dist float64)
+	OnPlayerNearToTarget(p GamePlayer, dist float64)
+}
+
+type GameRole string
+
+const (
+	GameRoleUndefined GameRole = "undefined"
+	GameRoleTarget    GameRole = "target"
+	GameRoleHunter    GameRole = "hunter"
+)
+
+type GamePlayer struct {
+	Player
+	Role GameRole
 }
 
 // Game controls rounds and players
 type Game struct {
-	ID           string
-	players      map[string]*Player
-	duration     time.Duration
-	started      bool
-	targetPlayer *Player
-	events       GameEvents
+	ID       string
+	players  map[string]*GamePlayer
+	duration time.Duration
+	started  bool
+	target   *GamePlayer
+	events   GameEvents
 
-	stopFunc context.CancelFunc
+	stop context.CancelFunc
 }
 
 // NewGame create a game with duration
 func NewGame(id string, duration time.Duration, events GameEvents) *Game {
 	return &Game{ID: id, events: events, duration: duration, started: false,
-		players: make(map[string]*Player)}
+		players: make(map[string]*GamePlayer), stop: func() {}}
 }
 
 func (g Game) String() string {
@@ -213,39 +224,51 @@ The role is:
     - it receives sessions to send messages to its players
     - it must remove players from the game
 */
-func (g *Game) RemovePlayer(p *Player) {
-	if _, exists := g.players[p.ID]; !exists {
+func (g *Game) RemovePlayer(id string) {
+	gamePlayer, exists := g.players[id]
+	if !exists {
 		return
 	}
-
-	delete(g.players, p.ID)
+	delete(g.players, id)
 	if !g.started {
-		log.Println("game:"+g.ID+":detect=exit:", p)
+		log.Println("game:"+g.ID+":detect=exit:", gamePlayer)
 		return
 	}
 
 	if len(g.players) == 1 {
-		log.Println("game:"+g.ID+":detect=last-one:", p)
-		g.Stop()
-	} else if p.ID == g.targetPlayer.ID {
-		log.Println("game:"+g.ID+":detect=target-loose:", p)
-		g.events.OnPlayerLoose(g, g.targetPlayer)
-		g.Stop()
+		log.Println("game:"+g.ID+":detect=last-one:", gamePlayer)
+		g.stop()
+	} else if id == g.target.ID {
+		log.Println("game:"+g.ID+":detect=target-loose:", gamePlayer)
+		go g.events.OnPlayerLoose(g, *gamePlayer)
+		g.stop()
 	} else if len(g.players) == 0 {
-		log.Println("game:"+g.ID+":detect=no-players:", p)
-		g.players[p.ID] = p
-		g.Stop()
+		log.Println("game:"+g.ID+":detect=no-players:", gamePlayer)
+		g.players[id] = gamePlayer
+		g.stop()
 	} else {
-		log.Println("game:"+g.ID+":detect=loose:", p)
-		g.events.OnPlayerLoose(g, p)
+		log.Println("game:"+g.ID+":detect=loose:", gamePlayer)
+		go g.events.OnPlayerLoose(g, *gamePlayer)
+	}
+	return
+}
+
+func (g *Game) setPlayersRoles() {
+	g.target = sortTargetPlayer(g.players)
+	g.target.Role = GameRoleTarget
+
+	for id, p := range g.players {
+		if id != g.target.ID {
+			p.Role = GameRoleHunter
+		}
+		g.events.OnGameStarted(g, *p)
 	}
 }
 
-func (g *Game) sortTargetPlayer() {
+func sortTargetPlayer(players map[string]*GamePlayer) *GamePlayer {
 	ids := make([]string, 0)
-	for id := range g.players {
+	for id := range players {
 		ids = append(ids, id)
 	}
-	randPlayerID := ids[rand.Intn(len(ids))]
-	g.targetPlayer = g.players[randPlayerID]
+	return players[ids[rand.Intn(len(ids))]]
 }
