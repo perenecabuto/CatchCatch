@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"time"
 
 	_ "github.com/tevjef/go-runtime-metrics/expvar"
@@ -63,5 +64,5 @@ func (c MetricsCollector) Notify(measurement string, tags Tags, values Values) e
 
 // RunGlobalCollector collects server go metrics
 func (c MetricsCollector) RunGlobalCollector() error {
-	return metrics.RunCollector(&metrics.Config{Database: c.db, Host: c.addr})
+	return metrics.RunCollector(&metrics.Config{Database: c.db, Host: strings.Replace(c.addr, "http://", "", 1)})
 }
