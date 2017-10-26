@@ -90,9 +90,6 @@ func (c *Conn) readMessage() error {
 	if err != nil {
 		log.Println("readMessage(header):", err.Error())
 	}
-	if header.OpCode == ws.OpClose {
-		return errors.New("readMessage(closed): closed connection")
-	}
 	if _, err := io.ReadAtLeast(c.conn, c.messagebuf, int(header.Length)); err != nil {
 		log.Println("readMessage(body):", err.Error())
 		return err
@@ -100,7 +97,6 @@ func (c *Conn) readMessage() error {
 	if header.Masked {
 		ws.Cipher(c.messagebuf, header.Mask, 0)
 	}
-
 	msg := &protobuf.Simple{}
 	if err := proto.Unmarshal(c.messagebuf[:header.Length], msg); err != nil {
 		log.Println("readMessage(unmarshall):", msg, err.Error(), string(c.messagebuf))
