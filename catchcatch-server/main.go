@@ -23,6 +23,7 @@ var (
 	webDir         = flag.String("web-dir", "../web", "web files dir")
 	zconfEnabled   = flag.Bool("zconf", false, "start zeroconf server")
 	debugMode      = flag.Bool("debug", false, "debug")
+	wsdriver       = flag.String("wsdriver", "xnet", "options: xnet, gobwas")
 )
 
 func main() {
@@ -36,7 +37,8 @@ func main() {
 	stream := NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debugMode)
 	service := NewPlayerLocationService(client)
-	server := NewWebSocketServer(ctx)
+	wsHandler := selectWsDriver(*wsdriver)
+	server := NewWebSocketServer(wsHandler)
 	watcher := NewGameWatcher(stream, server)
 	onExit(func() {
 		cancel()
@@ -59,6 +61,15 @@ func main() {
 
 	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
+}
+
+func selectWsDriver(name string) WebSocketDriver {
+	switch name {
+	case "gobwas":
+		return NewGobwasWSDriver()
+	default:
+		return NewXNetWSDriver()
+	}
 }
 
 func mustConnectTile38(debug bool) *redis.Client {
