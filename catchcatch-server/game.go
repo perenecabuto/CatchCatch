@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,6 +10,10 @@ import (
 	"time"
 )
 
+var (
+	ErrAlreadyStarted       = errors.New("game already started")
+	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
+)
 
 // GameEvents interface for communication with external game watcher
 type GameEvents interface {
@@ -57,45 +62,41 @@ func (g Game) String() string {
 
 /*
 Start the game
-Note: for while keep it simple, as possible
-TODO: separate methods and make it smaller
 */
-func (g *Game) Start() {
+func (g *Game) Start(ctx context.Context) error {
 	if g.started {
-		g.Stop()
+		return ErrAlreadyStarted
 	}
 
-	log.Println("---------------------------")
 	log.Println("game:", g.ID, ":start!!!!!!")
-	log.Println("---------------------------")
-	g.sortTargetPlayer()
-	// TODO: create GamePlayer to wrap its role
-	for id, p := range g.players {
-		role := "hunter"
-		if id == g.targetPlayer.ID {
-			role = "target"
-		}
-		g.events.OnGameStarted(g, p, role)
-	}
+	g.setPlayersRoles()
+
 	g.started = true
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), g.duration)
-		g.stopFunc = cancel
+	go g.handleGameFinishEvent(ctx)
+	return nil
+}
 
-		<-ctx.Done()
-		log.Println("---------------------------")
-		log.Println("game:", g.ID, ":stop!!!!!!!")
-		log.Println("---------------------------")
-		if _, exists := g.players[g.targetPlayer.ID]; exists {
-			g.events.OnTargetWin(g.targetPlayer)
-		}
-		rank := NewGameRank(g.ID).ForPlayersWithTarget(g.players, g.targetPlayer)
-		g.events.OnGameFinish(rank)
-		g.started = false
-		g.players = make(map[string]*Player)
-		g.targetPlayer = nil
-	}()
+func (g *Game) handleGameFinishEvent(ctx context.Context) {
+	var gameCtx context.Context
+	gameCtx, g.stop = context.WithTimeout(ctx, g.duration)
+	<-gameCtx.Done()
+	g.started = false
+	g.finish(gameCtx)
+}
+
+func (g *Game) finish(ctx context.Context) {
+	log.Println("game:", g.ID, ":stop!!!!!!!")
+	g.started = false
+
+	_, stillInTheGame := g.players[g.target.ID]
+	if stillInTheGame {
+		g.events.OnTargetWin(*g.target)
+	}
+
+	rank := NewGameRank(g.ID).ByPlayersDistanceToTarget(g.players, *g.target)
+	g.events.OnGameFinish(rank)
+	g.players = make(map[string]*GamePlayer)
 }
 
 // GameInfo ...
@@ -146,21 +147,9 @@ func (rank GameRank) ForPlayersWithTarget(players map[string]*Player, targetPlay
 	return rank
 }
 
-// Stop a running game
-func (g *Game) Stop() {
-	if g.stopFunc != nil {
-		g.stopFunc()
-	}
-}
-
 // Started true when game started
 func (g Game) Started() bool {
 	return g.started
-}
-
-// Ready returns true when game is ready to start
-func (g Game) Ready() bool {
-	return !g.started && len(g.players) >= MinPlayersPerGame
 }
 
 /*
