@@ -10,9 +10,12 @@ import (
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
-// MinPlayersPerGame ...
-const MinPlayersPerGame = 3
-const DefaultGameDuration = time.Minute
+const (
+	// MinPlayersPerGame ...
+	MinPlayersPerGame = 3
+	// DefaultGameDuration ...
+	DefaultGameDuration = time.Minute
+)
 
 // GameContext stores game and its canel (and stop eventualy) function
 type GameContext struct {

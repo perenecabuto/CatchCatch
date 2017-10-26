@@ -11,7 +11,9 @@ import (
 )
 
 var (
-	ErrAlreadyStarted       = errors.New("game already started")
+	// ErrAlreadyStarted happens when an action is denied on running game
+	ErrAlreadyStarted = errors.New("game already started")
+	// ErrPlayerIsNotInTheGame happens when try to change or remove an player not in the game
 	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
 )
 
@@ -25,14 +27,19 @@ type GameEvents interface {
 	OnPlayerNearToTarget(p GamePlayer, dist float64)
 }
 
+// GameRole represents GamePlayer role
 type GameRole string
 
 const (
+	// GameRoleUndefined for no role
 	GameRoleUndefined GameRole = "undefined"
-	GameRoleTarget    GameRole = "target"
-	GameRoleHunter    GameRole = "hunter"
+	// GameRoleTarget for target
+	GameRoleTarget GameRole = "target"
+	// GameRoleHunter for hunter
+	GameRoleHunter GameRole = "hunter"
 )
 
+// GamePlayer wraps player and its role in the game
 type GamePlayer struct {
 	Player
 	Role GameRole
