@@ -121,10 +121,11 @@ func (gw *GameWatcher) startGameWhenReady(ctx context.Context, g *Game) error {
 
 // WatchCheckpoints ...
 func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
-	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", 1000, func(d *Detection) {
+	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", 1000, func(d *Detection) error {
 		if d.Intersects == Exit {
-			return
+			return nil
 		}
+
 		payload := &protobuf.Detection{
 			EventName:    proto.String("checkpoint:detected"),
 			Id:           &d.FeatID,
