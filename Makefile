@@ -35,7 +35,7 @@ run-grafana:
 
 run-tile38:
 	@-docker rm -f tile38-local
-	@docker run -d --rm --name tile38-local -v $(PWD):/data -p $(TILE38PORT):$(TILE38PORT) -P tile38/tile38
+	@-docker run -d --rm --name tile38-local -v $(PWD):/data -p $(TILE38PORT):$(TILE38PORT) -P tile38/tile38
 
 deploy-beta: deploy
 deploy-digitalocean: deploy
