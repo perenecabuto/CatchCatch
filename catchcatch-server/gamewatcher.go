@@ -38,11 +38,17 @@ func (gw *GameWatcher) WatchGamePlayers(ctx context.Context, g *Game) error {
 		switch d.Intersects {
 		case Enter:
 			g.SetPlayer(p)
+			if err := g.SetPlayer(d.FeatID, d.Lat, d.Lon); err != nil {
+				return err
+			}
 		case Inside:
-			g.SetPlayer(p)
+			if err := g.SetPlayer(d.FeatID, d.Lat, d.Lon); err != nil {
+				return err
+			}
 		case Exit:
-			g.RemovePlayer(p)
+			g.RemovePlayer(d.FeatID)
 		}
+		return nil
 	})
 	return err
 }
