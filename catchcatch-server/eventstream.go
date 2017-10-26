@@ -96,6 +96,8 @@ func streamDetection(ctx context.Context, addr string, q query, callback Detecti
 
 	buf, n := make([]byte, 4096), 0
 	t := time.NewTicker(interval)
+	defer t.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
