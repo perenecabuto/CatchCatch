@@ -222,13 +222,14 @@ func (wss *WebSocketServer) BroadcastTo(ids []string, message Message) {
 }
 
 // Broadcast event message to all connections
-func (wss *WebSocketServer) Broadcast(message Message) {
+func (wss *WebSocketServer) Broadcast(message Message) error {
 	connections := wss.connections.Load().(connectionGroup)
 	for id := range connections {
 		if err := wss.Emit(id, message); err != nil {
-			log.Println("error to emit ", message, err)
+			return err
 		}
 	}
+	return nil
 }
 
 // CloseAll Conn
