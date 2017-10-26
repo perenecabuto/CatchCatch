@@ -68,8 +68,11 @@ func (h *EventHandler) onPlayerUpdate(player *Player, c *Conn) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
-
-		player.Lat, player.Lon = *msg.Lat, *msg.Lon
+		lat, lon := float64(float32(msg.GetLat())), float64(float32(msg.GetLon()))
+		if lat == 0 || lon == 0 {
+			return
+		}
+		player.Lat, player.Lon = lat, lon
 		h.service.Update(player)
 
 		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
