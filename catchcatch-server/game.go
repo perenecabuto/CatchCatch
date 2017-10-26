@@ -123,13 +123,13 @@ func NewGameRank(gameName string) *GameRank {
 	return &GameRank{Game: gameName, PlayerRank: make([]PlayerRank, 0), PlayerIDs: make([]string, 0)}
 }
 
-// ForPlayersWithTarget returns a game rank for players based on minimum distance to the target player
-func (rank GameRank) ForPlayersWithTarget(players map[string]*Player, targetPlayer *Player) GameRank {
-	playersDistToTarget := map[int]*Player{}
+// ByPlayersDistanceToTarget returns a game rank for players based on minimum distance to the target player
+func (rank GameRank) ByPlayersDistanceToTarget(players map[string]*GamePlayer, target GamePlayer) GameRank {
+	playersDistToTarget := map[int]GamePlayer{}
 	for _, p := range players {
-		dist := p.DistTo(targetPlayer)
-		playersDistToTarget[int(dist)] = p
-		rank.PlayerIDs = append(rank.PlayerIDs, p.ID)
+		dist := p.DistTo(target.Player)
+		playersDistToTarget[int(dist)] = *p
+		rank.PlayerIDs = append(rank.PlayerIDs, p.Player.ID)
 	}
 	dists := make([]int, 0)
 	for dist := range playersDistToTarget {
