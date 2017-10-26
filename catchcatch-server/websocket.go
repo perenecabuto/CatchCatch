@@ -4,35 +4,38 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
 
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 	uuid "github.com/satori/go.uuid"
 )
 
+// WebSocketConnection is an interface for websocket communication
+type WebSocketConnection interface {
+	Read(*[]byte) (int, error)
+	Send(payload []byte) error
+	Close() error
+}
+
+// WebSocketDriver is an interface for websocket connection handling
+type WebSocketDriver interface {
+	Handler(ctx context.Context, onConnect func(context.Context, WebSocketConnection)) http.Handler
+}
+
 // Conn represents a websocket connection
 type Conn struct {
-	ID   string
-	conn net.Conn
+	WebSocketConnection
 
-	messagebuf     []byte
+	ID             string
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
 	stopFunc       context.CancelFunc
-}
 
-// NewConn creates ws client connection handler
-func NewConn(conn net.Conn) *Conn {
-	id := uuid.NewV4().String()
-	return &Conn{id, conn, make([]byte, 512), make(map[string]evtCallback), func() {}, func() {}}
+	buffer []byte
 }
 
 type evtCallback func([]byte)
@@ -76,60 +79,55 @@ func (c *Conn) Emit(message Message) error {
 		return err
 	}
 
-	return wsutil.WriteServerMessage(c.conn, ws.OpBinary, payload)
+	return c.Send(payload)
 }
 
 func (c *Conn) close() {
+	c.Close()
 	c.stopFunc()
-	c.conn.Close()
 	go c.onDisconnected()
 }
 
 func (c *Conn) readMessage() error {
-	header, err := ws.ReadHeader(c.conn)
+	length, err := c.Read(&c.buffer)
 	if err != nil {
-		log.Println("readMessage(header):", err.Error())
-	}
-	if _, err := io.ReadAtLeast(c.conn, c.messagebuf, int(header.Length)); err != nil {
-		log.Println("readMessage(body):", err.Error())
 		return err
 	}
-	if header.Masked {
-		ws.Cipher(c.messagebuf, header.Mask, 0)
+	if length == 0 {
+		return nil
 	}
 	msg := &protobuf.Simple{}
-	if err := proto.Unmarshal(c.messagebuf[:header.Length], msg); err != nil {
-		log.Println("readMessage(unmarshall):", msg, err.Error(), string(c.messagebuf))
-		return err
+	if err := proto.Unmarshal(c.buffer[:length], msg); err != nil {
+		return fmt.Errorf("readMessage(unmarshall): %s %s", err.Error(), c.buffer[:length])
 	}
-
 	if len(msg.String()) == 0 {
 		log.Println("message error:", msg)
-		return errors.New("Invalid payload: " + string(c.messagebuf))
+		return fmt.Errorf("Invalid payload: %s", c.buffer)
 	}
 	cb, exists := c.eventCallbacks[msg.GetEventName()]
 	if !exists {
 		return fmt.Errorf("No callback found for: %v", msg)
 	}
 	return withRecover(func() error {
-		cb(c.messagebuf)
+		cb(c.buffer)
 		return nil
 	})
 }
 
 // WebSocketServer manage websocket connections
 type WebSocketServer struct {
-	connections atomic.Value
+	handler     WebSocketDriver
 	onConnected func(c *Conn)
 
+	connections atomic.Value
 	sync.Mutex
 }
 
 type connectionGroup map[string]*Conn
 
 // NewWebSocketServer create a new WebSocketServer
-func NewWebSocketServer(ctx context.Context) *WebSocketServer {
-	wss := &WebSocketServer{onConnected: func(c *Conn) {}}
+func NewWebSocketServer(handler WebSocketDriver) *WebSocketServer {
+	wss := &WebSocketServer{handler: handler, onConnected: func(c *Conn) {}}
 	wss.connections.Store(make(connectionGroup))
 	return wss
 }
@@ -143,15 +141,9 @@ func (wss *WebSocketServer) OnConnected(fn func(c *Conn)) {
 
 // Listen to websocket connections
 func (wss *WebSocketServer) Listen(ctx context.Context) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, _, _, err := ws.UpgradeHTTP(r, w, nil)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-		}
-		ctx := r.WithContext(ctx).Context()
-
+	return wss.handler.Handler(ctx, func(ctx context.Context, c WebSocketConnection) {
 		conn := wss.Add(c)
-		err = withRecover(func() error {
+		err := withRecover(func() error {
 			wss.onConnected(conn)
 			return conn.listen(ctx)
 		})
@@ -169,8 +161,9 @@ func (wss *WebSocketServer) Get(id string) *Conn {
 }
 
 // Add Conn for session id
-func (wss *WebSocketServer) Add(c net.Conn) *Conn {
-	conn := NewConn(c)
+func (wss *WebSocketServer) Add(c WebSocketConnection) *Conn {
+	id := uuid.NewV4().String()
+	conn := &Conn{c, id, make(map[string]evtCallback), func() {}, func() {}, make([]byte, 512)}
 	wss.withConnections(func(connections connectionGroup) {
 		connections[conn.ID] = conn
 	})
