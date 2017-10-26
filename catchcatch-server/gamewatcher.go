@@ -117,9 +117,11 @@ func (gw *GameWatcher) watchGame(ctx context.Context, gameID string) error {
 			errChan <- err
 		}
 	}()
-	err := <-errChan
-	log.Println("Error on watch game!!!!!", err)
-	return err
+	if err := <-errChan; err != nil {
+		gw.games[gameID].cancel()
+		return err
+	}
+	return nil
 }
 
 func (gw *GameWatcher) startGameWhenReady(ctx context.Context, g *Game) error {
