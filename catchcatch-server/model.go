@@ -20,7 +20,7 @@ type Player struct {
 	Lat float64 `json:"lat"`
 }
 
-func (p *Player) String() string {
+func (p Player) String() string {
 	return fmt.Sprintln("id:", p.ID, "lat:", p.Lat, "lon:", p.Lon)
 }
 
@@ -28,11 +28,11 @@ func (p *Player) String() string {
 type PlayerList []*Player
 
 // Point returns geo.Point with coordinates
-func (p *Player) Point() *geo.Point {
+func (p Player) Point() *geo.Point {
 	return geo.NewPoint(p.Lat, p.Lon)
 }
 
 // DistTo returns the distance to other player
-func (p *Player) DistTo(other *Player) float64 {
+func (p Player) DistTo(other Player) float64 {
 	return p.Point().GreatCircleDistance(other.Point()) * 1000
 }
