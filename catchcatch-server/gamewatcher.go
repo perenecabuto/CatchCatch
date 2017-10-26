@@ -72,8 +72,9 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 		}
 
 		go func() {
-			if err := gw.watchGame(ctx, gameID); err != nil {
+			if err := gw.watchGame(watcherCtx, gameID); err != nil {
 				log.Println(err)
+				gw.games[gameID].cancel()
 			}
 		}()
 		return nil
