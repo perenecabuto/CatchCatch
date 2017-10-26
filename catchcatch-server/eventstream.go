@@ -43,9 +43,9 @@ func (es *Tile38EventStream) StreamIntersects(ctx context.Context, intersectKey,
 }
 
 func overrideNearByFeatIDWrapper(nearByFeatID string, handler DetectionHandler) DetectionHandler {
-	return func(d *Detection) {
+	return func(d *Detection) error {
 		d.NearByFeatID = nearByFeatID
-		handler(d)
+		return handler(d)
 	}
 }
 
@@ -77,7 +77,7 @@ func (d Detection) String() string {
 }
 
 // DetectionHandler is called when a an event is detected
-type DetectionHandler func(*Detection)
+type DetectionHandler func(*Detection) error
 
 // DetectionError ...
 type DetectionError string
@@ -115,10 +115,12 @@ func streamDetection(ctx context.Context, addr string, q query, callback Detecti
 					log.Println("Failed to handleDetection:", err)
 					continue
 				}
-				withRecover(func() error {
-					callback(detected)
-					return nil
+				err = withRecover(func() error {
+					return callback(detected)
 				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
