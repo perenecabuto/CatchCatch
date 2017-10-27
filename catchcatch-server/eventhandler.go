@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
@@ -55,7 +56,7 @@ func (h *EventHandler) onConnection(c *Conn) {
 
 // Player events
 
-func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
+func (h *EventHandler) onPlayerDisconnect(player *model.Player) func() {
 	return func() {
 		log.Println("player:disconnect", player.ID)
 		h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
@@ -64,7 +65,7 @@ func (h *EventHandler) onPlayerDisconnect(player *Player) func() {
 	}
 }
 
-func (h *EventHandler) onPlayerUpdate(player *Player, c *Conn) func([]byte) {
+func (h *EventHandler) onPlayerUpdate(player *model.Player, c *Conn) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
@@ -88,7 +89,7 @@ func (h *EventHandler) onPlayerRequestRemotes(so *Conn) func([]byte) {
 	}
 }
 
-func (h *EventHandler) onPlayerRequestGames(player *Player, c *Conn) func([]byte) {
+func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *Conn) func([]byte) {
 	return func([]byte) {
 		go func() {
 			games, err := h.service.FeaturesAround("geofences", player.Point())
@@ -114,7 +115,7 @@ func (h *EventHandler) onDisconnectByID() func([]byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
 		log.Println("admin:disconnect", msg.GetId())
-		player := &Player{ID: msg.GetId()}
+		player := &model.Player{ID: msg.GetId()}
 		h.service.Remove(player)
 		h.server.Remove(msg.GetId())
 
@@ -166,8 +167,8 @@ func (h *EventHandler) onRequestFeatures(c *Conn) func([]byte) {
 
 // Actions
 
-func (h *EventHandler) newPlayer(c *Conn) (player *Player, err error) {
-	player = &Player{c.ID, 0, 0}
+func (h *EventHandler) newPlayer(c *Conn) (player *model.Player, err error) {
+	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
 	if err := h.service.Register(player); err != nil {
 		return nil, errors.New("could not register: " + err.Error())
 	}

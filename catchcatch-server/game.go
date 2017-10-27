@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 )
 
 var (
@@ -41,7 +43,7 @@ const (
 
 // GamePlayer wraps player and its role in the game
 type GamePlayer struct {
-	Player
+	model.Player
 	Role GameRole
 }
 
@@ -171,7 +173,7 @@ func (g *Game) SetPlayer(id string, lon, lat float64) error {
 	if !g.started {
 		if _, exists := g.players[id]; !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
-			g.players[id] = &GamePlayer{Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined}
+			g.players[id] = &GamePlayer{model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined}
 		}
 		return nil
 	}
