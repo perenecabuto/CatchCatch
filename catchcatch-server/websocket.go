@@ -14,34 +14,34 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// WebSocketConnection is an interface for websocket communication
-type WebSocketConnection interface {
+// WSConnection is an interface for WS communication
+type WSConnection interface {
 	Read(*[]byte) (int, error)
 	Send(payload []byte) error
 	Close() error
 }
 
-// WebSocketDriver is an interface for websocket connection handling
-type WebSocketDriver interface {
-	Handler(ctx context.Context, onConnect func(context.Context, WebSocketConnection)) http.Handler
+// WSDriver is an interface for WS communication
+type WSDriver interface {
+	Handler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler
 }
 
-// Conn represents a websocket connection
-type Conn struct {
-	WebSocketConnection
+// WSConnListener represents a WS connection
+type WSConnListener struct {
+	WSConnection
 
 	ID             string
 	eventCallbacks map[string]evtCallback
 	onDisconnected func()
-	stopFunc       context.CancelFunc
+	stop           context.CancelFunc
 
 	buffer []byte
 }
 
 type evtCallback func([]byte)
 
-func (c *Conn) listen(ctx context.Context) error {
-	ctx, c.stopFunc = context.WithCancel(ctx)
+func (c *WSConnListener) listen(ctx context.Context) error {
+	ctx, c.stop = context.WithCancel(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -55,12 +55,12 @@ func (c *Conn) listen(ctx context.Context) error {
 }
 
 // On this connection event trigger callback with its message
-func (c *Conn) On(event string, callback evtCallback) {
+func (c *WSConnListener) On(event string, callback evtCallback) {
 	c.eventCallbacks[event] = callback
 }
 
 // OnDisconnected register event callback to closed connections
-func (c *Conn) OnDisconnected(fn func()) {
+func (c *WSConnListener) OnDisconnected(fn func()) {
 	if fn != nil {
 		c.onDisconnected = fn
 	}
@@ -73,7 +73,7 @@ type Message interface {
 }
 
 // Emit send payload on eventX to socket id
-func (c *Conn) Emit(message Message) error {
+func (c *WSConnListener) Emit(message Message) error {
 	payload, err := proto.Marshal(message)
 	if err != nil {
 		return err
@@ -82,13 +82,14 @@ func (c *Conn) Emit(message Message) error {
 	return c.Send(payload)
 }
 
-func (c *Conn) close() {
-	c.Close()
-	c.stopFunc()
+// Close WS connection and stop listening
+func (c *WSConnListener) Close() {
+	c.stop()
+	c.WSConnection.Close()
 	go c.onDisconnected()
 }
 
-func (c *Conn) readMessage() error {
+func (c *WSConnListener) readMessage() error {
 	length, err := c.Read(&c.buffer)
 	if err != nil {
 		return err
@@ -114,78 +115,73 @@ func (c *Conn) readMessage() error {
 	})
 }
 
-// WebSocketServer manage websocket connections
-type WebSocketServer struct {
-	handler     WebSocketDriver
-	onConnected func(c *Conn)
+// WSServer manage WS connections
+type WSServer struct {
+	handler     WSDriver
+	onConnected func(c *WSConnListener)
 
 	connections atomic.Value
 	sync.Mutex
 }
 
-type connectionGroup map[string]*Conn
+type connectionGroup map[string]*WSConnListener
 
-// NewWebSocketServer create a new WebSocketServer
-func NewWebSocketServer(handler WebSocketDriver) *WebSocketServer {
-	wss := &WebSocketServer{handler: handler, onConnected: func(c *Conn) {}}
+// NewWSServer create a new WSServer
+func NewWSServer(handler WSDriver) *WSServer {
+	wss := &WSServer{handler: handler, onConnected: func(c *WSConnListener) {}}
 	wss.connections.Store(make(connectionGroup))
 	return wss
 }
 
 // OnConnected register event callback to new connections
-func (wss *WebSocketServer) OnConnected(fn func(c *Conn)) {
+func (wss *WSServer) OnConnected(fn func(c *WSConnListener)) {
 	if fn != nil {
 		wss.onConnected = fn
 	}
 }
 
-// Listen to websocket connections
-func (wss *WebSocketServer) Listen(ctx context.Context) http.Handler {
-	return wss.handler.Handler(ctx, func(ctx context.Context, c WebSocketConnection) {
+// Listen to WS connections
+func (wss *WSServer) Listen(ctx context.Context) http.Handler {
+	return wss.handler.Handler(ctx, func(ctx context.Context, c WSConnection) {
 		conn := wss.Add(c)
 		err := withRecover(func() error {
 			wss.onConnected(conn)
+			defer wss.Remove(conn.ID)
 			return conn.listen(ctx)
 		})
 		if err != nil {
-			log.Println("WebSocketServer: read error", err)
+			log.Println("WSServer: read error", err)
 		}
-		wss.Remove(conn.ID)
 	})
 }
 
 // Get Conn by session id
-func (wss *WebSocketServer) Get(id string) *Conn {
+func (wss *WSServer) Get(id string) *WSConnListener {
 	connections := wss.connections.Load().(connectionGroup)
 	return connections[id]
 }
 
 // Add Conn for session id
-func (wss *WebSocketServer) Add(c WebSocketConnection) *Conn {
+func (wss *WSServer) Add(c WSConnection) *WSConnListener {
 	id := uuid.NewV4().String()
-	conn := &Conn{c, id, make(map[string]evtCallback), func() {}, func() {}, make([]byte, 512)}
+	conn := &WSConnListener{c, id, make(map[string]evtCallback), func() {}, func() {}, make([]byte, 512)}
 	wss.withConnections(func(connections connectionGroup) {
 		connections[conn.ID] = conn
 	})
 	return conn
 }
 
-func (wss *WebSocketServer) withConnections(fn func(connectionGroup)) {
+func (wss *WSServer) withConnections(fn func(connectionGroup)) {
 	wss.Lock()
 	connections := wss.connections.Load().(connectionGroup)
-	fn(connections)
-	newGroup := make(connectionGroup)
-	for k, v := range connections {
-		newGroup[k] = v
-	}
-	wss.connections.Store(newGroup)
 	wss.Unlock()
+	fn(connections)
 }
 
 // Remove Conn by session id
-func (wss *WebSocketServer) Remove(id string) {
+func (wss *WSServer) Remove(id string) {
 	if c := wss.Get(id); c != nil {
-		c.close()
+		c.Close()
 		wss.withConnections(func(connections connectionGroup) {
 			delete(connections, id)
 		})
@@ -193,7 +189,7 @@ func (wss *WebSocketServer) Remove(id string) {
 }
 
 // Emit send payload on eventX to socket id
-func (wss *WebSocketServer) Emit(id string, message Message) error {
+func (wss *WSServer) Emit(id string, message Message) error {
 	if conn := wss.Get(id); conn != nil {
 		conn.Emit(message)
 		return nil
@@ -202,7 +198,7 @@ func (wss *WebSocketServer) Emit(id string, message Message) error {
 }
 
 // BroadcastTo ids event message
-func (wss *WebSocketServer) BroadcastTo(ids []string, message Message) {
+func (wss *WSServer) BroadcastTo(ids []string, message Message) {
 	for _, id := range ids {
 		if err := wss.Emit(id, message); err != nil {
 			log.Println("error to emit ", message, message, err)
@@ -211,7 +207,7 @@ func (wss *WebSocketServer) BroadcastTo(ids []string, message Message) {
 }
 
 // Broadcast event message to all connections
-func (wss *WebSocketServer) Broadcast(message Message) error {
+func (wss *WSServer) Broadcast(message Message) error {
 	connections := wss.connections.Load().(connectionGroup)
 	for id := range connections {
 		if err := wss.Emit(id, message); err != nil {
@@ -222,9 +218,9 @@ func (wss *WebSocketServer) Broadcast(message Message) error {
 }
 
 // CloseAll Conn
-func (wss *WebSocketServer) CloseAll() {
+func (wss *WSServer) CloseAll() {
 	connections := wss.connections.Load().(connectionGroup)
 	for _, c := range connections {
-		c.close()
+		c.Close()
 	}
 }

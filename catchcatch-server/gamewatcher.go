@@ -27,13 +27,13 @@ type GameContext struct {
 // and notify players events to each game by geo position
 type GameWatcher struct {
 	games  map[string]*GameContext
-	wss    *WebSocketServer
+	wss    *WSServer
 	stream EventStream
 	Clear  context.CancelFunc
 }
 
 // NewGameWatcher builds GameWatecher
-func NewGameWatcher(stream EventStream, wss *WebSocketServer) *GameWatcher {
+func NewGameWatcher(stream EventStream, wss *WSServer) *GameWatcher {
 	return &GameWatcher{make(map[string]*GameContext), wss, stream, func() {}}
 }
 

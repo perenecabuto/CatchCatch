@@ -12,16 +12,16 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-// GobwasWSDriver is a WebSocketDriver implementation based on gobwas/ws
+// GobwasWSDriver is a WSDriver implementation based on gobwas/ws
 type GobwasWSDriver struct{}
 
-// NewGobwasWSDriver creates a gobwas/ws WebSocketDriver
-func NewGobwasWSDriver() WebSocketDriver {
+// NewGobwasWSDriver creates a gobwas/ws WSDriver
+func NewGobwasWSDriver() WSDriver {
 	return new(GobwasWSDriver)
 }
 
-// Handler implements WebSocketDriver.Handler
-func (d GobwasWSDriver) Handler(ctx context.Context, onConnect func(context.Context, WebSocketConnection)) http.Handler {
+// Handler implements WSDriver.Handler
+func (d GobwasWSDriver) Handler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, _, _, err := ws.UpgradeHTTP(r, w, nil)
 		if err != nil {
@@ -38,12 +38,12 @@ type GobwasWSConn struct {
 	net.Conn
 }
 
-// Send implements WebSocketConnection.Send
+// Send implements WSConnection.Send
 func (c GobwasWSConn) Send(payload []byte) error {
 	return wsutil.WriteServerBinary(c, payload)
 }
 
-// Read implements WebSocketConnection.Read
+// Read implements WSConnection.Read
 func (c GobwasWSConn) Read(buff *[]byte) (int, error) {
 	header, err := ws.ReadHeader(c.Conn)
 	if err != nil {
@@ -62,16 +62,16 @@ func (c GobwasWSConn) Read(buff *[]byte) (int, error) {
 	return length, nil
 }
 
-// XNetWSDriver is a WebSocketDriver implementation based on x/net/websocket
+// XNetWSDriver is a WSDriver implementation based on x/net/websocket
 type XNetWSDriver struct{}
 
-// NewXNetWSDriver creates a x/net/websocket WebSocketDriver
-func NewXNetWSDriver() WebSocketDriver {
+// NewXNetWSDriver creates a x/net/websocket WSDriver
+func NewXNetWSDriver() WSDriver {
 	return &XNetWSDriver{}
 }
 
-// Handler implements WebSocketDriver.Handler
-func (d XNetWSDriver) Handler(ctx context.Context, onConnect func(context.Context, WebSocketConnection)) http.Handler {
+// Handler implements WSDriver.Handler
+func (d XNetWSDriver) Handler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
 	return websocket.Server{
 		Handler: func(c *websocket.Conn) {
 			conn := &XNetWSConn{Conn: c}
@@ -86,13 +86,13 @@ type XNetWSConn struct {
 	*websocket.Conn
 }
 
-// Read implements WebSocketConnection.Read
+// Read implements WSConnection.Read
 func (c XNetWSConn) Read(buff *[]byte) (int, error) {
 	err := websocket.Message.Receive(c.Conn, buff)
 	return len(*buff), err
 }
 
-// Send implements WebSocketConnection.Send
+// Send implements WSConnection.Send
 func (c XNetWSConn) Send(payload []byte) error {
 	return websocket.Message.Send(c.Conn, payload)
 }

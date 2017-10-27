@@ -51,7 +51,7 @@ func main() {
 	client := mustConnectTile38(*debugMode)
 	service := NewPlayerLocationService(client)
 	wsHandler := selectWsDriver(*wsdriver)
-	server := NewWebSocketServer(wsHandler)
+	server := NewWSServer(wsHandler)
 	watcher := NewGameWatcher(stream, server)
 	onExit(func() {
 		cancel()
@@ -74,7 +74,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func selectWsDriver(name string) WebSocketDriver {
+func selectWsDriver(name string) WSDriver {
 	switch name {
 	case "gobwas":
 		return NewGobwasWSDriver()

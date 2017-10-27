@@ -14,13 +14,13 @@ import (
 
 // EventHandler handle websocket events
 type EventHandler struct {
-	server  *WebSocketServer
+	server  *WSServer
 	service PlayerLocationService
 	games   *GameWatcher
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *WebSocketServer, service PlayerLocationService, gw *GameWatcher) *EventHandler {
+func NewEventHandler(server *WSServer, service PlayerLocationService, gw *GameWatcher) *EventHandler {
 	handler := &EventHandler{server, service, gw}
 	server.OnConnected(handler.onConnection)
 	return handler
@@ -33,11 +33,11 @@ func (h *EventHandler) Listen(ctx context.Context) http.Handler {
 
 // Event handlers
 
-func (h *EventHandler) onConnection(c *Conn) {
+func (h *EventHandler) onConnection(c *WSConnListener) {
 	player, err := h.newPlayer(c)
 	if err != nil {
 		log.Println("error to create player", err)
-		c.close()
+		c.Close()
 		return
 	}
 	log.Println("new player connected", player)
@@ -65,7 +65,7 @@ func (h *EventHandler) onPlayerDisconnect(player *model.Player) func() {
 	}
 }
 
-func (h *EventHandler) onPlayerUpdate(player *model.Player, c *Conn) func([]byte) {
+func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
@@ -83,13 +83,13 @@ func (h *EventHandler) onPlayerUpdate(player *model.Player, c *Conn) func([]byte
 	}
 }
 
-func (h *EventHandler) onPlayerRequestRemotes(so *Conn) func([]byte) {
+func (h *EventHandler) onPlayerRequestRemotes(so *WSConnListener) func([]byte) {
 	return func([]byte) {
 		h.sendPlayerList(so)
 	}
 }
 
-func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *Conn) func([]byte) {
+func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *WSConnListener) func([]byte) {
 	return func([]byte) {
 		go func() {
 			games, err := h.service.FeaturesAround("geofences", player.Point())
@@ -148,7 +148,7 @@ func (h *EventHandler) onAddFeature() func([]byte) {
 	}
 }
 
-func (h *EventHandler) onRequestFeatures(c *Conn) func([]byte) {
+func (h *EventHandler) onRequestFeatures(c *WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
@@ -167,7 +167,7 @@ func (h *EventHandler) onRequestFeatures(c *Conn) func([]byte) {
 
 // Actions
 
-func (h *EventHandler) newPlayer(c *Conn) (player *model.Player, err error) {
+func (h *EventHandler) newPlayer(c *WSConnListener) (player *model.Player, err error) {
 	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
 	if err := h.service.Register(player); err != nil {
 		return nil, errors.New("could not register: " + err.Error())
@@ -177,7 +177,7 @@ func (h *EventHandler) newPlayer(c *Conn) (player *model.Player, err error) {
 	return player, nil
 }
 
-func (h *EventHandler) sendPlayerList(c *Conn) error {
+func (h *EventHandler) sendPlayerList(c *WSConnListener) error {
 	return withRecover(func() error {
 		players, err := h.service.Players()
 		if err != nil {
