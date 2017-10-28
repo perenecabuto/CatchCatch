@@ -165,13 +165,13 @@ func (wss *WSServer) Get(id string) *WSConnListener {
 func (wss *WSServer) Add(c WSConnection) *WSConnListener {
 	id := uuid.NewV4().String()
 	conn := &WSConnListener{c, id, make(map[string]evtCallback), func() {}, func() {}, make([]byte, 512)}
-	wss.withConnections(func(connections connectionGroup) {
+	wss.getConnectionsForChange(func(connections connectionGroup) {
 		connections[conn.ID] = conn
 	})
 	return conn
 }
 
-func (wss *WSServer) withConnections(fn func(connectionGroup)) {
+func (wss *WSServer) getConnectionsForChange(fn func(connectionGroup)) {
 	wss.Lock()
 	connections := wss.connections.Load().(connectionGroup)
 	fn(connections)
@@ -187,7 +187,7 @@ func (wss *WSServer) withConnections(fn func(connectionGroup)) {
 func (wss *WSServer) Remove(id string) {
 	if c := wss.Get(id); c != nil {
 		c.Close()
-		wss.withConnections(func(connections connectionGroup) {
+		wss.getConnectionsForChange(func(connections connectionGroup) {
 			delete(connections, id)
 		})
 	}
