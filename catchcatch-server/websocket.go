@@ -174,8 +174,13 @@ func (wss *WSServer) Add(c WSConnection) *WSConnListener {
 func (wss *WSServer) withConnections(fn func(connectionGroup)) {
 	wss.Lock()
 	connections := wss.connections.Load().(connectionGroup)
-	wss.Unlock()
 	fn(connections)
+	newGroup := make(connectionGroup)
+	for k, v := range connections {
+		newGroup[k] = v
+	}
+	wss.connections.Store(newGroup)
+	wss.Unlock()
 }
 
 // Remove Conn by session id
