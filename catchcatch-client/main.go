@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
@@ -33,7 +32,7 @@ func main() {
 	defer c.Close()
 
 	done := make(chan struct{})
-	player := model.Player{}
+	player := &protobuf.Player{Lat: proto.Float64(0), Lon: proto.Float64(0)}
 
 	go func() {
 		defer c.Close()
@@ -53,15 +52,13 @@ func main() {
 
 			switch *msg.EventName {
 			case "player:registered":
-				p := &protobuf.Player{}
-				if err := proto.Unmarshal(message, p); err != nil {
-					log.Println("error parsing player: ", err.Error(), p)
+				if err := proto.Unmarshal(message, player); err != nil {
+					log.Println("error parsing player: ", err.Error(), player)
 					continue
 				}
 
-				log.Println("player: ", p)
-				player.ID, player.Lat, player.Lon = *p.Id, *p.Lat, *p.Lon
-				player.Lat, player.Lon = -30.03495, -51.21866
+				log.Println("player: ", player)
+				*player.Lat, *player.Lon = -30.03495, -51.21866
 			}
 			log.Printf("recv: %s", msg)
 		}
@@ -71,13 +68,12 @@ func main() {
 	defer ticker.Stop()
 
 	for {
-		player.Lat += 0.00001
-		player.Lon += 0.00001
+		*player.Lat += 0.00001
+		*player.Lon += 0.00001
 		select {
 		case <-ticker.C:
-			evt := "player:update"
-			msg := &protobuf.Player{EventName: &evt, Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat}
-			payload, _ := proto.Marshal(msg)
+			*player.EventName = "player:update"
+			payload, _ := proto.Marshal(player)
 			err := c.WriteMessage(websocket.BinaryMessage, payload)
 			if err != nil {
 				log.Println("write:", err)
