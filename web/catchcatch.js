@@ -251,6 +251,7 @@ let AdminController = function (socket, sourceLayer, view) {
     };
 
     this.requestFeatures = function () {
+        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-remotes", group: "player"}).finish());        
         socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "checkpoint"}).finish());
         socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "geofences"}).finish());
     };

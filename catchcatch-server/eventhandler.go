@@ -41,15 +41,14 @@ func (h *EventHandler) onConnection(c *WSConnListener) {
 		return
 	}
 	log.Println("new player connected", player)
-	go h.sendPlayerList(c)
 
 	c.On("player:request-games", h.onPlayerRequestGames(player, c))
-	c.On("player:request-remotes", h.onPlayerRequestRemotes(c))
 	c.On("player:update", h.onPlayerUpdate(player, c))
 	c.OnDisconnected(h.onPlayerDisconnect(player))
 
 	c.On("admin:disconnect", h.onDisconnectByID())
 	c.On("admin:feature:add", h.onAddFeature())
+	c.On("admin:feature:request-remotes", h.onPlayerRequestRemotes(c))
 	c.On("admin:feature:request-list", h.onRequestFeatures(c))
 	c.On("admin:clear", h.onClear())
 }
@@ -78,14 +77,25 @@ func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) f
 
 		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
 			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
-		h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:updated"),
-			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	}
 }
 
 func (h *EventHandler) onPlayerRequestRemotes(so *WSConnListener) func([]byte) {
 	return func([]byte) {
-		h.sendPlayerList(so)
+		players, err := h.service.Players()
+		if err != nil {
+			log.Println("player:request-remotes event error: " + err.Error())
+		}
+		event := "remote-player:new"
+		for _, p := range players {
+			if p == nil {
+				continue
+			}
+			err := so.Emit(&protobuf.Player{EventName: &event, Id: &p.ID, Lon: &p.Lon, Lat: &p.Lat})
+			if err != nil {
+				log.Println("player:request-remotes event error: " + err.Error())
+			}
+		}
 	}
 }
 
@@ -173,26 +183,7 @@ func (h *EventHandler) newPlayer(c *WSConnListener) (player *model.Player, err e
 		return nil, errors.New("could not register: " + err.Error())
 	}
 	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
+	// TODO listen this by from admin/players features stream
 	h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:new"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	return player, nil
-}
-
-func (h *EventHandler) sendPlayerList(c *WSConnListener) error {
-	return withRecover(func() error {
-		players, err := h.service.Players()
-		if err != nil {
-			return errors.New("player:request-remotes event error: " + err.Error())
-		}
-		event := "remote-player:new"
-		for _, p := range players {
-			if p == nil {
-				continue
-			}
-			err := c.Emit(&protobuf.Player{EventName: &event, Id: &p.ID, Lon: &p.Lon, Lat: &p.Lat})
-			if err != nil {
-				return errors.New("player:request-remotes event error: " + err.Error())
-			}
-		}
-		return nil
-	})
 }
