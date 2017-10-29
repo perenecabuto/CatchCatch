@@ -211,6 +211,20 @@ func (wss *WSServer) BroadcastTo(ids []string, message Message) {
 	}
 }
 
+// BroadcastFrom connection id event message to all connections
+func (wss *WSServer) BroadcastFrom(fromID string, message Message) error {
+	connections := wss.connections.Load().(connectionGroup)
+	for id := range connections {
+		if fromID == id {
+			continue
+		}
+		if err := wss.Emit(id, message); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Broadcast event message to all connections
 func (wss *WSServer) Broadcast(message Message) error {
 	connections := wss.connections.Load().(connectionGroup)
