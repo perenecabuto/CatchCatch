@@ -15,7 +15,7 @@ import (
 
 // EventStream listen to geofence events and notifiy detection
 type EventStream interface {
-	StreamNearByEvents(ctx context.Context, nearByKey, roamKey string, meters int, callback DetectionHandler) error
+	StreamNearByEvents(ctx context.Context, nearByKey, roamKey, roamID string, meters int, callback DetectionHandler) error
 	StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback DetectionHandler) error
 }
 
@@ -30,8 +30,8 @@ func NewEventStream(addr string) EventStream {
 }
 
 // StreamNearByEvents stream proximation events
-func (es *Tile38EventStream) StreamNearByEvents(ctx context.Context, nearByKey, roamKey string, meters int, callback DetectionHandler) error {
-	cmd := query{"NEARBY", nearByKey, "FENCE", "ROAM", roamKey, "*", meters}
+func (es *Tile38EventStream) StreamNearByEvents(ctx context.Context, nearByKey, roamKey string, roamID string, meters int, callback DetectionHandler) error {
+	cmd := query{"NEARBY", nearByKey, "FENCE", "ROAM", roamKey, roamID, meters}
 	return streamDetection(ctx, es.addr, cmd, callback)
 }
 

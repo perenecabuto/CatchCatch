@@ -65,7 +65,7 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	watcherCtx, gw.Clear = context.WithCancel(ctx)
 	defer gw.Clear()
 
-	return gw.stream.StreamNearByEvents(watcherCtx, "player", "geofences", 0, func(d *Detection) error {
+	return gw.stream.StreamNearByEvents(watcherCtx, "player", "geofences", "*", 0, func(d *Detection) error {
 		gameID := d.NearByFeatID
 		if gameID == "" {
 			return nil
@@ -142,7 +142,7 @@ func (gw *GameWatcher) startGameWhenReady(ctx context.Context, g *Game) error {
 
 // WatchCheckpoints ...
 func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
-	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", 1000, func(d *Detection) error {
+	err := gw.stream.StreamNearByEvents(ctx, "player", "checkpoint", "*", 1000, func(d *Detection) error {
 		if d.Intersects == Exit {
 			return nil
 		}
