@@ -141,7 +141,11 @@ func handleDetection(msg string) (*Detection, error) {
 	if gjson.Get(msg, "command").String() == "del" {
 		intersects = Exit
 	} else if detect := gjson.Get(msg, "detect").String(); detect != "" {
-		intersects = IntersectsEvent(detect)
+		if detect == "roam" {
+			intersects = Inside
+		} else {
+			intersects = IntersectsEvent(detect)
+		}
 	}
 	coords := gjson.Get(msg, "object.coordinates").String()
 	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects, coords}, nil
