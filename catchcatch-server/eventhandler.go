@@ -11,16 +11,21 @@ import (
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
+//TODO: separate player events and admin events
+//TODO: separate player and admin routes
+//TODO: set game status on db
+
 // EventHandler handle websocket events
 type EventHandler struct {
 	server  *WSServer
 	service PlayerLocationService
 	games   *GameWatcher
+	stream  EventStream
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *WSServer, service PlayerLocationService, gw *GameWatcher) *EventHandler {
-	handler := &EventHandler{server, service, gw}
+func NewEventHandler(server *WSServer, service PlayerLocationService, gw *GameWatcher, stream EventStream) *EventHandler {
+	handler := &EventHandler{server, service, gw, stream}
 	server.OnConnected(handler.onConnection)
 	return handler
 }
