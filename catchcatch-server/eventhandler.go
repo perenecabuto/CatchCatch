@@ -39,11 +39,51 @@ func (h *EventHandler) onConnection(c *WSConnListener) {
 		c.Close()
 		return
 	}
+
 	log.Println("new player connected", player)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go h.stream.StreamNearByEvents(ctx, "player", "player", player.ID, 5000, func(d *Detection) error {
+		switch d.Intersects {
+		case Inside:
+			err := c.Emit(&protobuf.Player{EventName: proto.String("remote-player:updated"),
+				Id: &d.FeatID, Lon: &d.Lon, Lat: &d.Lat})
+			if err != nil {
+				log.Println("remote-player:updated error", err.Error())
+			}
+		case Exit:
+			if d.FeatID == player.ID {
+				c.Close()
+				return nil
+			}
+			err := c.Emit(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
+				Id: &d.FeatID, Lon: &d.Lon, Lat: &d.Lat})
+			if err != nil {
+				log.Println("remote-player:updated error", err.Error())
+			}
+		}
+		return nil
+	})
+
+	go h.stream.StreamNearByEvents(ctx, "geofences", "player", player.ID, 5000, func(d *Detection) error {
+		switch d.Intersects {
+		case Inside:
+			coords := `{"type":"Polygon","coordinates":` + d.Coordinates + "}"
+			c.Emit(&protobuf.Feature{EventName: proto.String("admin:feature:added"), Id: &d.FeatID,
+				Group: proto.String("geofences"), Coords: &coords})
+			if err != nil {
+				log.Println("admin:feature:added error", err.Error())
+			}
+		}
+		return nil
+	})
 
 	c.On("player:request-games", h.onPlayerRequestGames(player, c))
 	c.On("player:update", h.onPlayerUpdate(player, c))
-	c.OnDisconnected(h.onPlayerDisconnect(player))
+	c.OnDisconnected(func() {
+		cancel()
+		h.onPlayerDisconnect(player)
+	})
 
 	c.On("admin:disconnect", h.onDisconnectByID())
 	c.On("admin:feature:add", h.onAddFeature())
@@ -54,13 +94,9 @@ func (h *EventHandler) onConnection(c *WSConnListener) {
 
 // Player events
 
-func (h *EventHandler) onPlayerDisconnect(player *model.Player) func() {
-	return func() {
-		log.Println("player:disconnect", player.ID)
-		h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
-			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
-		h.service.Remove(player)
-	}
+func (h *EventHandler) onPlayerDisconnect(player *model.Player) {
+	log.Println("player:disconnect", player.ID)
+	h.service.Remove(player)
 }
 
 func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) func([]byte) {
@@ -127,9 +163,6 @@ func (h *EventHandler) onDisconnectByID() func([]byte) {
 		player := &model.Player{ID: msg.GetId()}
 		h.service.Remove(player)
 		h.server.Remove(msg.GetId())
-
-		h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
-			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	}
 }
 
@@ -148,12 +181,11 @@ func (h *EventHandler) onAddFeature() func([]byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
-		f, err := h.service.AddFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
+		_, err := h.service.AddFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
 		if err != nil {
 			log.Println("Error to create feature:", err)
 			return
 		}
-		h.server.Broadcast(&protobuf.Feature{EventName: proto.String("admin:feature:added"), Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
 	}
 }
 
@@ -165,7 +197,6 @@ func (h *EventHandler) onRequestFeatures(c *WSConnListener) func([]byte) {
 		features, err := h.service.Features(msg.GetGroup())
 		if err != nil {
 			log.Println("Error on sendFeatures:", err)
-
 		}
 		event := "admin:feature:added"
 		for _, f := range features {
@@ -182,7 +213,5 @@ func (h *EventHandler) newPlayer(c *WSConnListener) (player *model.Player, err e
 		return nil, errors.New("could not register: " + err.Error())
 	}
 	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
-	// TODO listen this by from admin/players features stream
-	h.server.Broadcast(&protobuf.Player{EventName: proto.String("remote-player:new"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	return player, nil
 }
