@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"net/http"
 
 	"github.com/golang/protobuf/proto"
 
@@ -24,11 +23,6 @@ func NewEventHandler(server *WSServer, service PlayerLocationService, gw *GameWa
 	handler := &EventHandler{server, service, gw}
 	server.OnConnected(handler.onConnection)
 	return handler
-}
-
-// Listen to websocket connections
-func (h *EventHandler) Listen(ctx context.Context) http.Handler {
-	return h.server.Listen(ctx)
 }
 
 // Event handlers
