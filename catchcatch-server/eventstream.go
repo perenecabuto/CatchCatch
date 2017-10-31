@@ -35,7 +35,7 @@ func (es *Tile38EventStream) StreamNearByEvents(ctx context.Context, nearByKey, 
 	return streamDetection(ctx, es.addr, cmd, callback)
 }
 
-// StreamIntersects stream intersection events
+// StreamIntersects stream events of the objects (of type intersectKey) moving inside object (onKey + onKeyID)
 func (es *Tile38EventStream) StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
 	cmd := query{"INTERSECTS", intersectKey, "FENCE", "DETECT", "inside,enter,exit", "GET", onKey, onKeyID}
 	callback = overrideNearByFeatIDWrapper(onKeyID, callback)
@@ -69,6 +69,7 @@ type Detection struct {
 	NearByFeatID string          `json:"near_by_feat_id"`
 	NearByMeters float64         `json:"near_by_meters"`
 	Intersects   IntersectsEvent `json:"intersects"`
+	Coordinates  string          `json:"coordinates"`
 }
 
 func (d Detection) String() string {
@@ -131,9 +132,9 @@ func streamDetection(ctx context.Context, addr string, q query, callback Detecti
 func handleDetection(msg string) (*Detection, error) {
 	featID := gjson.Get(msg, "id").String()
 	lat, lon := 0.0, 0.0
-	coords := gjson.Get(msg, "object.coordinates").Array()
-	if len(coords) == 2 {
-		lat, lon = coords[1].Float(), coords[0].Float()
+	latlon := gjson.Get(msg, "object.coordinates").Array()
+	if len(latlon) == 2 {
+		lat, lon = latlon[1].Float(), latlon[0].Float()
 	}
 	nearByFeatID, nearByMeters := gjson.Get(msg, "nearby.id").String(), gjson.Get(msg, "nearby.meters").Float()
 	intersects := None
@@ -142,7 +143,8 @@ func handleDetection(msg string) (*Detection, error) {
 	} else if detect := gjson.Get(msg, "detect").String(); detect != "" {
 		intersects = IntersectsEvent(detect)
 	}
-	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects}, nil
+	coords := gjson.Get(msg, "object.coordinates").String()
+	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects, coords}, nil
 }
 
 func listenTo(addr string, q query) (net.Conn, error) {
