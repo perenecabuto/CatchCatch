@@ -15,6 +15,7 @@ type PlayerLocationService interface {
 	Players() (model.PlayerList, error)
 
 	AddFeature(group, id, geojson string) (*model.Feature, error)
+	FeatureByID(group, id string) (*model.Feature, error)
 	Features(group string) ([]*model.Feature, error)
 	FeaturesAround(group string, point *geo.Point) ([]*model.Feature, error)
 
@@ -81,6 +82,18 @@ func (s *Tile38PlayerLocationService) AddFeature(group, id, geojson string) (*mo
 func (s *Tile38PlayerLocationService) Features(group string) ([]*model.Feature, error) {
 	cmd := redis.NewSliceCmd("SCAN", group)
 	return featuresFromSliceCmd(s.client, group, cmd)
+}
+
+// FeatureByID ...
+func (s *Tile38PlayerLocationService) FeatureByID(group, id string) (*model.Feature, error) {
+	cmd := redis.NewStringCmd("GET", group, id)
+	s.client.Process(cmd)
+	res, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+	coords := gjson.Get(res, "coordinates").String()
+	return &model.Feature{ID: id, Group: group, Coordinates: coords}, nil
 }
 
 // FeaturesAround return feature group near by point
