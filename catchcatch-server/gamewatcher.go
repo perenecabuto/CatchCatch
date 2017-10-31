@@ -186,7 +186,9 @@ func (gw *GameWatcher) OnTargetWin(p GamePlayer) {
 // OnGameFinish implements GameEvent.OnGameFinish
 func (gw *GameWatcher) OnGameFinish(rank GameRank) {
 	log.Printf("gamewatcher:stop:game:%s", rank.Game)
-	gw.games[rank.Game].cancel()
+	if game := gw.games[rank.Game]; game != nil && game.cancel != nil {
+		game.cancel()
+	}
 
 	playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
 	for i, pr := range rank.PlayerRank {
