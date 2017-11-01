@@ -12,6 +12,7 @@ LOCAL_BRANCH = master
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
 build:
+	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
 	cd catchcatch-server && CGO_ENABLED=0 go build -ldflags="-s -w" -tags netgo -a
 
 docker-compose: build
