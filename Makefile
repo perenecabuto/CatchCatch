@@ -11,6 +11,12 @@ LOCAL_BRANCH = master
 %-beta: DOKKU_HOST=159.203.15.29
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
+build:
+	cd catchcatch-server && CGO_ENABLED=0 go build -ldflags="-s -w" -tags netgo -a
+
+docker-compose: build
+	docker-compose up --build
+
 test:
 	cd catchcatch-server && CompileDaemon -color -command "go test -v ./..."
 

@@ -1,0 +1,33 @@
+---
+version: '2'
+services:
+    web:
+        build: .
+        ports:
+            - "5000:5000"
+        command:
+            - "./catchcatch-server"
+            - "-tile38-addr"
+            - "tile38:9851"
+            - "-influxdb-addr"
+            - "http://influxdb:8086"
+        links:
+            - tile38
+            - influxdb
+            
+    influxdb:
+        image: influxdb
+        ports:
+            - "8086:8086"
+
+    tile38:
+        image: tile38/tile38
+        ports:
+            - "9851:9851"
+    
+    grafana:
+        image: grafana/grafana
+        ports:
+            - "3000:3000"
+        links:
+            - influxdb
