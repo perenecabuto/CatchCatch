@@ -40,6 +40,10 @@ func NewGameWatcher(stream EventStream, wss *WSServer) *GameWatcher {
 // observeGamePlayers events
 // TODO: monitor game player watches
 func (gw *GameWatcher) observeGamePlayers(ctx context.Context, g *Game) error {
+	// TODO: change game status to running and set the server name
+	// TODO: check if the game is already started
+	// TODO: stop this when game stops
+	// TODO: monitor game start
 	return gw.stream.StreamIntersects(ctx, "player", "geofences", g.ID, func(d *Detection) error {
 		switch d.Intersects {
 		case Enter:
@@ -58,14 +62,18 @@ func (gw *GameWatcher) observeGamePlayers(ctx context.Context, g *Game) error {
 }
 
 // WatchGames starts this gamewatcher to listen to player events over games
-// TODO: destroy the game after it finishes
 // TODO: monitor game watches
+// TODO: create a timer to anounce the server as a game idle watcher
+// TODO: before starting idle game watcher verify if the server watcher is the same of this server
+// TODO: check if the server is the watcher and isn't running
 func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 	var watcherCtx context.Context
+	// TODO: remove this cancel
 	watcherCtx, gw.Clear = context.WithCancel(ctx)
 	defer gw.Clear()
 
-	return gw.stream.StreamNearByEvents(watcherCtx, "player", "geofences", "*", 0, func(d *Detection) error {
+	// TODO: find games idle
+	return gw.stream.StreamNearByEvents(watcherCtx, "player", "geofences", "status = idle", 0, func(d *Detection) error {
 		gameID := d.NearByFeatID
 		if gameID == "" {
 			return nil
@@ -74,6 +82,7 @@ func (gw *GameWatcher) WatchGames(ctx context.Context) error {
 		go func() {
 			if err := gw.watchGame(watcherCtx, gameID); err != nil {
 				log.Println(err)
+				// TODO: remove this cancel
 				gw.games[gameID].cancel()
 			}
 		}()
@@ -168,6 +177,7 @@ func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 
 // OnGameStarted implements GameEvent.OnGameStarted
 func (gw *GameWatcher) OnGameStarted(g *Game, p GamePlayer) {
+	// TODO: set game started
 	gw.wss.Emit(p.ID, &protobuf.GameInfo{
 		EventName: proto.String("game:started"),
 		Id:        &g.ID,
@@ -181,6 +191,7 @@ func (gw *GameWatcher) OnTargetWin(p GamePlayer) {
 
 // OnGameFinish implements GameEvent.OnGameFinish
 func (gw *GameWatcher) OnGameFinish(rank GameRank) {
+	// TODO remove this game cancel and set game stopped
 	log.Printf("gamewatcher:stop:game:%s", rank.Game)
 	if game := gw.games[rank.Game]; game != nil && game.cancel != nil {
 		game.cancel()
