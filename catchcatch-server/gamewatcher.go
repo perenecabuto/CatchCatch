@@ -156,11 +156,7 @@ func (gw *GameWatcher) WatchCheckpoints(ctx context.Context) {
 			NearByFeatId: &d.NearByFeatID,
 			NearByMeters: &d.NearByMeters,
 		}
-		if err := gw.wss.Emit(d.FeatID, payload); err != nil {
-			log.Println("Error to notify player", d.FeatID, err)
-		}
-		payload.EventName = proto.String("admin:feature:checkpoint")
-		return gw.wss.Broadcast(payload)
+		return gw.wss.Emit(d.FeatID, payload)
 	})
 	if err != nil {
 		log.Println("Error to stream geofence:event", err)

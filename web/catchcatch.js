@@ -82,7 +82,7 @@ function init() {
     function (feat) {
         console.log("add feat", feat);
         let coords = feat.getGeometry().getCoordinates();
-        let fakePlayer = new Player(coords[1], coords[0]);
+        let fakePlayer = new Player(coords[1], coords[0], controller);
         map.addInteraction(fakePlayer.getInteraction());
         fakePlayer.connect(function (p) {
             controller.updatePlayer(p);
@@ -112,7 +112,7 @@ function init() {
 window.addEventListener("DOMContentLoaded", messages.load(init));
 
 
-let Player = function (x, y) {
+let Player = function (x, y, admin) {
     let socket;
     let player = { id: undefined, x: 0, y: 0 };
 
@@ -177,7 +177,7 @@ let Player = function (x, y) {
         })
         socket.on('checkpoint:detected', function (msg) {
             let detection = messages.Detection.decode(msg);
-            log(player.id + ':checkpoint:detected:' + JSON.stringify(detection));
+            admin.showCircleOnMap(player.id, [detection.lon, detection.lat], detection.nearByMeters);    
         })
         socket.on('disconnect', onDisconnected)
     }
