@@ -25,8 +25,8 @@ type GameEvents interface {
 	OnTargetWin(p GamePlayer)
 	OnGameFinish(r GameRank)
 	OnPlayerLoose(g *Game, p GamePlayer)
-	OnTargetReached(p GamePlayer, dist float64)
-	OnPlayerNearToTarget(p GamePlayer, dist float64)
+	OnTargetReached(p GamePlayer)
+	OnPlayerNearToTarget(p GamePlayer)
 }
 
 // GameRole represents GamePlayer role
@@ -136,8 +136,8 @@ func NewGameRank(gameName string) *GameRank {
 func (rank GameRank) ByPlayersDistanceToTarget(players map[string]*GamePlayer, target GamePlayer) GameRank {
 	playersDistToTarget := map[int]GamePlayer{}
 	for _, p := range players {
-		dist := p.DistTo(target.Player)
-		playersDistToTarget[int(dist)] = *p
+		dist := int(p.DistToTarget)
+		playersDistToTarget[dist] = *p
 		rank.PlayerIDs = append(rank.PlayerIDs, p.Player.ID)
 	}
 	dists := make([]int, 0)
@@ -173,7 +173,7 @@ func (g *Game) SetPlayer(id string, lon, lat float64) error {
 	if !g.started {
 		if _, exists := g.players[id]; !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
-			g.players[id] = &GamePlayer{model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined}
+			g.players[id] = &GamePlayer{model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0}
 		}
 		return nil
 	}
@@ -194,16 +194,16 @@ func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) error {
 	if !exists {
 		return ErrPlayerIsNotInTheGame
 	}
-	dist := p.DistTo(target.Player)
+	p.DistToTarget = p.DistTo(target.Player)
 
-	if dist <= 20 {
-		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
+	if p.DistToTarget <= 20 {
+		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, p.DistToTarget)
 		delete(g.players, target.ID)
 		g.events.OnPlayerLoose(g, *target)
-		g.events.OnTargetReached(*p, dist)
-		g.stop()
-	} else if dist <= 100 {
-		g.events.OnPlayerNearToTarget(*p, dist)
+		g.events.OnTargetReached(*p)
+		g.Stop()
+	} else if p.DistToTarget <= 100 {
+		g.events.OnPlayerNearToTarget(*p)
 	}
 	return nil
 }
