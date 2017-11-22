@@ -65,18 +65,6 @@ func (h *EventHandler) onConnection(c *WSConnListener) {
 		return nil
 	})
 
-	go h.stream.StreamNearByEvents(ctx, "geofences", "player", player.ID, 5000, func(d *Detection) error {
-		switch d.Intersects {
-		case Inside:
-			coords := `{"type":"Polygon","coordinates":` + d.Coordinates + "}"
-			c.Emit(&protobuf.Feature{EventName: proto.String("admin:feature:added"), Id: &d.FeatID,
-				Group: proto.String("geofences"), Coords: &coords})
-			if err != nil {
-				log.Println("admin:feature:added error", err.Error())
-			}
-		}
-		return nil
-	})
 
 	c.On("player:request-games", h.onPlayerRequestGames(player, c))
 	c.On("player:update", h.onPlayerUpdate(player, c))
