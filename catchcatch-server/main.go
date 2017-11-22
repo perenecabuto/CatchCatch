@@ -66,7 +66,7 @@ func main() {
 	}()
 	go watcher.WatchCheckpoints(ctx)
 
-	eventH := NewEventHandler(server, service, watcher, stream)
+	eventH := NewEventHandler(server, service)
 	server.OnConnected(eventH.onConnection)
 	http.Handle("/ws", recoverWrapper(server.Listen(ctx)))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
