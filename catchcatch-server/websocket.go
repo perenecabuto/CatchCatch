@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"sync/atomic"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
@@ -125,8 +124,8 @@ type WSServer struct {
 	handler     WSDriver
 	onConnected func(c *WSConnListener)
 
-	connections atomic.Value
-	sync.Mutex
+	connections connectionGroup
+	sync.RWMutex
 }
 
 type connectionGroup map[string]*WSConnListener
@@ -134,7 +133,7 @@ type connectionGroup map[string]*WSConnListener
 // NewWSServer create a new WSServer
 func NewWSServer(handler WSDriver) *WSServer {
 	wss := &WSServer{handler: handler, onConnected: func(c *WSConnListener) {}}
-	wss.connections.Store(make(connectionGroup))
+	wss.connections = make(connectionGroup)
 	return wss
 }
 
@@ -162,39 +161,30 @@ func (wss *WSServer) Listen(ctx context.Context) http.Handler {
 
 // Get Conn by session id
 func (wss *WSServer) Get(id string) *WSConnListener {
-	connections := wss.connections.Load().(connectionGroup)
-	return connections[id]
+	wss.RLock()
+	c := wss.connections[id]
+	wss.RUnlock()
+	return c
 }
 
 // Add Conn for session id
 func (wss *WSServer) Add(c WSConnection) *WSConnListener {
 	id := uuid.NewV4().String()
 	conn := &WSConnListener{c, id, make(map[string]evtCallback), func() {}, func() {}, make([]byte, 512)}
-	wss.getConnectionsForChange(func(connections connectionGroup) {
-		connections[conn.ID] = conn
-	})
-	return conn
-}
-
-func (wss *WSServer) getConnectionsForChange(fn func(connectionGroup)) {
 	wss.Lock()
-	connections := wss.connections.Load().(connectionGroup)
-	fn(connections)
-	newGroup := make(connectionGroup)
-	for k, v := range connections {
-		newGroup[k] = v
-	}
-	wss.connections.Store(newGroup)
+	wss.connections[conn.ID] = conn
 	wss.Unlock()
+	return conn
 }
 
 // Remove Conn by session id
 func (wss *WSServer) Remove(id string) {
 	if c := wss.Get(id); c != nil {
 		c.Close()
-		wss.getConnectionsForChange(func(connections connectionGroup) {
-			delete(connections, id)
-		})
+
+		wss.Lock()
+		delete(wss.connections, id)
+		wss.Unlock()
 	}
 }
 
@@ -217,12 +207,14 @@ func (wss *WSServer) BroadcastTo(ids []string, message Message) {
 
 // BroadcastFrom connection id event message to all connections
 func (wss *WSServer) BroadcastFrom(fromID string, message Message) error {
-	connections := wss.connections.Load().(connectionGroup)
-	for id := range connections {
-		if fromID == id {
+	wss.RLock()
+	connections := wss.connections
+	wss.RUnlock()
+	for _, c := range connections {
+		if fromID == c.ID {
 			continue
 		}
-		if err := wss.Emit(id, message); err != nil {
+		if err := c.Emit(message); err != nil {
 			return err
 		}
 	}
@@ -231,16 +223,18 @@ func (wss *WSServer) BroadcastFrom(fromID string, message Message) error {
 
 // Broadcast event message to all connections
 func (wss *WSServer) Broadcast(message Message) error {
-	connections := wss.connections.Load().(connectionGroup)
-	for id := range connections {
-		if err := wss.Emit(id, message); err != nil {
+	wss.RLock()
+	connections := wss.connections
+	wss.RUnlock()
+	for _, c := range connections {
+		if err := c.Emit(message); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// CloseAll Conn
+// Close connection by id
 func (wss *WSServer) Close(id string) error {
 	if conn := wss.Get(id); conn != nil {
 		conn.Close()
@@ -251,7 +245,9 @@ func (wss *WSServer) Close(id string) error {
 
 // CloseAll Conn
 func (wss *WSServer) CloseAll() {
-	connections := wss.connections.Load().(connectionGroup)
+	wss.RLock()
+	connections := wss.connections
+	wss.RUnlock()
 	for _, c := range connections {
 		c.Close()
 	}
