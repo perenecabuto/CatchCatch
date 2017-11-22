@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
 	"math/rand"
 	"sort"
-	"time"
 
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 )
@@ -44,25 +42,23 @@ const (
 // GamePlayer wraps player and its role in the game
 type GamePlayer struct {
 	model.Player
-	Role GameRole
+	Role         GameRole
+	DistToTarget float64
 }
 
 // Game controls rounds and players
 type Game struct {
-	ID       string
-	players  map[string]*GamePlayer
-	duration time.Duration
-	started  bool
-	target   *GamePlayer
-	events   GameEvents
-
-	stop context.CancelFunc
+	ID      string
+	players map[string]*GamePlayer
+	started bool
+	target  *GamePlayer
+	events  GameEvents
 }
 
 // NewGame create a game with duration
-func NewGame(id string, duration time.Duration, events GameEvents) *Game {
-	return &Game{ID: id, events: events, duration: duration, started: false,
-		players: make(map[string]*GamePlayer), stop: func() {}}
+func NewGame(id string, events GameEvents) *Game {
+	return &Game{ID: id, events: events, started: false,
+		players: make(map[string]*GamePlayer)}
 }
 
 func (g Game) String() string {
@@ -72,7 +68,7 @@ func (g Game) String() string {
 /*
 Start the game
 */
-func (g *Game) Start(ctx context.Context) error {
+func (g *Game) Start() error {
 	if g.started {
 		return ErrAlreadyStarted
 	}
@@ -82,21 +78,12 @@ func (g *Game) Start(ctx context.Context) error {
 
 	g.started = true
 
-	go g.handleGameFinishEvent(ctx)
 	return nil
 }
 
-func (g *Game) handleGameFinishEvent(ctx context.Context) {
-	var gameCtx context.Context
-	gameCtx, g.stop = context.WithTimeout(ctx, g.duration)
-	<-gameCtx.Done()
-	g.started = false
-	g.finish(gameCtx)
-}
-
-func (g *Game) finish(ctx context.Context) {
+// Stop the game
+func (g *Game) Stop() error {
 	log.Println("game:", g.ID, ":stop!!!!!!!")
-	g.started = false
 
 	_, stillInTheGame := g.players[g.target.ID]
 	if stillInTheGame {
@@ -105,7 +92,10 @@ func (g *Game) finish(ctx context.Context) {
 
 	rank := NewGameRank(g.ID).ByPlayersDistanceToTarget(g.players, *g.target)
 	g.events.OnGameFinish(rank)
+
+	g.started = false
 	g.players = make(map[string]*GamePlayer)
+	return nil
 }
 
 // GameInfo ...
@@ -228,15 +218,15 @@ func (g *Game) RemovePlayer(id string) {
 
 	if len(g.players) == 1 {
 		log.Println("game:"+g.ID+":detect=last-one:", gamePlayer)
-		g.stop()
+		g.Stop()
 	} else if id == g.target.ID {
 		log.Println("game:"+g.ID+":detect=target-loose:", gamePlayer)
-		g.stop()
 		go g.events.OnPlayerLoose(*g, *gamePlayer)
+		g.Stop()
 	} else if len(g.players) == 0 {
 		log.Println("game:"+g.ID+":detect=no-players:", gamePlayer)
 		g.players[id] = gamePlayer
-		g.stop()
+		g.Stop()
 	} else {
 		log.Println("game:"+g.ID+":detect=loose:", gamePlayer)
 		go g.events.OnPlayerLoose(*g, *gamePlayer)
