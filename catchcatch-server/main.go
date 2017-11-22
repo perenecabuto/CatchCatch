@@ -65,6 +65,8 @@ func main() {
 		}
 	}()
 	go watcher.WatchCheckpoints(ctx)
+	go watcher.WatchGeofences(ctx)
+	go watcher.WatchPlayers(ctx)
 
 	eventH := NewEventHandler(server, service)
 	server.OnConnected(eventH.onConnection)
