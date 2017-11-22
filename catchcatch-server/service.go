@@ -129,7 +129,7 @@ func featuresFromSliceCmd(client *redis.Client, group string, cmd *redis.SliceCm
 	features := make([]*model.Feature, len(payload))
 	for i, item := range payload {
 		itemRes, _ := redis.NewSliceResult(item.([]interface{}), nil).Result()
-		features[i] = &model.Feature{ID: itemRes[0].(string), Coordinates: itemRes[1].(string), Group: group}
+		features[i] = &model.Feature{ID: itemRes[0].(string), Group: group, Coordinates: itemRes[1].(string)}
 	}
 	return features, nil
 }
