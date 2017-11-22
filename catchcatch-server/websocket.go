@@ -14,6 +14,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+var (
+	// ErrWSConnectionNotFound is returned when connection id is not registred on this server
+	ErrWSConnectionNotFound = errors.New("connection not found")
+)
+
 // WSConnection is an interface for WS communication
 type WSConnection interface {
 	Read(*[]byte) (int, error)
@@ -196,10 +201,9 @@ func (wss *WSServer) Remove(id string) {
 // Emit send payload on eventX to socket id
 func (wss *WSServer) Emit(id string, message Message) error {
 	if conn := wss.Get(id); conn != nil {
-		conn.Emit(message)
-		return nil
+		return conn.Emit(message)
 	}
-	return errors.New("connection not found")
+	return ErrWSConnectionNotFound
 }
 
 // BroadcastTo ids event message
@@ -242,7 +246,7 @@ func (wss *WSServer) Close(id string) error {
 		conn.Close()
 		return nil
 	}
-	return errors.New("connection not found")
+	return ErrWSConnectionNotFound
 }
 
 // CloseAll Conn
