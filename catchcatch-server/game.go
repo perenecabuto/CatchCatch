@@ -21,10 +21,10 @@ var (
 
 // GameEvents interface for communication with external game watcher
 type GameEvents interface {
-	OnGameStarted(g *Game, p GamePlayer)
+	OnGameStarted(g Game, p GamePlayer)
 	OnTargetWin(p GamePlayer)
 	OnGameFinish(r GameRank)
-	OnPlayerLoose(g *Game, p GamePlayer)
+	OnPlayerLoose(g Game, p GamePlayer)
 	OnTargetReached(p GamePlayer)
 	OnPlayerNearToTarget(p GamePlayer)
 }
@@ -199,7 +199,7 @@ func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) error {
 	if p.DistToTarget <= 20 {
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, p.DistToTarget)
 		delete(g.players, target.ID)
-		g.events.OnPlayerLoose(g, *target)
+		g.events.OnPlayerLoose(*g, *target)
 		g.events.OnTargetReached(*p)
 		g.Stop()
 	} else if p.DistToTarget <= 100 {
@@ -231,15 +231,15 @@ func (g *Game) RemovePlayer(id string) {
 		g.stop()
 	} else if id == g.target.ID {
 		log.Println("game:"+g.ID+":detect=target-loose:", gamePlayer)
-		go g.events.OnPlayerLoose(g, *gamePlayer)
 		g.stop()
+		go g.events.OnPlayerLoose(*g, *gamePlayer)
 	} else if len(g.players) == 0 {
 		log.Println("game:"+g.ID+":detect=no-players:", gamePlayer)
 		g.players[id] = gamePlayer
 		g.stop()
 	} else {
 		log.Println("game:"+g.ID+":detect=loose:", gamePlayer)
-		go g.events.OnPlayerLoose(g, *gamePlayer)
+		go g.events.OnPlayerLoose(*g, *gamePlayer)
 	}
 	return
 }
@@ -252,7 +252,7 @@ func (g *Game) setPlayersRoles() {
 		if id != g.target.ID {
 			p.Role = GameRoleHunter
 		}
-		g.events.OnGameStarted(g, *p)
+		g.events.OnGameStarted(*g, *p)
 	}
 }
 
