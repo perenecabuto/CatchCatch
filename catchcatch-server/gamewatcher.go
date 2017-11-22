@@ -152,7 +152,7 @@ func (gw *GameWatcher) startGameWhenReady(ctx context.Context, g *Game) error {
 // game callbacks
 
 // OnGameStarted implements GameEvent.OnGameStarted
-func (gw *GameWatcher) OnGameStarted(g *Game, p GamePlayer) {
+func (gw *GameWatcher) OnGameStarted(g Game, p GamePlayer) {
 	// TODO: set game started
 	gw.wss.Emit(p.ID, &protobuf.GameInfo{
 		EventName: proto.String("game:started"),
@@ -185,18 +185,18 @@ func (gw *GameWatcher) OnGameFinish(rank GameRank) {
 }
 
 // OnPlayerLoose implements GameEvent.OnPlayerLoose
-func (gw *GameWatcher) OnPlayerLoose(g *Game, p GamePlayer) {
+func (gw *GameWatcher) OnPlayerLoose(g Game, p GamePlayer) {
 	gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
 }
 
 // OnTargetReached implements GameEvent.OnTargetReached
-func (gw *GameWatcher) OnTargetReached(p GamePlayer, dist float64) {
+func (gw *GameWatcher) OnTargetReached(p GamePlayer) {
 	gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"),
-		Dist: &dist})
+		Dist: &p.DistToTarget})
 }
 
 // OnPlayerNearToTarget implements GameEvent.OnPlayerNearToTarget
-func (gw *GameWatcher) OnPlayerNearToTarget(p GamePlayer, dist float64) {
+func (gw *GameWatcher) OnPlayerNearToTarget(p GamePlayer) {
 	gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:near"),
-		Dist: &dist})
+		Dist: &p.DistToTarget})
 }
