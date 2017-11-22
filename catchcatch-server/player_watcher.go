@@ -15,7 +15,7 @@ func (gw *GameWatcher) WatchPlayers(ctx context.Context) error {
 		case Inside:
 			err := gw.wss.Emit(playerID, &protobuf.Player{EventName: proto.String("remote-player:updated"),
 				Id: &remotePlayerID, Lon: &d.Lon, Lat: &d.Lat})
-			if err != nil {
+			if err != ErrWSConnectionNotFound && err != nil {
 				log.Println("remote-player:updated error", err.Error())
 			}
 		case Exit:

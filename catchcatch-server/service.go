@@ -7,6 +7,10 @@ import (
 	redis "gopkg.in/redis.v5"
 )
 
+var (
+	ErrFeatureNotFound = redis.Nil
+)
+
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
 	Register(p *model.Player) error

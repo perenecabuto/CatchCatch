@@ -45,7 +45,7 @@ func (h *EventHandler) onConnection(c *WSConnListener) {
 		h.onPlayerDisconnect(player)
 	})
 
-	c.On("admin:disconnect", h.onDisconnectByID())
+	c.On("admin:disconnect", h.onDisconnectByID(c))
 	c.On("admin:feature:add", h.onAddFeature())
 	c.On("admin:feature:request-remotes", h.onPlayerRequestRemotes(c))
 	c.On("admin:feature:request-list", h.onRequestFeatures(c))
@@ -115,13 +115,19 @@ func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *WSConnListe
 
 // Admin events
 
-func (h *EventHandler) onDisconnectByID() func([]byte) {
+func (h *EventHandler) onDisconnectByID(c *WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
 		log.Println("admin:disconnect", msg.GetId())
 		player := &model.Player{ID: msg.GetId()}
-		h.service.Remove(player)
+		err := h.service.Remove(player)
+		if err == ErrFeatureNotFound {
+			// Notify remote-player removal to ghost players on admin
+			log.Println("admin:disconnect:force", msg.GetId())
+			c.Emit(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
+				Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
+		}
 		h.server.Remove(msg.GetId())
 	}
 }
