@@ -41,35 +41,10 @@ func (h *EventHandler) onConnection(c *WSConnListener) {
 	}
 
 	log.Println("new player connected", player)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go h.stream.StreamNearByEvents(ctx, "player", "player", player.ID, 5000, func(d *Detection) error {
-		switch d.Intersects {
-		case Inside:
-			err := c.Emit(&protobuf.Player{EventName: proto.String("remote-player:updated"),
-				Id: &d.FeatID, Lon: &d.Lon, Lat: &d.Lat})
-			if err != nil {
-				log.Println("remote-player:updated error", err.Error())
-			}
-		case Exit:
-			if d.FeatID == player.ID {
-				c.Close()
-				return nil
-			}
-			err := c.Emit(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
-				Id: &d.FeatID, Lon: &d.Lon, Lat: &d.Lat})
-			if err != nil {
-				log.Println("remote-player:updated error", err.Error())
-			}
-		}
-		return nil
-	})
-
 
 	c.On("player:request-games", h.onPlayerRequestGames(player, c))
 	c.On("player:update", h.onPlayerUpdate(player, c))
 	c.OnDisconnected(func() {
-		cancel()
 		h.onPlayerDisconnect(player)
 	})
 
