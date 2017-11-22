@@ -19,7 +19,7 @@ type PlayerLocationService interface {
 	Remove(p *model.Player) error
 	Players() (model.PlayerList, error)
 
-	AddFeature(group, id, geojson string) (*model.Feature, error)
+	SetFeature(group, id, geojson string) (*model.Feature, error)
 	FeatureByID(group, id string) (*model.Feature, error)
 	Features(group string) ([]*model.Feature, error)
 	FeaturesAround(group string, point *geo.Point) ([]*model.Feature, error)
@@ -73,8 +73,8 @@ func (s *Tile38PlayerLocationService) Players() (model.PlayerList, error) {
 	return list, nil
 }
 
-// AddFeature persist features
-func (s *Tile38PlayerLocationService) AddFeature(group, id, geojson string) (*model.Feature, error) {
+// SetFeature persist features
+func (s *Tile38PlayerLocationService) SetFeature(group, id, geojson string) (*model.Feature, error) {
 	cmd := redis.NewStringCmd("SET", group, id, "OBJECT", geojson)
 	s.client.Process(cmd)
 	if err := cmd.Err(); err != nil {

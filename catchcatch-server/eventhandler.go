@@ -148,7 +148,7 @@ func (h *EventHandler) onAddFeature() func([]byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
-		_, err := h.service.AddFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
+		_, err := h.service.SetFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
 		if err != nil {
 			log.Println("Error to create feature:", err)
 			return
