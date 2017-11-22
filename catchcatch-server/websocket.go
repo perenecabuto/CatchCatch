@@ -237,6 +237,15 @@ func (wss *WSServer) Broadcast(message Message) error {
 }
 
 // CloseAll Conn
+func (wss *WSServer) Close(id string) error {
+	if conn := wss.Get(id); conn != nil {
+		conn.Close()
+		return nil
+	}
+	return errors.New("connection not found")
+}
+
+// CloseAll Conn
 func (wss *WSServer) CloseAll() {
 	connections := wss.connections.Load().(connectionGroup)
 	for _, c := range connections {
