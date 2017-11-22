@@ -16,6 +16,9 @@ services:
         links:
             - tile38
             - influxdb
+        depends_on:
+            - tile38
+            - influxdb
             
     influxdb:
         image: influxdb
