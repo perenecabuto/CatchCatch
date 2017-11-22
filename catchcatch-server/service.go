@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	// ErrFeatureNotFound happens when feature does not exists in the storage
 	ErrFeatureNotFound = redis.Nil
 )
 
