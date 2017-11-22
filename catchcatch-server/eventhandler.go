@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"log"
 
@@ -19,13 +18,11 @@ import (
 type EventHandler struct {
 	server  *WSServer
 	service PlayerLocationService
-	games   *GameWatcher
-	stream  EventStream
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *WSServer, service PlayerLocationService, gw *GameWatcher, stream EventStream) *EventHandler {
-	handler := &EventHandler{server, service, gw, stream}
+func NewEventHandler(server *WSServer, service PlayerLocationService) *EventHandler {
+	handler := &EventHandler{server, service}
 	server.OnConnected(handler.onConnection)
 	return handler
 }
@@ -131,7 +128,8 @@ func (h *EventHandler) onDisconnectByID() func([]byte) {
 
 func (h *EventHandler) onClear() func([]byte) {
 	return func([]byte) {
-		h.games.Clear()
+		// TODO: send this message by broaker
+		// h.games.Clear()
 		h.service.Clear()
 		h.server.CloseAll()
 	}
