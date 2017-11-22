@@ -84,15 +84,26 @@ func (s *Tile38PlayerLocationService) Features(group string) ([]*model.Feature, 
 	return featuresFromSliceCmd(s.client, group, cmd)
 }
 
+// Exists ...
+func (s *Tile38PlayerLocationService) Exists(group, id string) (bool, error) {
+	f, err := s.FeatureByID(group, id)
+	if err == redis.Nil {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return f != nil, nil
+}
+
 // FeatureByID ...
 func (s *Tile38PlayerLocationService) FeatureByID(group, id string) (*model.Feature, error) {
 	cmd := redis.NewStringCmd("GET", group, id)
 	s.client.Process(cmd)
-	res, err := cmd.Result()
+	coords, err := cmd.Result()
 	if err != nil {
 		return nil, err
 	}
-	coords := gjson.Get(res, "coordinates").String()
 	return &model.Feature{ID: id, Group: group, Coordinates: coords}, nil
 }
 
