@@ -4,9 +4,11 @@ services:
     web:
         build: .
         ports:
-            - "5000:5000"
+            - "5050:5050"
         command:
             - "./catchcatch-server"
+            - "-port"
+            - "5050"
             - "-tile38-addr"
             - "tile38:9851"
             - "-influxdb-addr"
