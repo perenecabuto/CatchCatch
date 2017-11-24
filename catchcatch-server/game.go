@@ -10,21 +10,30 @@ import (
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 )
 
+type GameEventName string
+
 var (
 	// ErrAlreadyStarted happens when an action is denied on running game
 	ErrAlreadyStarted = errors.New("game already started")
 	// ErrPlayerIsNotInTheGame happens when try to change or remove an player not in the game
 	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
+
+	GameNothingHappens     GameEventName = "game:nothing"
+	GamePlayerAdded        GameEventName = "game:player:added"
+	GamePlayerRemoved      GameEventName = "game:player:removed"
+	GameTargetWin          GameEventName = "game:target:win"
+	GameFinish             GameEventName = "game:finish"
+	GamePlayerLoose        GameEventName = "game:player:loose"
+	GameTargetReached      GameEventName = "game:target:reached"
+	GamePlayerNearToTarget GameEventName = "game:player:near"
+
+	GameEventNothing = GameEvent{Name: GameNothingHappens}
 )
 
-// GameEvents interface for communication with external game watcher
-type GameEvents interface {
-	OnGameStarted(g Game, p GamePlayer)
-	OnTargetWin(p GamePlayer)
-	OnGameFinish(r GameRank)
-	OnPlayerLoose(g Game, p GamePlayer)
-	OnTargetReached(p GamePlayer)
-	OnPlayerNearToTarget(p GamePlayer)
+type GameEvent struct {
+	Name   GameEventName
+	Player GamePlayer
+	Game   Game
 }
 
 // GameRole represents GamePlayer role
@@ -52,12 +61,11 @@ type Game struct {
 	players map[string]*GamePlayer
 	started bool
 	target  *GamePlayer
-	events  GameEvents
 }
 
 // NewGame create a game with duration
-func NewGame(id string, events GameEvents) *Game {
-	return &Game{ID: id, events: events, started: false,
+func NewGame(id string) *Game {
+	return &Game{ID: id, started: false,
 		players: make(map[string]*GamePlayer)}
 }
 
@@ -75,27 +83,28 @@ func (g *Game) Start() error {
 
 	log.Println("game:", g.ID, ":start!!!!!!")
 	g.setPlayersRoles()
-
 	g.started = true
 
 	return nil
 }
 
 // Stop the game
-func (g *Game) Stop() error {
+func (g *Game) Stop() GameRank {
 	log.Println("game:", g.ID, ":stop!!!!!!!")
-
-	_, stillInTheGame := g.players[g.target.ID]
-	if stillInTheGame {
-		g.events.OnTargetWin(*g.target)
-	}
-
-	rank := NewGameRank(g.ID).ByPlayersDistanceToTarget(g.players, *g.target)
-	g.events.OnGameFinish(rank)
-
 	g.started = false
 	g.players = make(map[string]*GamePlayer)
-	return nil
+	return NewGameRank(g.ID).ByPlayersDistanceToTarget(g.players, *g.target)
+}
+
+// Players return game players
+func (g *Game) Players() []GamePlayer {
+	players := make([]GamePlayer, len(g.players))
+	i := 0
+	for _, p := range g.players {
+		players[i] = *p
+		i++
+	}
+	return players
 }
 
 // GameInfo ...
@@ -159,43 +168,47 @@ The rule is:
     - it can send messages to the player
     - it receives sessions to notify anything to this player games
 */
-func (g *Game) SetPlayer(id string, lon, lat float64) error {
+func (g *Game) SetPlayer(id string, lon, lat float64) (GameEvent, error) {
 	if !g.started {
 		if _, exists := g.players[id]; !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
 			g.players[id] = &GamePlayer{model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0}
+			return GameEvent{Name: GamePlayerAdded}, nil
 		}
-		return nil
+		return GameEventNothing, nil
 	}
 	p, exists := g.players[id]
 	if !exists {
-		return nil
+		return GameEventNothing, nil
 	}
 	p.Lon, p.Lat = lon, lat
 
 	if p.Role == GameRoleHunter {
 		return g.notifyToTheHunterTheDistanceToTheTarget(p)
 	}
-	return nil
+	return GameEventNothing, nil
 }
 
-func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) error {
+func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) (GameEvent, error) {
 	target, exists := g.players[g.target.ID]
 	if !exists {
-		return ErrPlayerIsNotInTheGame
+		return GameEventNothing, ErrPlayerIsNotInTheGame
 	}
 	p.DistToTarget = p.DistTo(target.Player)
 
 	if p.DistToTarget <= 20 {
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, p.DistToTarget)
 		delete(g.players, target.ID)
-		g.events.OnPlayerLoose(*g, *target)
-		g.events.OnTargetReached(*p)
+		// TODO: remember to notify target that he loses
+		// g.events.OnPlayerLoose(*g, *target)
+		// TODO: remove stop
 		g.Stop()
+		// TODO: remove stop
+		return GameEvent{Name: GameTargetReached, Game: *g, Player: *p}, nil
 	} else if p.DistToTarget <= 100 {
-		g.events.OnPlayerNearToTarget(*p)
+		return GameEvent{Name: GamePlayerNearToTarget, Game: *g, Player: *p}, nil
 	}
-	return nil
+	return GameEventNothing, nil
 }
 
 /*
@@ -205,15 +218,15 @@ The role is:
     - it receives sessions to send messages to its players
     - it must remove players from the game
 */
-func (g *Game) RemovePlayer(id string) {
+func (g *Game) RemovePlayer(id string) (GameEvent, error) {
 	gamePlayer, exists := g.players[id]
 	if !exists {
-		return
+		return GameEventNothing, ErrPlayerIsNotInTheGame
 	}
 	delete(g.players, id)
 	if !g.started {
 		log.Println("game:"+g.ID+":detect=exit:", gamePlayer)
-		return
+		return GameEvent{Name: GamePlayerRemoved, Player: *gamePlayer}, nil
 	}
 
 	if len(g.players) == 1 {
@@ -221,17 +234,19 @@ func (g *Game) RemovePlayer(id string) {
 		g.Stop()
 	} else if id == g.target.ID {
 		log.Println("game:"+g.ID+":detect=target-loose:", gamePlayer)
-		go g.events.OnPlayerLoose(*g, *gamePlayer)
+		// TODO: Remove stop
 		g.Stop()
+		return GameEvent{Name: GamePlayerRemoved, Player: *gamePlayer}, nil
 	} else if len(g.players) == 0 {
 		log.Println("game:"+g.ID+":detect=no-players:", gamePlayer)
 		g.players[id] = gamePlayer
+		// TODO: Remove stop
 		g.Stop()
 	} else {
 		log.Println("game:"+g.ID+":detect=loose:", gamePlayer)
-		go g.events.OnPlayerLoose(*g, *gamePlayer)
+		return GameEvent{Name: GamePlayerLoose, Player: *gamePlayer}, nil
 	}
-	return
+	return GameEventNothing, nil
 }
 
 func (g *Game) setPlayersRoles() {
@@ -242,7 +257,6 @@ func (g *Game) setPlayersRoles() {
 		if id != g.target.ID {
 			p.Role = GameRoleHunter
 		}
-		g.events.OnGameStarted(*g, *p)
 	}
 }
 
