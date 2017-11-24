@@ -11,7 +11,7 @@ import (
 // WatchGeofences watch for geofences events and notify players around
 func (gw *GameWatcher) WatchGeofences(ctx context.Context) error {
 	// TODO: only notify admins about new geofences
-	return gw.stream.StreamNearByEvents(ctx, "geofences", "player", "*", 5000, func(d *Detection) error {
+	return gw.stream.StreamNearByEvents(ctx, "geofences", "player", "*", DefaultWatcherRange, func(d *Detection) error {
 		switch d.Intersects {
 		case Inside:
 			coords := `{"type":"Polygon","coordinates":` + d.Coordinates + "}"

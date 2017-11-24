@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"runtime/debug"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -11,6 +10,8 @@ import (
 )
 
 const (
+	// DefaultWatcherRange set the watcher radar radius size
+	DefaultWatcherRange = 5000
 	// MinPlayersPerGame ...
 	MinPlayersPerGame = 3
 	// DefaultGameDuration ...

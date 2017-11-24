@@ -10,7 +10,7 @@ import (
 
 // WatchPlayers observe players around players and notify it's position
 func (gw *GameWatcher) WatchPlayers(ctx context.Context) error {
-	return gw.stream.StreamNearByEvents(ctx, "player", "player", "*", 5000, func(d *Detection) error {
+	return gw.stream.StreamNearByEvents(ctx, "player", "player", "*", DefaultWatcherRange, func(d *Detection) error {
 		playerID, remotePlayerID := d.NearByFeatID, d.FeatID
 		switch d.Intersects {
 		case Inside:
