@@ -196,8 +196,8 @@ func (wss *WSServer) Emit(id string, message Message) error {
 	return ErrWSConnectionNotFound
 }
 
-// BroadcastTo ids event message
-func (wss *WSServer) BroadcastTo(ids []string, message Message) {
+// EmitTo ids event message
+func (wss *WSServer) EmitTo(ids []string, message Message) {
 	for _, id := range ids {
 		if err := wss.Emit(id, message); err != nil {
 			log.Println("error to emit ", message, message, err)
