@@ -166,6 +166,11 @@ func (rank GameRank) ByPlayersDistanceToTarget(players []GamePlayer) GameRank {
 	return rank
 }
 
+func (g Game) Rank() GameRank {
+	players := g.Players()
+	return NewGameRank(g.ID).ByPlayersDistanceToTarget(players)
+}
+
 // Started true when game started
 func (g Game) Started() bool {
 	return g.started
