@@ -27,7 +27,7 @@ var (
 	GameTargetWin             GameEventName = "game:target:win"
 	GameLastPlayerDetected    GameEventName = "game:finish"
 	GamePlayerLoose           GameEventName = "game:player:loose"
-	GameTargetReached         GameEventName = "game:target:reached"
+	GameTargetLoose           GameEventName = "game:target:reached"
 	GamePlayerNearToTarget    GameEventName = "game:player:near"
 	GameRunningWithoutPlayers GameEventName = "game:empty"
 
@@ -56,13 +56,14 @@ type GamePlayer struct {
 	model.Player
 	Role         GameRole
 	DistToTarget float64
+	Loose        bool
 }
 
 // Game controls rounds and players
 type Game struct {
 	ID      string
-	players map[string]*GamePlayer
 	started bool
+	players map[string]*GamePlayer
 	target  *GamePlayer
 }
 
@@ -152,7 +153,10 @@ func (rank GameRank) ByPlayersDistanceToTarget(players map[string]*GamePlayer, t
 	maxDist := dists[len(dists)-1] + 1
 	for _, dist := range dists {
 		p := playersDistToTarget[dist]
-		points := 100 * (maxDist - dist) / maxDist
+		points := 0
+		if !p.Loose {
+			points = 100 * (maxDist - dist) / maxDist
+		}
 		rank.PlayerRank = append(rank.PlayerRank, PlayerRank{Player: p.ID, Points: points})
 	}
 
@@ -176,7 +180,8 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (GameEvent, error) {
 	if !g.started {
 		if _, exists := g.players[id]; !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
-			g.players[id] = &GamePlayer{model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0}
+			g.players[id] = &GamePlayer{
+				model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false}
 			return GameEvent{Name: GamePlayerAdded}, nil
 		}
 		return GameEventNothing, nil
@@ -201,11 +206,8 @@ func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) (GameEvent
 	p.DistToTarget = p.DistTo(target.Player)
 
 	if p.DistToTarget <= 20 {
-		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, p.DistToTarget)
-		delete(g.players, target.ID)
-		// TODO: remember to notify target that he loses
-		// g.events.OnPlayerLoose(*g, *target)
-		return GameEvent{Name: GameTargetReached, Player: *p}, nil
+		g.players[target.ID].Loose = true
+		return GameEvent{Name: GameTargetLoose, Player: *p}, nil
 	} else if p.DistToTarget <= 100 {
 		return GameEvent{Name: GamePlayerNearToTarget, Player: *p}, nil
 	}
@@ -220,34 +222,31 @@ The role is:
     - it must remove players from the game
 */
 func (g *Game) RemovePlayer(id string) (GameEvent, error) {
-	gamePlayer, exists := g.players[id]
+	p, exists := g.players[id]
 	if !exists {
 		return GameEventNothing, ErrPlayerIsNotInTheGame
 	}
-	delete(g.players, id)
 	if !g.started {
-		log.Println("game:"+g.ID+":detect=exit:", gamePlayer)
-		return GameEvent{Name: GamePlayerRemoved, Player: *gamePlayer}, nil
+		delete(g.players, id)
+		return GameEvent{Name: GamePlayerRemoved, Player: *p}, nil
 	}
 
-	if len(g.players) == 1 {
-		log.Println("game:"+g.ID+":detect=last-one:", gamePlayer)
-		g.Stop()
-	} else if id == g.target.ID {
-		log.Println("game:"+g.ID+":detect=target-loose:", gamePlayer)
-		// TODO: Remove stop
-		g.Stop()
-		return GameEvent{Name: GamePlayerRemoved, Player: *gamePlayer}, nil
-	} else if len(g.players) == 0 {
-		log.Println("game:"+g.ID+":detect=no-players:", gamePlayer)
-		g.players[id] = gamePlayer
-		// TODO: Remove stop
-		g.Stop()
-	} else {
-		log.Println("game:"+g.ID+":detect=loose:", gamePlayer)
-		return GameEvent{Name: GamePlayerLoose, Player: *gamePlayer}, nil
+	g.players[id].Loose = true
+	playersInGame := make([]*GamePlayer, 0)
+	for _, gp := range g.players {
+		if !gp.Loose {
+			playersInGame = append(playersInGame, gp)
+		}
 	}
-	return GameEventNothing, nil
+	if len(playersInGame) == 1 {
+		return GameEvent{Name: GameLastPlayerDetected, Player: *p}, nil
+	} else if len(playersInGame) == 0 {
+		return GameEvent{Name: GameRunningWithoutPlayers, Player: *p}, nil
+	} else if id == g.target.ID {
+		return GameEvent{Name: GameTargetLoose, Player: *p}, nil
+	}
+
+	return GameEvent{Name: GamePlayerLoose, Player: *p}, nil
 }
 
 func (g *Game) setPlayersRoles() {
