@@ -37,7 +37,6 @@ var (
 type GameEvent struct {
 	Name   GameEventName
 	Player GamePlayer
-	Game   Game
 }
 
 // GameRole represents GamePlayer role
