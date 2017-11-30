@@ -18,14 +18,18 @@ var (
 	// ErrPlayerIsNotInTheGame happens when try to change or remove an player not in the game
 	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
 
-	GameNothingHappens     GameEventName = "game:nothing"
-	GamePlayerAdded        GameEventName = "game:player:added"
-	GamePlayerRemoved      GameEventName = "game:player:removed"
-	GameTargetWin          GameEventName = "game:target:win"
-	GameFinish             GameEventName = "game:finish"
-	GamePlayerLoose        GameEventName = "game:player:loose"
-	GameTargetReached      GameEventName = "game:target:reached"
-	GamePlayerNearToTarget GameEventName = "game:player:near"
+	GameCreated               GameEventName = "game:created"
+	GameStarted               GameEventName = "game:started"
+	GameFinished              GameEventName = "game:finished"
+	GameNothingHappens        GameEventName = "game:nothing"
+	GamePlayerAdded           GameEventName = "game:player:added"
+	GamePlayerRemoved         GameEventName = "game:player:removed"
+	GameTargetWin             GameEventName = "game:target:win"
+	GameLastPlayerDetected    GameEventName = "game:finish"
+	GamePlayerLoose           GameEventName = "game:player:loose"
+	GameTargetReached         GameEventName = "game:target:reached"
+	GamePlayerNearToTarget    GameEventName = "game:player:near"
+	GameRunningWithoutPlayers GameEventName = "game:empty"
 
 	GameEventNothing = GameEvent{Name: GameNothingHappens}
 )
@@ -76,24 +80,25 @@ func (g Game) String() string {
 /*
 Start the game
 */
-func (g *Game) Start() error {
+func (g *Game) Start() GameEvent {
 	if g.started {
-		return ErrAlreadyStarted
+		return GameEventNothing
 	}
-
 	log.Println("game:", g.ID, ":start!!!!!!")
 	g.setPlayersRoles()
 	g.started = true
-
-	return nil
+	return GameEvent{Name: GameStarted}
 }
 
 // Stop the game
-func (g *Game) Stop() GameRank {
+func (g *Game) Stop() GameEvent {
+	if !g.started {
+		return GameEventNothing
+	}
 	log.Println("game:", g.ID, ":stop!!!!!!!")
 	g.started = false
 	g.players = make(map[string]*GamePlayer)
-	return NewGameRank(g.ID).ByPlayersDistanceToTarget(g.players, *g.target)
+	return GameEvent{Name: GameFinished}
 }
 
 // Players return game players
@@ -201,12 +206,9 @@ func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) (GameEvent
 		delete(g.players, target.ID)
 		// TODO: remember to notify target that he loses
 		// g.events.OnPlayerLoose(*g, *target)
-		// TODO: remove stop
-		g.Stop()
-		// TODO: remove stop
-		return GameEvent{Name: GameTargetReached, Game: *g, Player: *p}, nil
+		return GameEvent{Name: GameTargetReached, Player: *p}, nil
 	} else if p.DistToTarget <= 100 {
-		return GameEvent{Name: GamePlayerNearToTarget, Game: *g, Player: *p}, nil
+		return GameEvent{Name: GamePlayerNearToTarget, Player: *p}, nil
 	}
 	return GameEventNothing, nil
 }
