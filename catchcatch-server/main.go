@@ -49,7 +49,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	stream := NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debugMode)
-	service := NewPlayerLocationService(client)
+	repo := NewRepository(client)
+	playerService := NewPlayerLocationService(repo)
 	wsHandler := selectWsDriver(*wsdriver)
 	server := NewWSServer(wsHandler)
 	watcher := NewGameWatcher(stream, server)
@@ -68,7 +69,7 @@ func main() {
 	go watcher.WatchGeofences(ctx)
 	go watcher.WatchPlayers(ctx)
 
-	eventH := NewEventHandler(server, service)
+	eventH := NewEventHandler(server, playerService)
 	server.OnConnected(eventH.onConnection)
 	http.Handle("/ws", recoverWrapper(server.Listen(ctx)))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
