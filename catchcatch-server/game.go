@@ -137,11 +137,14 @@ func NewGameRank(gameName string) *GameRank {
 }
 
 // ByPlayersDistanceToTarget returns a game rank for players based on minimum distance to the target player
-func (rank GameRank) ByPlayersDistanceToTarget(players map[string]*GamePlayer, target GamePlayer) GameRank {
+func (rank GameRank) ByPlayersDistanceToTarget(players []GamePlayer) GameRank {
+	if len(players) == 0 {
+		return rank
+	}
 	playersDistToTarget := map[int]GamePlayer{}
 	for _, p := range players {
 		dist := int(p.DistToTarget)
-		playersDistToTarget[dist] = *p
+		playersDistToTarget[dist] = p
 		rank.PlayerIDs = append(rank.PlayerIDs, p.Player.ID)
 	}
 	dists := make([]int, 0)
