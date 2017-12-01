@@ -47,13 +47,11 @@ var (
 // GameRole represents GamePlayer role
 type GameRole string
 
+// GameRole options
 const (
-	// GameRoleUndefined for no role
 	GameRoleUndefined GameRole = "undefined"
-	// GameRoleTarget for target
-	GameRoleTarget GameRole = "target"
-	// GameRoleHunter for hunter
-	GameRoleHunter GameRole = "hunter"
+	GameRoleTarget    GameRole = "target"
+	GameRoleHunter    GameRole = "hunter"
 )
 
 // GamePlayer wraps player and its role in the game
@@ -171,6 +169,7 @@ func (rank GameRank) ByPlayersDistanceToTarget(players []GamePlayer) GameRank {
 	return rank
 }
 
+// Rank returns the rank of the players in this game
 func (g Game) Rank() GameRank {
 	players := g.Players()
 	return NewGameRank(g.ID).ByPlayersDistanceToTarget(players)
