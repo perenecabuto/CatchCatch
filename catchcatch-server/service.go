@@ -66,7 +66,11 @@ type GameService interface {
 	Create(gameID, serverID string) error
 	Update(g *Game, serverID string, evt GameEvent) error
 	Remove(gameID string) error
+	IsGameRunning(gameID string) (bool, error)
 	GameByID(gameID string) (*Game, *GameEvent, error)
+
+	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
+	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
 }
 
 type Tile38GameService struct {
@@ -93,6 +97,19 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) error {
 	extra, _ := sjson.Set("", "updated_at", time.Now().Unix())
 	extra, _ = sjson.Set(extra, "server_id", serverID)
 	return gs.repo.SetFeatureExtraData("game", gameID, extra)
+}
+
+func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
+	data, err := gs.repo.FeatureExtraData("game", gameID)
+	if err == ErrFeatureNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	lastUpdate := time.Unix(gjson.Get(data, "updated_at").Int(), 0)
+	expiration := lastUpdate.Add(20 * time.Second)
+	return time.Now().Before(expiration), nil
 }
 
 func (gs *Tile38GameService) Update(g *Game, serverID string, evt GameEvent) error {
@@ -147,4 +164,22 @@ func (gs *Tile38GameService) Remove(gameID string) error {
 		return err
 	}
 	return gs.repo.RemoveFeature("game", gameID)
+}
+
+func (gs *Tile38GameService) ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error {
+	return gs.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 0, func(d *Detection) error {
+		gameID := d.NearByFeatID
+		if gameID == "" {
+			return nil
+		}
+		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
+		return callback(gameID, p)
+	})
+}
+
+func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error {
+	return gs.stream.StreamIntersects(ctx, "player", "game", gameID, func(d *Detection) error {
+		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
+		return callback(p, d.Intersects == Exit)
+	})
 }
