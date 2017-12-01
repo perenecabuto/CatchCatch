@@ -12,6 +12,7 @@ var (
 	ErrFeatureNotFound = redis.Nil
 )
 
+// Repository is the geospatial repository
 type Repository interface {
 	SetFeature(group, id, geojson string) (*model.Feature, error)
 	Exists(group, id string) (bool, error)
@@ -22,10 +23,12 @@ type Repository interface {
 	Clear() error
 }
 
+// Tile38Repository tile38 implementation of Repository
 type Tile38Repository struct {
 	client *redis.Client
 }
 
+// NewRepository creates a new tile38 repository
 func NewRepository(client *redis.Client) Repository {
 	return &Tile38Repository{client}
 }
