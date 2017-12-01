@@ -51,25 +51,21 @@ func main() {
 	client := mustConnectTile38(*debugMode)
 	repo := NewRepository(client)
 	playerService := NewPlayerLocationService(repo)
+	featService := NewGeoFeatureService(repo, stream)
 	wsHandler := selectWsDriver(*wsdriver)
 	server := NewWSServer(wsHandler)
-	watcher := NewGameWatcher(stream, server)
+	aWatcher := NewAdminWatcher(featService, server)
 	onExit(func() {
 		cancel()
 		client.Close()
 		server.CloseAll()
 	})
 
-	go func() {
-		if err := watcher.WatchGamesForever(ctx); err != nil {
-			log.Panic("WatchGamesForever:error", err)
-		}
-	}()
-	go watcher.WatchCheckpoints(ctx)
-	go watcher.WatchGeofences(ctx)
-	go watcher.WatchPlayers(ctx)
+	go aWatcher.WatchCheckpoints(ctx)
+	go aWatcher.WatchGeofences(ctx)
+	go aWatcher.WatchPlayers(ctx)
 
-	eventH := NewEventHandler(server, playerService)
+	eventH := NewEventHandler(server, playerService, featService)
 	server.OnConnected(eventH.onConnection)
 	http.Handle("/ws", recoverWrapper(server.Listen(ctx)))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
