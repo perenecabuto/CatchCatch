@@ -21,12 +21,12 @@ func NewAdminWatcher(service GeoFeatureService, wss *WSServer) *AdminWatcher {
 // WatchPlayers observe players around players and notify it's position
 func (w *AdminWatcher) WatchPlayers(ctx context.Context) error {
 	return w.service.ObservePlayersAround(ctx, func(playerID string, remotePlayer model.Player, exit bool) error {
-		evtName := proto.String("remote-player:update")
+		evtName := proto.String("remote-player:updated")
 		if exit {
 			w.wss.Close(remotePlayer.ID)
 			evtName = proto.String("remote-player:destroy")
 		}
-		err := w.wss.Emit(playerID, &protobuf.Player{EventName: evtName,
+		err := w.wss.Broadcast(&protobuf.Player{EventName: evtName,
 			Id: &remotePlayer.ID, Lon: &remotePlayer.Lon, Lat: &remotePlayer.Lat})
 		if err != ErrWSConnectionNotFound && err != nil {
 			log.Println("remote-player:updated error", err.Error())
