@@ -147,7 +147,10 @@ func handleDetection(msg string) (*Detection, error) {
 			intersects = IntersectsEvent(detect)
 		}
 	}
-	coords := gjson.Get(msg, "object.coordinates").String()
+	coords := fmt.Sprintf(`{"type":"%s","coordinates":%s}`,
+		gjson.Get(msg, "object.type").String(),
+		gjson.Get(msg, "object.coordinates").String(),
+	)
 	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects, coords}, nil
 }
 
