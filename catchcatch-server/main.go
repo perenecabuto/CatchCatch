@@ -13,10 +13,12 @@ import (
 	"time"
 
 	zconf "github.com/grandcat/zeroconf"
+	uuid "github.com/satori/go.uuid"
 	redis "gopkg.in/redis.v5"
 )
 
 var (
+	serverID       = flag.String("id", uuid.NewV4().String(), "server id")
 	tile38Addr     = flag.String("tile38-addr", "localhost:9851", "redis address")
 	maxConnections = flag.Int("tile38-connections", 100, "tile38 address")
 	port           = flag.Int("port", 5000, "server port")
@@ -51,16 +53,21 @@ func main() {
 	client := mustConnectTile38(*debugMode)
 	repo := NewRepository(client)
 	playerService := NewPlayerLocationService(repo)
+	gameService := NewGameService(repo, stream)
 	featService := NewGeoFeatureService(repo, stream)
 	wsHandler := selectWsDriver(*wsdriver)
 	server := NewWSServer(wsHandler)
 	aWatcher := NewAdminWatcher(featService, server)
+	gWatcher := NewGameWatcher(*serverID, gameService, server)
+	worker := NewGameWorker(*serverID, gameService)
 	onExit(func() {
 		cancel()
 		client.Close()
 		server.CloseAll()
 	})
 
+	go worker.WatchGames(ctx)
+	go gWatcher.WatchGameEventsForever(ctx)
 	go aWatcher.WatchCheckpoints(ctx)
 	go aWatcher.WatchGeofences(ctx)
 	go aWatcher.WatchPlayers(ctx)
