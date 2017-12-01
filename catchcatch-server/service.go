@@ -71,6 +71,7 @@ type GameService interface {
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
 	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
+	ObserveGamesEvents(ctx context.Context, callback func(*Game, *GameEvent) error) error
 }
 
 type Tile38GameService struct {
@@ -181,5 +182,21 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 	return gs.stream.StreamIntersects(ctx, "player", "game", gameID, func(d *Detection) error {
 		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		return callback(p, d.Intersects == Exit)
+	})
+}
+
+func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*Game, *GameEvent) error) error {
+	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultWatcherRange, func(d *Detection) error {
+		gameID, playerID := d.FeatID, d.NearByFeatID
+		game, evt, err := gs.GameByID(gameID)
+		if err != nil {
+			return err
+		}
+		log.Println("game:event", evt, ":game:", game, ":player:", playerID)
+		if game == nil {
+			return nil
+		}
+
+		return callback(game, evt)
 	})
 }
