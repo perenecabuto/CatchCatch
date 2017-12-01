@@ -9,10 +9,9 @@ import (
 
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
-	Register(p *model.Player) error
-	Update(p *model.Player) error
+	Set(p *model.Player) error
 	Remove(p *model.Player) error
-	Players() (model.PlayerList, error)
+	All() (model.PlayerList, error)
 }
 
 // Tile38PlayerLocationService manages player locations
@@ -25,18 +24,13 @@ func NewPlayerLocationService(repo Repository) PlayerLocationService {
 	return &Tile38PlayerLocationService{repo}
 }
 
-// Register add new player
+// Exists add new player
 func (s *Tile38PlayerLocationService) Exists(p *model.Player) (bool, error) {
 	return s.repo.Exists("player", p.ID)
 }
 
-// Register add new player
-func (s *Tile38PlayerLocationService) Register(p *model.Player) error {
-	return s.Update(p)
-}
-
-// Update player data
-func (s *Tile38PlayerLocationService) Update(p *model.Player) error {
+// Set player data
+func (s *Tile38PlayerLocationService) Set(p *model.Player) error {
 	_, err := s.repo.SetFeature("player", p.ID,
 		fmt.Sprintf(`{"type": "Point", "coordinates": [%f, %f]}`, p.Lon, p.Lat))
 	return err
@@ -47,8 +41,8 @@ func (s *Tile38PlayerLocationService) Remove(p *model.Player) error {
 	return s.repo.RemoveFeature("player", p.ID)
 }
 
-// Players return all registered players
-func (s *Tile38PlayerLocationService) Players() (model.PlayerList, error) {
+// All return all registered players
+func (s *Tile38PlayerLocationService) All() (model.PlayerList, error) {
 	features, err := s.repo.Features("player")
 	if err != nil {
 		return nil, err
