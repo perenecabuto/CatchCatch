@@ -17,12 +17,13 @@ import (
 // EventHandler handle websocket events
 type EventHandler struct {
 	server  *WSServer
-	service PlayerLocationService
+	players PlayerLocationService
+	geo     GeoFeatureService
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *WSServer, service PlayerLocationService) *EventHandler {
-	handler := &EventHandler{server, service}
+func NewEventHandler(server *WSServer, players PlayerLocationService, geo GeoFeatureService) *EventHandler {
+	handler := &EventHandler{server, players, geo}
 	server.OnConnected(handler.onConnection)
 	return handler
 }
@@ -56,7 +57,7 @@ func (h *EventHandler) onConnection(c *WSConnListener) {
 
 func (h *EventHandler) onPlayerDisconnect(player *model.Player) {
 	log.Println("player:disconnect", player.ID)
-	h.service.Remove(player)
+	h.players.Remove(player)
 }
 
 func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) func([]byte) {
@@ -68,7 +69,7 @@ func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) f
 			return
 		}
 		player.Lat, player.Lon = lat, lon
-		h.service.Update(player)
+		h.players.Set(player)
 
 		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
 			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
@@ -77,7 +78,7 @@ func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) f
 
 func (h *EventHandler) onPlayerRequestRemotes(so *WSConnListener) func([]byte) {
 	return func([]byte) {
-		players, err := h.service.Players()
+		players, err := h.players.All()
 		if err != nil {
 			log.Println("player:request-remotes event error: " + err.Error())
 		}
@@ -97,7 +98,7 @@ func (h *EventHandler) onPlayerRequestRemotes(so *WSConnListener) func([]byte) {
 func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *WSConnListener) func([]byte) {
 	return func([]byte) {
 		go func() {
-			games, err := h.service.FeaturesAround("geofences", player.Point())
+			games, err := h.geo.FeaturesAroundPlayer("geofences", *player)
 			if err != nil {
 				log.Println("Error to request games:", err)
 				return
@@ -121,7 +122,7 @@ func (h *EventHandler) onDisconnectByID(c *WSConnListener) func([]byte) {
 		proto.Unmarshal(buf, msg)
 		log.Println("admin:disconnect", msg.GetId())
 		player := &model.Player{ID: msg.GetId()}
-		err := h.service.Remove(player)
+		err := h.players.Remove(player)
 		if err == ErrFeatureNotFound {
 			// Notify remote-player removal to ghost players on admin
 			log.Println("admin:disconnect:force", msg.GetId())
@@ -136,7 +137,7 @@ func (h *EventHandler) onClear() func([]byte) {
 	return func([]byte) {
 		// TODO: send this message by broaker
 		// h.games.Clear()
-		h.service.Clear()
+		h.geo.Clear()
 		h.server.CloseAll()
 	}
 }
@@ -148,7 +149,7 @@ func (h *EventHandler) onAddFeature() func([]byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
-		_, err := h.service.SetFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
+		err := h.geo.SetFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
 		if err != nil {
 			log.Println("Error to create feature:", err)
 			return
@@ -161,7 +162,7 @@ func (h *EventHandler) onRequestFeatures(c *WSConnListener) func([]byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
-		features, err := h.service.Features(msg.GetGroup())
+		features, err := h.geo.FeaturesByGroup(msg.GetGroup())
 		if err != nil {
 			log.Println("Error on sendFeatures:", err)
 		}
@@ -176,7 +177,7 @@ func (h *EventHandler) onRequestFeatures(c *WSConnListener) func([]byte) {
 
 func (h *EventHandler) newPlayer(c *WSConnListener) (player *model.Player, err error) {
 	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
-	if err := h.service.Register(player); err != nil {
+	if err := h.players.Set(player); err != nil {
 		return nil, errors.New("could not register: " + err.Error())
 	}
 	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
