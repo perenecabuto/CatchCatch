@@ -10,14 +10,11 @@ import (
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 )
 
+// GameEventName represent game events
 type GameEventName string
 
-var (
-	// ErrAlreadyStarted happens when an action is denied on running game
-	ErrAlreadyStarted = errors.New("game already started")
-	// ErrPlayerIsNotInTheGame happens when try to change or remove an player not in the game
-	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
-
+// GameEventName options
+const (
 	GameCreated               GameEventName = "game:created"
 	GameStarted               GameEventName = "game:started"
 	GameFinished              GameEventName = "game:finished"
@@ -30,14 +27,22 @@ var (
 	GameTargetLoose           GameEventName = "game:target:reached"
 	GamePlayerNearToTarget    GameEventName = "game:player:near"
 	GameRunningWithoutPlayers GameEventName = "game:empty"
-
-	GameEventNothing = GameEvent{Name: GameNothingHappens}
 )
 
+// GameEvent is returned when something happens in the game
 type GameEvent struct {
 	Name   GameEventName
 	Player GamePlayer
 }
+
+var (
+	// ErrAlreadyStarted happens when an action is denied on running game
+	ErrAlreadyStarted = errors.New("game already started")
+	// ErrPlayerIsNotInTheGame happens when try to change or remove an player not in the game
+	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
+	// GameEventNothing is the NULL event
+	GameEventNothing = GameEvent{Name: GameNothingHappens}
+)
 
 // GameRole represents GamePlayer role
 type GameRole string
