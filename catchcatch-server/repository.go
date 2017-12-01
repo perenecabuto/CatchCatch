@@ -20,6 +20,9 @@ type Repository interface {
 	RemoveFeature(group, id string) error
 	Features(group string) ([]*model.Feature, error)
 	FeaturesAround(group string, point *geo.Point) ([]*model.Feature, error)
+	FeatureExtraData(group, id string) (string, error)
+	SetFeatureExtraData(group, id string, j string) error
+	DelFeatureExtraData(group, id string) error
 	Clear() error
 }
 
@@ -77,6 +80,31 @@ func (r *Tile38Repository) FeatureByID(group, id string) (*model.Feature, error)
 		return nil, err
 	}
 	return &model.Feature{ID: id, Group: group, Coordinates: coords}, nil
+}
+
+// FeatureExtraData ...
+func (r *Tile38Repository) FeatureExtraData(group, id string) (string, error) {
+	cmd := redis.NewStringCmd("GET", group, id+":extra")
+	r.client.Process(cmd)
+	return cmd.Val(), cmd.Err()
+}
+
+// SetFeatureExtraData ...
+func (r *Tile38Repository) SetFeatureExtraData(group, id, data string) error {
+	cmd := redis.NewStringCmd("SET", group, id+":extra", "STRING", data)
+	r.client.Process(cmd)
+	cmd = redis.NewStringCmd("JSET", group, id, "_extradata", 1)
+	r.client.Process(cmd)
+	return cmd.Err()
+}
+
+// DelFeatureExtraData ...
+func (r *Tile38Repository) DelFeatureExtraData(group, id string) error {
+	cmd := redis.NewStringCmd("DEL", group, id+":extra")
+	r.client.Process(cmd)
+	cmd = redis.NewStringCmd("JSET", group, id, "_extradata", 1)
+	r.client.Process(cmd)
+	return cmd.Err()
 }
 
 // FeaturesAround return feature group near by point
