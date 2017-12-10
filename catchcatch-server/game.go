@@ -263,6 +263,7 @@ func (g *Game) setPlayersRoles() {
 		if id == g.targetID {
 			p.Role = GameRoleTarget
 		} else {
+			p.DistToTarget = p.DistTo(g.players[g.targetID].Player)
 			p.Role = GameRoleHunter
 		}
 	}
