@@ -62,6 +62,11 @@ type GamePlayer struct {
 	Loose        bool
 }
 
+func (gp GamePlayer) String() string {
+	return fmt.Sprintf("[ID: %s, Role: %s, DistToTarget: %f, Loose: %v]",
+		gp.ID, gp.Role, gp.DistToTarget, gp.Loose)
+}
+
 // Game controls rounds and players
 type Game struct {
 	ID      string
