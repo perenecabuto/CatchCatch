@@ -157,7 +157,7 @@ func (gs *Tile38GameService) GameByID(gameID string) (*Game, *GameEvent, error) 
 			break
 		}
 	}
-	return &Game{gameID, started, players, target}, evt, nil
+	return &Game{gameID, started, players, target.ID}, evt, nil
 }
 
 func (gs *Tile38GameService) Remove(gameID string) error {

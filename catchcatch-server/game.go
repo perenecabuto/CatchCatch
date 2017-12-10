@@ -69,10 +69,10 @@ func (gp GamePlayer) String() string {
 
 // Game controls rounds and players
 type Game struct {
-	ID      string
-	started bool
-	players map[string]*GamePlayer
-	target  *GamePlayer
+	ID       string
+	started  bool
+	players  map[string]*GamePlayer
+	targetID string
 }
 
 // NewGame create a game with duration
@@ -210,23 +210,14 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (GameEvent, error) {
 	p.Lon, p.Lat = lon, lat
 
 	if p.Role == GameRoleHunter {
-		return g.notifyToTheHunterTheDistanceToTheTarget(p)
-	}
-	return GameEventNothing, nil
-}
-
-func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) (GameEvent, error) {
-	target, exists := g.players[g.target.ID]
-	if !exists {
-		return GameEventNothing, ErrPlayerIsNotInTheGame
-	}
-	p.DistToTarget = p.DistTo(target.Player)
-
-	if p.DistToTarget <= 20 {
-		g.players[target.ID].Loose = true
-		return GameEvent{Name: GameTargetLoose, Player: *p}, nil
-	} else if p.DistToTarget <= 100 {
-		return GameEvent{Name: GamePlayerNearToTarget, Player: *p}, nil
+		target := g.players[g.targetID]
+		p.DistToTarget = p.DistTo(target.Player)
+		if p.DistToTarget <= 20 {
+			target.Loose = true
+			return GameEvent{Name: GameTargetLoose, Player: *p}, nil
+		} else if p.DistToTarget <= 100 {
+			return GameEvent{Name: GamePlayerNearToTarget, Player: *p}, nil
+		}
 	}
 	return GameEventNothing, nil
 }
@@ -259,7 +250,7 @@ func (g *Game) RemovePlayer(id string) (GameEvent, error) {
 		return GameEvent{Name: GameLastPlayerDetected, Player: *p}, nil
 	} else if len(playersInGame) == 0 {
 		return GameEvent{Name: GameRunningWithoutPlayers, Player: *p}, nil
-	} else if id == g.target.ID {
+	} else if id == g.targetID {
 		return GameEvent{Name: GameTargetLoose, Player: *p}, nil
 	}
 
@@ -267,20 +258,21 @@ func (g *Game) RemovePlayer(id string) (GameEvent, error) {
 }
 
 func (g *Game) setPlayersRoles() {
-	g.target = sortTargetPlayer(g.players)
-	g.target.Role = GameRoleTarget
-
+	g.targetID = raffleTargetPlayer(g.players)
 	for id, p := range g.players {
-		if id != g.target.ID {
+		if id == g.targetID {
+			p.Role = GameRoleTarget
+		} else {
 			p.Role = GameRoleHunter
 		}
 	}
 }
 
-func sortTargetPlayer(players map[string]*GamePlayer) *GamePlayer {
+func raffleTargetPlayer(players map[string]*GamePlayer) string {
+	rand.New(rand.NewSource(time.Now().Unix()))
 	ids := make([]string, 0)
 	for id := range players {
 		ids = append(ids, id)
 	}
-	return players[ids[rand.Intn(len(ids))]]
+	return ids[rand.Intn(len(ids))]
 }

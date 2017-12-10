@@ -68,7 +68,7 @@ func (gw *GameWatcher) WatchGameEvents(ctx context.Context) error {
 			gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &game.ID})
 
 		case GameTargetLoose:
-			gw.wss.Emit(game.target.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &game.ID})
+			gw.wss.Emit(game.targetID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &game.ID})
 			gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"),
 				Dist: &p.DistToTarget})
 			gw.sendGameRank(game)
