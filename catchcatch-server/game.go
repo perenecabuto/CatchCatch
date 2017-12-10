@@ -150,24 +150,23 @@ func (rank GameRank) ByPlayersDistanceToTarget(players []GamePlayer) GameRank {
 	if len(players) == 0 {
 		return rank
 	}
-	playersDistToTarget := map[int]GamePlayer{}
+	playersDistToTarget := map[GamePlayer]float64{}
 	for _, p := range players {
-		dist := int(p.DistToTarget)
-		playersDistToTarget[dist] = p
+		playersDistToTarget[p] = p.DistToTarget
 		rank.PlayerIDs = append(rank.PlayerIDs, p.Player.ID)
 	}
-	dists := make([]int, 0)
-	for dist := range playersDistToTarget {
+	dists := make([]float64, 0)
+	for _, dist := range playersDistToTarget {
 		dists = append(dists, dist)
 	}
-	sort.Ints(dists)
-
+	sort.Float64s(dists)
 	maxDist := dists[len(dists)-1] + 1
-	for _, dist := range dists {
-		p := playersDistToTarget[dist]
+
+	for p, dist := range playersDistToTarget {
 		points := 0
 		if !p.Loose {
-			points = 100 * (maxDist - dist) / maxDist
+			part := float64(dist) / float64(maxDist)
+			points = int(100 * part)
 		}
 		rank.PlayerRank = append(rank.PlayerRank, PlayerRank{Player: p.ID, Points: points})
 	}
