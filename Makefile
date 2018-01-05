@@ -11,18 +11,21 @@ LOCAL_BRANCH = master
 %-beta: DOKKU_HOST=159.203.15.29
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
+test:
+	go test -cover -v ./...
+
+test-forever:
+	cd catchcatch-server && CompileDaemon -color -command "go test -v ./..."
+
+coverage:
+	cd catchcatch-server && go test -coverprofile=c.out ; go tool cover -html=c.out
+
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
 	cd catchcatch-server && CGO_ENABLED=0 go build -ldflags="-s -w" -tags netgo -a
 
 docker-compose: build
 	docker-compose up --build
-
-test:
-	cd catchcatch-server && CompileDaemon -color -command "go test -v ./..."
-
-coverage:
-	cd catchcatch-server && go test -coverprofile=c.out ; go tool cover -html=c.out
 
 run: run-tile38
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
