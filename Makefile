@@ -21,6 +21,9 @@ docker-compose: build
 test:
 	cd catchcatch-server && CompileDaemon -color -command "go test -v ./..."
 
+coverage:
+	cd catchcatch-server && go test -coverprofile=c.out ; go tool cover -html=c.out
+
 run: run-tile38
 	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
 
