@@ -20,6 +20,10 @@ test-forever:
 coverage:
 	cd catchcatch-server && go test -coverprofile=c.out ; go tool cover -html=c.out
 
+gen-mocks:
+	-go get github.com/vektra/mockery/...
+	mockery -all
+
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
 	cd catchcatch-server && CGO_ENABLED=0 go build -ldflags="-s -w" -tags netgo -a
