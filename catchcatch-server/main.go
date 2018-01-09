@@ -3,18 +3,16 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"runtime/debug"
 	"strconv"
 	"time"
 
 	zconf "github.com/grandcat/zeroconf"
 	uuid "github.com/satori/go.uuid"
 	redis "gopkg.in/redis.v5"
+
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
 )
 
 var (
@@ -60,7 +58,7 @@ func main() {
 	aWatcher := NewAdminWatcher(featService, server)
 	gWatcher := NewGameWatcher(*serverID, gameService, server)
 	worker := NewGameWorker(*serverID, gameService)
-	onExit(func() {
+	execfunc.OnExit(func() {
 		cancel()
 		client.Close()
 		server.CloseAll()
@@ -104,39 +102,4 @@ func tile38DebugWrapper(oldProcess func(cmd redis.Cmder) error) func(cmd redis.C
 		log.Println("TILE38 DEBUG:", cmd.String())
 		return oldProcess(cmd)
 	}
-}
-
-func recoverWrapper(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := withRecover(func() error {
-			h.ServeHTTP(w, r)
-			return nil
-		})
-		if err != nil {
-			http.Error(w, "", http.StatusInternalServerError)
-		}
-	})
-}
-
-func withRecover(fn func() error) (err error) {
-	defer func() {
-		r := recover()
-		if r != nil {
-			err = fmt.Errorf("%v", r)
-			log.Printf("[panic withRecover] %v", err)
-			debug.PrintStack()
-		}
-	}()
-	return fn()
-}
-
-func onExit(fn func()) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, os.Kill)
-	go func() {
-		<-c
-		fn()
-		time.Sleep(2 * time.Second)
-		os.Exit(0)
-	}()
 }
