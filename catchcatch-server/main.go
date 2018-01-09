@@ -13,6 +13,7 @@ import (
 	redis "gopkg.in/redis.v5"
 
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/metrics"
 )
 
 var (
@@ -38,7 +39,7 @@ func main() {
 		defer zcServer.Shutdown()
 	}
 
-	metrics, err := NewMetricsCollector(*influxdbAddr, *influxdbDB, *influxdbUser, *influxdbPass)
+	metrics, err := metrics.NewMetricsCollector(*influxdbAddr, *influxdbDB, *influxdbUser, *influxdbPass)
 	if err != nil {
 		log.Panic(err)
 	}
