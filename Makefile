@@ -12,7 +12,7 @@ LOCAL_BRANCH = master
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
 test:
-	go test -cover -v ./...
+	cd catchcatch-server; go test -cover -v ./...
 
 test-forever:
 	cd catchcatch-server && CompileDaemon -color -command "go test -v ./..."
