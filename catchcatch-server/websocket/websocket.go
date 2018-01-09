@@ -1,4 +1,4 @@
-package main
+package websocket
 
 import (
 	"context"
@@ -9,8 +9,10 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 	uuid "github.com/satori/go.uuid"
+
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
 )
 
 var (
@@ -113,7 +115,7 @@ func (c *WSConnListener) readMessage() error {
 	if !exists {
 		return fmt.Errorf("No callback found for: %v", msg)
 	}
-	return withRecover(func() error {
+	return execfunc.WithRecover(func() error {
 		cb(c.buffer)
 		return nil
 	})
@@ -148,7 +150,7 @@ func (wss *WSServer) OnConnected(fn func(c *WSConnListener)) {
 func (wss *WSServer) Listen(ctx context.Context) http.Handler {
 	return wss.handler.Handler(ctx, func(ctx context.Context, c WSConnection) {
 		conn := wss.Add(c)
-		err := withRecover(func() error {
+		err := execfunc.WithRecover(func() error {
 			wss.onConnected(conn)
 			defer wss.Remove(conn.ID)
 			return conn.listen(ctx)
