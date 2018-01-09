@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"context"
@@ -6,7 +6,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/game"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
 )
 
 var (
@@ -17,11 +19,11 @@ var (
 // GameWorker observe manage and run games
 type GameWorker struct {
 	serverID string
-	service  GameService
+	service  service.GameService
 }
 
 // NewGameWorker creates GameWorker
-func NewGameWorker(serverID string, service GameService) *GameWorker {
+func NewGameWorker(serverID string, service service.GameService) *GameWorker {
 	return &GameWorker{serverID, service}
 }
 
@@ -53,10 +55,10 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 		return err
 	}
 
-	g := NewGame(gameID)
+	g := game.NewGame(gameID)
 	gCtx, stop := context.WithCancel(ctx)
 
-	evtChan := make(chan GameEvent, 100)
+	evtChan := make(chan game.GameEvent, 100)
 	defer close(evtChan)
 	gameTimer := time.NewTimer(time.Hour)
 	defer gameTimer.Stop()
@@ -65,7 +67,7 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 
 	go func() {
 		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, exit bool) error {
-			var evt GameEvent
+			var evt game.GameEvent
 			var err error
 			if exit {
 				evt, err = g.RemovePlayer(p.ID)
@@ -75,7 +77,7 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 			if err != nil {
 				return err
 			}
-			if evt.Name != GameNothingHappens {
+			if evt.Name != game.GameNothingHappens {
 				evtChan <- evt
 			}
 			return nil
@@ -92,14 +94,14 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 			log.Printf("GameWorker:%s:gameevent:%-v", gameID, evt)
 
 			switch evt.Name {
-			case GameTargetWin, GameTargetLoose, GameLastPlayerDetected, GameRunningWithoutPlayers:
+			case game.GameTargetWin, game.GameTargetLoose, game.GameLastPlayerDetected, game.GameRunningWithoutPlayers:
 				gw.service.Update(g, gw.serverID, evt)
 				stop()
-			case GamePlayerNearToTarget:
+			case game.GamePlayerNearToTarget:
 				gw.service.Update(g, gw.serverID, evt)
-			case GamePlayerAdded, GamePlayerRemoved:
+			case game.GamePlayerAdded, game.GamePlayerRemoved:
 				// TODO: monitor game start
-				ready := !g.Started() && len(g.players) >= MinPlayersPerGame
+				ready := !g.Started() && len(g.Players()) >= MinPlayersPerGame
 				if ready {
 					gameTimer = time.NewTimer(5 * time.Minute)
 					evt = g.Start()
@@ -108,7 +110,7 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 			}
 		case <-gameHealthCheckTicker.C:
 			// TODO do not send events for this
-			err := gw.service.Update(g, gw.serverID, GameEventNothing)
+			err := gw.service.Update(g, gw.serverID, game.GameEventNothing)
 			if err != nil {
 				log.Println("Worker:watchGame:healthcheck:error:", err)
 			}

@@ -1,20 +1,23 @@
-package main
+package core
 
 import (
 	"context"
 	"log"
 
 	"github.com/golang/protobuf/proto"
+
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
 )
 
 type AdminWatcher struct {
-	service GeoFeatureService
-	wss     *WSServer
+	service service.GeoFeatureService
+	wss     *websocket.WSServer
 }
 
-func NewAdminWatcher(service GeoFeatureService, wss *WSServer) *AdminWatcher {
+func NewAdminWatcher(service service.GeoFeatureService, wss *websocket.WSServer) *AdminWatcher {
 	return &AdminWatcher{service, wss}
 }
 
@@ -28,7 +31,7 @@ func (w *AdminWatcher) WatchPlayers(ctx context.Context) error {
 		}
 		err := w.wss.Broadcast(&protobuf.Player{EventName: evtName,
 			Id: &remotePlayer.ID, Lon: &remotePlayer.Lon, Lat: &remotePlayer.Lat})
-		if err != ErrWSConnectionNotFound && err != nil {
+		if err != websocket.ErrWSConnectionNotFound && err != nil {
 			log.Println("remote-player:updated error", err.Error())
 		}
 		return nil

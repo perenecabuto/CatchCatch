@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"context"
@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/game"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
 )
 
 const (
-	// DefaultWatcherRange set the watcher radar radius size
-	DefaultWatcherRange = 5000
 	// MinPlayersPerGame ...
 	MinPlayersPerGame = 3
 	// DefaultGameDuration ...
@@ -22,12 +23,12 @@ const (
 // and notify players events to each game by geo position
 type GameWatcher struct {
 	serverID string
-	wss      *WSServer
-	service  GameService
+	wss      *websocket.WSServer
+	service  service.GameService
 }
 
 // NewGameWatcher builds GameWatecher
-func NewGameWatcher(serverID string, service GameService, wss *WSServer) *GameWatcher {
+func NewGameWatcher(serverID string, service service.GameService, wss *websocket.WSServer) *GameWatcher {
 	return &GameWatcher{serverID, wss, service}
 }
 
@@ -49,43 +50,42 @@ func (gw *GameWatcher) WatchGameEventsForever(ctx context.Context) {
 // WatchGameEvents observers game events and notify players
 // TODO: monitor game watches
 func (gw *GameWatcher) WatchGameEvents(ctx context.Context) error {
-	return gw.service.ObserveGamesEvents(ctx, func(game *Game, evt *GameEvent) error {
+	return gw.service.ObserveGamesEvents(ctx, func(g *game.Game, evt *game.GameEvent) error {
 		p := evt.Player
 		switch evt.Name {
-		case GameStarted:
-			for _, p := range game.Players() {
+		case game.GameStarted:
+			for _, p := range g.Players() {
 				gw.wss.Emit(p.ID, &protobuf.GameInfo{
 					EventName: proto.String("game:started"),
-					Id:        &game.ID,
-					Game:      &game.ID, Role: proto.String(string(p.Role))})
-
+					Id:        &g.ID, Game: &g.ID,
+					Role: proto.String(string(p.Role))})
 			}
 
-		case GamePlayerNearToTarget:
+		case game.GamePlayerNearToTarget:
 			gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &p.DistToTarget})
 
-		case GamePlayerLoose:
-			gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &game.ID})
+		case game.GamePlayerLoose:
+			gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
 
-		case GameTargetLoose:
-			gw.wss.Emit(game.targetID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &game.ID})
+		case game.GameTargetLoose:
+			gw.wss.Emit(g.TargetID(), &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
 			gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"),
 				Dist: &p.DistToTarget})
-			gw.sendGameRank(game)
+			gw.sendGameRank(g)
 
-		case GameTargetWin:
+		case game.GameTargetWin:
 			gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:target:win")})
-			gw.sendGameRank(game)
+			gw.sendGameRank(g)
 
-		case GameFinished:
-			gw.sendGameRank(game)
+		case game.GameFinished:
+			gw.sendGameRank(g)
 		}
 
 		return nil
 	})
 }
 
-func (gw *GameWatcher) sendGameRank(g *Game) {
+func (gw *GameWatcher) sendGameRank(g *game.Game) {
 	rank := g.Rank()
 	playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
 	for i, pr := range rank.PlayerRank {

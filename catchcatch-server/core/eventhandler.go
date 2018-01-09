@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"errors"
@@ -8,6 +8,8 @@ import (
 
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
 )
 
 //TODO: separate player events and admin events
@@ -16,21 +18,20 @@ import (
 
 // EventHandler handle websocket events
 type EventHandler struct {
-	server  *WSServer
-	players PlayerLocationService
-	geo     GeoFeatureService
+	server  *websocket.WSServer
+	players service.PlayerLocationService
+	geo     service.GeoFeatureService
 }
 
 // NewEventHandler EventHandler builder
-func NewEventHandler(server *WSServer, players PlayerLocationService, geo GeoFeatureService) *EventHandler {
+func NewEventHandler(server *websocket.WSServer, players service.PlayerLocationService, geo service.GeoFeatureService) *EventHandler {
 	handler := &EventHandler{server, players, geo}
-	server.OnConnected(handler.onConnection)
 	return handler
 }
 
 // Event handlers
 
-func (h *EventHandler) onConnection(c *WSConnListener) {
+func (h *EventHandler) OnConnection(c *websocket.WSConnListener) {
 	player, err := h.newPlayer(c)
 	if err != nil {
 		log.Println("error to create player", err)
@@ -60,7 +61,7 @@ func (h *EventHandler) onPlayerDisconnect(player *model.Player) {
 	h.players.Remove(player)
 }
 
-func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) func([]byte) {
+func (h *EventHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
@@ -76,7 +77,7 @@ func (h *EventHandler) onPlayerUpdate(player *model.Player, c *WSConnListener) f
 	}
 }
 
-func (h *EventHandler) onPlayerRequestRemotes(so *WSConnListener) func([]byte) {
+func (h *EventHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func([]byte) {
 	return func([]byte) {
 		players, err := h.players.All()
 		if err != nil {
@@ -95,7 +96,7 @@ func (h *EventHandler) onPlayerRequestRemotes(so *WSConnListener) func([]byte) {
 	}
 }
 
-func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *WSConnListener) func([]byte) {
+func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *websocket.WSConnListener) func([]byte) {
 	return func([]byte) {
 		go func() {
 			games, err := h.geo.FeaturesAroundPlayer("geofences", *player)
@@ -116,14 +117,14 @@ func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *WSConnListe
 
 // Admin events
 
-func (h *EventHandler) onDisconnectByID(c *WSConnListener) func([]byte) {
+func (h *EventHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
 		log.Println("admin:disconnect", msg.GetId())
 		player := &model.Player{ID: msg.GetId()}
 		err := h.players.Remove(player)
-		if err == ErrFeatureNotFound {
+		if err == service.ErrFeatureNotFound {
 			// Notify remote-player removal to ghost players on admin
 			log.Println("admin:disconnect:force", msg.GetId())
 			c.Emit(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
@@ -157,7 +158,7 @@ func (h *EventHandler) onAddFeature() func([]byte) {
 	}
 }
 
-func (h *EventHandler) onRequestFeatures(c *WSConnListener) func([]byte) {
+func (h *EventHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
@@ -175,7 +176,7 @@ func (h *EventHandler) onRequestFeatures(c *WSConnListener) func([]byte) {
 
 // Actions
 
-func (h *EventHandler) newPlayer(c *WSConnListener) (player *model.Player, err error) {
+func (h *EventHandler) newPlayer(c *websocket.WSConnListener) (player *model.Player, err error) {
 	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
 	if err := h.players.Set(player); err != nil {
 		return nil, errors.New("could not register: " + err.Error())
