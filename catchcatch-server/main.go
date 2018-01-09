@@ -12,9 +12,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 	redis "gopkg.in/redis.v5"
 
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/core"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/metrics"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
 )
 
 var (
@@ -56,10 +58,10 @@ func main() {
 	gameService := service.NewGameService(repo, stream)
 	featService := service.NewGeoFeatureService(repo, stream)
 	wsHandler := selectWsDriver(*wsdriver)
-	server := NewWSServer(wsHandler)
-	aWatcher := NewAdminWatcher(featService, server)
-	gWatcher := NewGameWatcher(*serverID, gameService, server)
-	worker := NewGameWorker(*serverID, gameService)
+	server := websocket.NewWSServer(wsHandler)
+	aWatcher := core.NewAdminWatcher(featService, server)
+	gWatcher := core.NewGameWatcher(*serverID, gameService, server)
+	worker := core.NewGameWorker(*serverID, gameService)
 	execfunc.OnExit(func() {
 		cancel()
 		client.Close()
@@ -72,21 +74,21 @@ func main() {
 	go aWatcher.WatchGeofences(ctx)
 	go aWatcher.WatchPlayers(ctx)
 
-	eventH := NewEventHandler(server, playerService, featService)
-	server.OnConnected(eventH.onConnection)
-	http.Handle("/ws", recoverWrapper(server.Listen(ctx)))
+	eventH := core.NewEventHandler(server, playerService, featService)
+	server.OnConnected(eventH.OnConnection)
+	http.Handle("/ws", execfunc.RecoverWrapper(server.Listen(ctx)))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func selectWsDriver(name string) WSDriver {
+func selectWsDriver(name string) websocket.WSDriver {
 	switch name {
 	case "gobwas":
-		return NewGobwasWSDriver()
+		return websocket.NewGobwasWSDriver()
 	default:
-		return NewXNetWSDriver()
+		return websocket.NewXNetWSDriver()
 	}
 }
 
