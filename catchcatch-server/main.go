@@ -14,6 +14,7 @@ import (
 
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/metrics"
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
 )
 
 var (
@@ -48,12 +49,12 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stream := NewEventStream(*tile38Addr)
+	stream := service.NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debugMode)
-	repo := NewRepository(client)
-	playerService := NewPlayerLocationService(repo)
-	gameService := NewGameService(repo, stream)
-	featService := NewGeoFeatureService(repo, stream)
+	repo := service.NewRepository(client)
+	playerService := service.NewPlayerLocationService(repo)
+	gameService := service.NewGameService(repo, stream)
+	featService := service.NewGeoFeatureService(repo, stream)
 	wsHandler := selectWsDriver(*wsdriver)
 	server := NewWSServer(wsHandler)
 	aWatcher := NewAdminWatcher(featService, server)

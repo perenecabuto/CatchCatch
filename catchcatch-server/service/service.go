@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/game"
 	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
 	gjson "github.com/tidwall/gjson"
 	sjson "github.com/tidwall/sjson"
@@ -62,16 +63,21 @@ func (s *Tile38PlayerLocationService) All() (model.PlayerList, error) {
 	return list, nil
 }
 
+const (
+	// DefaultGeoEventRange set the watcher radar radius size
+	DefaultGeoEventRange = 5000
+)
+
 type GameService interface {
 	Create(gameID, serverID string) error
-	Update(g *Game, serverID string, evt GameEvent) error
+	Update(g *game.Game, serverID string, evt game.GameEvent) error
 	Remove(gameID string) error
 	IsGameRunning(gameID string) (bool, error)
-	GameByID(gameID string) (*Game, *GameEvent, error)
+	GameByID(gameID string) (*game.Game, *game.GameEvent, error)
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
 	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
-	ObserveGamesEvents(ctx context.Context, callback func(*Game, *GameEvent) error) error
+	ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.GameEvent) error) error
 }
 
 type Tile38GameService struct {
@@ -88,8 +94,6 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) error {
 	if err != nil {
 		return err
 	}
-	// TODO: set the server name
-	// TODO: remove game when it finishes
 	_, err = gs.repo.SetFeature("game", gameID, f.Coordinates)
 	if err != nil {
 		return err
@@ -113,7 +117,7 @@ func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
 	return time.Now().Before(expiration), nil
 }
 
-func (gs *Tile38GameService) Update(g *Game, serverID string, evt GameEvent) error {
+func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.GameEvent) error {
 	extra, _ := sjson.Set("", "event", evt)
 	extra, _ = sjson.Set(extra, "updated_at", time.Now().Unix())
 	extra, _ = sjson.Set(extra, "server_id", serverID)
@@ -122,7 +126,7 @@ func (gs *Tile38GameService) Update(g *Game, serverID string, evt GameEvent) err
 	return gs.repo.SetFeatureExtraData("game", g.ID, extra)
 }
 
-func (gs *Tile38GameService) GameByID(gameID string) (*Game, *GameEvent, error) {
+func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.GameEvent, error) {
 	data, err := gs.repo.FeatureExtraData("game", gameID)
 	if err == ErrFeatureNotFound {
 		return nil, nil, nil
@@ -131,12 +135,12 @@ func (gs *Tile38GameService) GameByID(gameID string) (*Game, *GameEvent, error) 
 		return nil, nil, err
 	}
 
-	players := make(map[string]*GamePlayer)
+	players := make(map[string]*game.GamePlayer)
 	pdata := gjson.Get(data, "players").Array()
 	for _, pd := range pdata {
-		p := &GamePlayer{
+		p := &game.GamePlayer{
 			Player:       model.Player{ID: pd.Get("id").String(), Lon: pd.Get("lon").Float(), Lat: pd.Get("lat").Float()},
-			Role:         GameRole(pd.Get("Role").String()),
+			Role:         game.GameRole(pd.Get("Role").String()),
 			DistToTarget: pd.Get("DistToTarget").Float(),
 			Loose:        pd.Get("Loose").Bool(),
 		}
@@ -144,20 +148,21 @@ func (gs *Tile38GameService) GameByID(gameID string) (*Game, *GameEvent, error) 
 	}
 
 	edata := gjson.Get(data, "event")
-	evt := &GameEvent{Name: GameEventName(edata.Get("Name").String())}
+	evt := &game.GameEvent{Name: game.GameEventName(edata.Get("Name").String())}
 	if p := players[edata.Get("Player.ID").String()]; p != nil {
 		evt.Player = *p
 	}
 
 	started := gjson.Get(data, "started").Bool()
-	var target *GamePlayer
+	var target *game.GamePlayer
 	for _, p := range players {
-		if p.Role == GameRoleTarget {
+		if p.Role == game.GameRoleTarget {
 			target = p
 			break
 		}
 	}
-	return &Game{gameID, started, players, target.ID}, evt, nil
+
+	return game.NewGameWithParams(gameID, started, players, target.ID), evt, nil
 }
 
 func (gs *Tile38GameService) Remove(gameID string) error {
@@ -185,8 +190,8 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 	})
 }
 
-func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*Game, *GameEvent) error) error {
-	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultWatcherRange, func(d *Detection) error {
+func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.GameEvent) error) error {
+	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultGeoEventRange, func(d *Detection) error {
 		gameID, playerID := d.FeatID, d.NearByFeatID
 		game, evt, err := gs.GameByID(gameID)
 		if err != nil {
@@ -198,5 +203,62 @@ func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback fu
 		}
 
 		return callback(game, evt)
+	})
+}
+
+type GeoFeatureService interface {
+	FeaturesAroundPlayer(group string, player model.Player) ([]*model.Feature, error)
+	FeaturesByGroup(group string) ([]*model.Feature, error)
+	SetFeature(group, id, geojson string) error
+	Clear() error
+
+	ObservePlayersAround(context.Context, PlayersAroundCallback) error
+	ObservePlayerNearToFeature(context.Context, string, PlayerNearToFeatureCallback) error
+}
+
+type PlayerNearToFeatureCallback func(playerID string, distTo float64, f model.Feature) error
+type PlayersAroundCallback func(playerID string, movingPlayer model.Player, exit bool) error
+
+func NewGeoFeatureService(repo Repository, stream EventStream) GeoFeatureService {
+	return &Tile38GeoFeatureService{repo, stream}
+}
+
+type Tile38GeoFeatureService struct {
+	repo   Repository
+	stream EventStream
+}
+
+func (s *Tile38GeoFeatureService) FeaturesByGroup(group string) ([]*model.Feature, error) {
+	return s.repo.Features(group)
+}
+
+func (s *Tile38GeoFeatureService) FeaturesAroundPlayer(group string, p model.Player) ([]*model.Feature, error) {
+	return s.repo.FeaturesAround(group, p.Point())
+}
+
+func (s *Tile38GeoFeatureService) SetFeature(group, id, geojson string) error {
+	_, err := s.repo.SetFeature(group, id, geojson)
+	return err
+}
+func (s *Tile38GeoFeatureService) Clear() error {
+	return s.repo.Clear()
+}
+
+func (s *Tile38GeoFeatureService) ObservePlayersAround(ctx context.Context, callback PlayersAroundCallback) error {
+	return s.stream.StreamNearByEvents(ctx, "player", "player", "*", DefaultGeoEventRange, func(d *Detection) error {
+		playerID := d.NearByFeatID
+		movingPlayer := model.Player{ID: d.FeatID, Lon: d.Lon, Lat: d.Lat}
+		return callback(playerID, movingPlayer, d.Intersects == Exit)
+	})
+}
+
+func (s *Tile38GeoFeatureService) ObservePlayerNearToFeature(ctx context.Context, group string, callback PlayerNearToFeatureCallback) error {
+	return s.stream.StreamNearByEvents(ctx, group, "player", "*", DefaultGeoEventRange, func(d *Detection) error {
+		if d.Intersects == Inside {
+			playerID := d.NearByFeatID
+			f := model.Feature{ID: d.FeatID, Group: group, Coordinates: d.Coordinates}
+			return callback(playerID, d.NearByMeters, f)
+		}
+		return nil
 	})
 }

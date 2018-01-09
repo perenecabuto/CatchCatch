@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
 	protocol "github.com/quorzz/redis-protocol"
 	"github.com/tidwall/gjson"
 )
@@ -118,7 +119,7 @@ func streamDetection(ctx context.Context, addr string, q query, callback Detecti
 					log.Println("Failed to handleDetection:", err)
 					continue
 				}
-				err = withRecover(func() error {
+				err = execfunc.WithRecover(func() error {
 					return callback(detected)
 				})
 				if err != nil {
