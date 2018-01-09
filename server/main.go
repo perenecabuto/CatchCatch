@@ -75,7 +75,7 @@ func main() {
 	go aWatcher.WatchPlayers(ctx)
 
 	eventH := core.NewEventHandler(server, playerService, featService)
-	server.OnConnected(eventH.OnConnection)
+	server.SetEventHandler(eventH)
 	http.Handle("/ws", execfunc.RecoverWrapper(server.Listen(ctx)))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 

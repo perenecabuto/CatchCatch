@@ -123,8 +123,8 @@ func (c *WSConnListener) readMessage() error {
 
 // WSServer manage WS connections
 type WSServer struct {
-	handler     WSDriver
-	onConnected func(c *WSConnListener)
+	handler      WSDriver
+	OnConnection func(c *WSConnListener)
 
 	connections connectionGroup
 	sync.RWMutex
@@ -134,15 +134,20 @@ type connectionGroup map[string]*WSConnListener
 
 // NewWSServer create a new WSServer
 func NewWSServer(handler WSDriver) *WSServer {
-	wss := &WSServer{handler: handler, onConnected: func(c *WSConnListener) {}}
+	wss := &WSServer{handler: handler, OnConnection: func(c *WSConnListener) {}}
 	wss.connections = make(connectionGroup)
 	return wss
 }
 
-// OnConnected register event callback to new connections
-func (wss *WSServer) OnConnected(fn func(c *WSConnListener)) {
-	if fn != nil {
-		wss.onConnected = fn
+// WSEventHandler is responsible to handle WSConnListener events
+type WSEventHandler interface {
+	OnConnection(c *WSConnListener)
+}
+
+// SetEventHandler set the event handler to new connections
+func (wss *WSServer) SetEventHandler(h WSEventHandler) {
+	if h != nil {
+		wss.OnConnection = h.OnConnection
 	}
 }
 
@@ -151,7 +156,7 @@ func (wss *WSServer) Listen(ctx context.Context) http.Handler {
 	return wss.handler.Handler(ctx, func(ctx context.Context, c WSConnection) {
 		conn := wss.Add(c)
 		err := execfunc.WithRecover(func() error {
-			wss.onConnected(conn)
+			wss.OnConnection(conn)
 			defer wss.Remove(conn.ID)
 			return conn.listen(ctx)
 		})
