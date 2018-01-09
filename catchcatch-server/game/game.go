@@ -1,4 +1,4 @@
-package main
+package game
 
 import (
 	"errors"
@@ -80,6 +80,14 @@ type Game struct {
 func NewGame(id string) *Game {
 	return &Game{ID: id, started: false,
 		players: make(map[string]*GamePlayer)}
+}
+
+func NewGameWithParams(gameID string, started bool, players map[string]*GamePlayer, targetID string) *Game {
+	return &Game{gameID, started, players, targetID}
+}
+
+func (g Game) TargetID() string {
+	return g.targetID
 }
 
 func (g Game) String() string {
