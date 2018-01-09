@@ -36,6 +36,13 @@ func NewMetricsCollector(addr, db, username, password string) (*MetricsCollector
 		Password: password,
 		Timeout:  MetricsTimeout,
 	})
+	if err != nil {
+		return nil, err
+	}
+	_, err = client.Query(influxdb.Query{Command: "create database " + db})
+	if err != nil {
+		return nil, err
+	}
 	return &MetricsCollector{addr, db, username, password, client}, err
 }
 
