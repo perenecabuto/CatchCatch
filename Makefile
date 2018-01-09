@@ -1,5 +1,7 @@
 TILE38PORT := 9851
 
+SERVER_SRC := cd catchcatch-server;
+
 DOKKU_CMD = ssh dokku@$(DOKKU_HOST)
 DOKKU_ROOT_CMD = ssh root@$(DOKKU_HOST) dokku
 
@@ -12,13 +14,15 @@ LOCAL_BRANCH = master
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
 test:
-	cd catchcatch-server; go test -cover -v ./...
+	$(SERVER_SRC) go test -cover -v ./...
 
 test-forever:
-	cd catchcatch-server && CompileDaemon -color -command "go test -v ./..."
+	$(SERVER_SRC) CompileDaemon -color -command "go test -v ./..."
 
 coverage:
-	cd catchcatch-server && go test -coverprofile=c.out ; go tool cover -html=c.out
+	-go get github.com/lawrencewoodman/roveralls
+	$(SERVER_SRC) roveralls
+	$(SERVER_SRC) go tool cover -html=roveralls.coverprofile
 
 gen-mocks:
 	-go get github.com/vektra/mockery/...
@@ -26,16 +30,16 @@ gen-mocks:
 
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
-	cd catchcatch-server && CGO_ENABLED=0 go build -ldflags="-s -w" -tags netgo -a
+	$(SERVER_SRC) CGO_ENABLED=0 go build -ldflags="-s -w" -tags netgo -a
 
 docker-compose: build
 	docker-compose up --build
 
 run: run-tile38
-	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf"
+	$(SERVER_SRC) CompileDaemon -color -command "./catchcatch-server -zconf"
 
 run-debug:
-	cd catchcatch-server && CompileDaemon -color -command "./catchcatch-server -zconf -debug"
+	$(SERVER_SRC) CompileDaemon -color -command "./catchcatch-server -zconf -debug"
 
 run-influxdb:
 	@-docker rm -f influxdb-local
