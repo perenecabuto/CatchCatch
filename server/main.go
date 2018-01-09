@@ -12,11 +12,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 	redis "gopkg.in/redis.v5"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/core"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/metrics"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
+	"github.com/perenecabuto/CatchCatch/server/core"
+	"github.com/perenecabuto/CatchCatch/server/execfunc"
+	"github.com/perenecabuto/CatchCatch/server/metrics"
+	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
 var (

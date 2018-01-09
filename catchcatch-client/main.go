@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
+	"github.com/perenecabuto/CatchCatch/server/protobuf"
 )
 
 var addr = flag.String("addr", "localhost:5000", "http service address")

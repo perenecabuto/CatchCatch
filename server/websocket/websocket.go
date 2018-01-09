@@ -11,8 +11,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
+	"github.com/perenecabuto/CatchCatch/server/execfunc"
+	"github.com/perenecabuto/CatchCatch/server/protobuf"
 )
 
 var (

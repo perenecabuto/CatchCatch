@@ -3,8 +3,8 @@ package core
 import (
 	"testing"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/mocks"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
+	"github.com/perenecabuto/CatchCatch/server/mocks"
+	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
 func TestGameWatcher(t *testing.T) {

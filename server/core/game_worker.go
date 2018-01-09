@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/game"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
+	"github.com/perenecabuto/CatchCatch/server/game"
+	"github.com/perenecabuto/CatchCatch/server/model"
+	"github.com/perenecabuto/CatchCatch/server/service"
 )
 
 var (

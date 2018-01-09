@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
+	"github.com/perenecabuto/CatchCatch/server/model"
 )
 
 // GameEventName represent game events

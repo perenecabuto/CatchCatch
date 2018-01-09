@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/mocks"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
+	"github.com/perenecabuto/CatchCatch/server/mocks"
+	"github.com/perenecabuto/CatchCatch/server/model"
+	"github.com/perenecabuto/CatchCatch/server/protobuf"
+	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
 func TestNewAdminWatcher(t *testing.T) {

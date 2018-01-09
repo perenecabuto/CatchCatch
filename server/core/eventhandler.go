@@ -6,10 +6,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/protobuf"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/service"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/websocket"
+	"github.com/perenecabuto/CatchCatch/server/model"
+	"github.com/perenecabuto/CatchCatch/server/protobuf"
+	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
 //TODO: separate player events and admin events

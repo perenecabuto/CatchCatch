@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
+	"github.com/perenecabuto/CatchCatch/server/model"
 
 	geo "github.com/kellydunn/golang-geo"
 	redis "gopkg.in/redis.v5"

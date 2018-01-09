@@ -6,7 +6,7 @@ services:
         ports:
             - "5050:5050"
         command:
-            - "./catchcatch-server"
+            - "./server"
             - "-port"
             - "5050"
             - "-tile38-addr"

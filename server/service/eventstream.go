@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/execfunc"
+	"github.com/perenecabuto/CatchCatch/server/execfunc"
 	protocol "github.com/quorzz/redis-protocol"
 	"github.com/tidwall/gjson"
 )

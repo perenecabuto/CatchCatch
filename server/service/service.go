@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/game"
-	"github.com/perenecabuto/CatchCatch/catchcatch-server/model"
+	"github.com/perenecabuto/CatchCatch/server/game"
+	"github.com/perenecabuto/CatchCatch/server/model"
 	gjson "github.com/tidwall/gjson"
 	sjson "github.com/tidwall/sjson"
 )

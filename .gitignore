@@ -1,6 +1,7 @@
 # Bin
-catchcatch-server/catchcatch-server
-catchcatch-server/debug
+server/catchcatch-server
+server/server
+server/debug
 nohup.*
 
 # nohup

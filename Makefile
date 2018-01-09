@@ -1,6 +1,6 @@
 TILE38PORT := 9851
 
-SERVER_SRC := cd catchcatch-server;
+SERVER_SRC := cd server;
 
 DOKKU_CMD = ssh dokku@$(DOKKU_HOST)
 DOKKU_ROOT_CMD = ssh root@$(DOKKU_HOST) dokku
