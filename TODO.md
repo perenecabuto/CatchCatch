@@ -1,5 +1,7 @@
 # TODO
 
+## Server
+
 + monitor games per machine
 + write tests
 + prepare integrated tests
