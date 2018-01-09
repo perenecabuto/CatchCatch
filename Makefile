@@ -26,7 +26,7 @@ coverage:
 
 gen-mocks:
 	-go get github.com/vektra/mockery/...
-	mockery -all
+	$(SERVER_SRC) mockery -all
 
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
