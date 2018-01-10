@@ -1,0 +1,7 @@
+language: go
+
+go:
+  1.9
+  master
+
+go_import_path: github.com/perenecabuto/CatchCatch/server
