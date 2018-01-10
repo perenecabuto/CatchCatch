@@ -1,7 +1,10 @@
 language: go
 
 go:
-  1.9
-  master
+  - 1.9
+  - master
+
+services:
+  - docker
 
 go_import_path: github.com/perenecabuto/CatchCatch/server
