@@ -112,12 +112,13 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 			// TODO do not send events for this
 			err := gw.service.Update(g, gw.serverID, game.GameEventNothing)
 			if err != nil {
-				log.Println("Worker:watchGame:healthcheck:error:", err)
+				log.Println("GameWorker:watchGame:healthcheck:error:", err)
 			}
 		case <-gameTimer.C:
+			log.Printf("GameWorker:watchGame:stop:game:%s", gameID)
 			stop()
 		case <-gCtx.Done():
-			log.Printf("gamewatcher:stop:game:%s", gameID)
+			log.Printf("GameWorker:watchGame:done:game:%s", gameID)
 			stop()
 			evt := g.Stop()
 			gw.service.Update(g, gw.serverID, evt)
