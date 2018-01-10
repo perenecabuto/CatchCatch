@@ -6,5 +6,3 @@ go:
 
 services:
   - docker
-
-go_import_path: github.com/perenecabuto/CatchCatch/server
