@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/gogo/protobuf/proto"
@@ -26,9 +27,7 @@ func TestWatchCheckPointsMustNotifyPlayersNearToCheckPoinstsTheDistToIt(t *testi
 	defer cancel()
 
 	err := w.WatchCheckpoints(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	c := &mocks.WSConnection{}
 	c.On("Send", mock.Anything).Return(nil)
