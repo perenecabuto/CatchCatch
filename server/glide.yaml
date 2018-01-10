@@ -1,4 +1,4 @@
-package: .
+package: github.com/perenecabuto/CatchCatch/server
 import:
 - package: github.com/gobwas/ws
   subpackages:
@@ -8,21 +8,42 @@ import:
   - proto
 - package: github.com/grandcat/zeroconf
 - package: github.com/influxdata/influxdb
-  version: v1.3.5
+  version: ^1.4.2
   subpackages:
   - client/v2
 - package: github.com/kellydunn/golang-geo
-  version: v0.7.0
+  version: ^0.7.0
 - package: github.com/perenecabuto/CatchCatch
   subpackages:
-  - catchcatch-server/protobuf
+  - server/core
+  - server/execfunc
+  - server/game
+  - server/metrics
+  - server/model
+  - server/protobuf
+  - server/service
+  - server/websocket
 - package: github.com/quorzz/redis-protocol
 - package: github.com/satori/go.uuid
-  version: v1.1.0
+  version: ^1.2.0
+- package: github.com/stretchr/testify
+  version: ^1.2.0
+  subpackages:
+  - mock
 - package: github.com/tevjef/go-runtime-metrics
   subpackages:
   - expvar
 - package: github.com/tidwall/gjson
-  version: v1.0.0
+  version: ^1.0.5
+- package: github.com/tidwall/sjson
+  version: ^1.0.0
+- package: golang.org/x/net
+  subpackages:
+  - websocket
 - package: gopkg.in/redis.v5
-  version: v6.7.0
+  version: ^6.8.0
+testImport:
+- package: github.com/gogo/protobuf
+  version: ^0.5.0
+  subpackages:
+  - proto

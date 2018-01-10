@@ -1,0 +1,126 @@
+hash: ed55ad469dbf489c7f119ffba31adc91f7fc4fa9312f1baaad2daa976b745c47
+updated: 2018-01-10T21:31:44.826234506-02:00
+imports:
+- name: github.com/cenkalti/backoff
+  version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
+- name: github.com/davecgh/go-spew
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  subpackages:
+  - spew
+- name: github.com/erikstmartin/go-testdb
+  version: 8d10e4a1bae52cd8b81ffdec3445890d6dccab3d
+- name: github.com/go-redis/redis
+  version: ce05aa5775d74a7314b83570c15cd8cc66ed1696
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
+- name: github.com/gobwas/httphead
+  version: 01c9b01b368a438f615030bbbd5e4f9e0023e15c
+- name: github.com/gobwas/pool
+  version: e294a5482d9a8523f8e6b2744ea2185083c838af
+  subpackages:
+  - pbufio
+  - pbytes
+- name: github.com/gobwas/ws
+  version: 915eed3240022c5265584c55032ef1b8c8f84168
+  subpackages:
+  - wsutil
+- name: github.com/golang/protobuf
+  version: 1e59b77b52bf8e4b449a57e6f79f21226d571845
+  subpackages:
+  - proto
+- name: github.com/grandcat/zeroconf
+  version: 8219919fca892353a082b184bca66db55c55b583
+- name: github.com/influxdata/influxdb
+  version: 6d2685d1738277a1c2672fc58df7994627769be6
+  subpackages:
+  - client/v2
+  - models
+  - pkg/escape
+- name: github.com/kellydunn/golang-geo
+  version: 0862dac374594467ff6cc454c7cc974536e039b2
+- name: github.com/kylelemons/go-gypsy
+  version: 08cad365cd28a7fba23bb1e57aa43c5e18ad8bb8
+  subpackages:
+  - yaml
+- name: github.com/lib/pq
+  version: 83612a56d3dd153a94a629cd64925371c9adad78
+  subpackages:
+  - oid
+- name: github.com/miekg/dns
+  version: f5ac34d755eb6975958108413c7802a782ca16c8
+- name: github.com/perenecabuto/CatchCatch
+  version: d225c14393c9c1ece7901ed855dffb1c9d6ac095
+  subpackages:
+  - server/core
+  - server/execfunc
+  - server/game
+  - server/metrics
+  - server/model
+  - server/protobuf
+  - server/service
+  - server/websocket
+- name: github.com/pkg/errors
+  version: e881fd58d78e04cf6d0de1217f8707c8cc2249bc
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/quorzz/redis-protocol
+  version: 8cdae60e7b8a0435899eeeee0f40f2d2cd495aa3
+- name: github.com/satori/go.uuid
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
+- name: github.com/stretchr/objx
+  version: bc43df392909781b3b7b1912fcf414b6e088936e
+- name: github.com/stretchr/testify
+  version: b91bfb9ebec76498946beb6af7c0230c7cc7ba6c
+  subpackages:
+  - assert
+  - mock
+- name: github.com/tevjef/go-runtime-metrics
+  version: 527a540293077c77cf70479bbf9f8efb9f818cb2
+  subpackages:
+  - collector
+  - expvar
+  - influxdb
+- name: github.com/tidwall/gjson
+  version: e62d62a3e1e9f324346170bbc04333341f803dfb
+- name: github.com/tidwall/match
+  version: 1731857f09b1f38450e2c12409748407822dc6be
+- name: github.com/tidwall/sjson
+  version: 6a22caf2fd45d5e2119bfc3717e984f15a7eb7ee
+- name: github.com/ziutek/mymysql
+  version: ff6cc86d3d933e6c0e3185a19fb46e171a7651b2
+  subpackages:
+  - godrv
+  - mysql
+  - native
+- name: golang.org/x/crypto
+  version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
+  subpackages:
+  - ed25519
+  - ed25519/internal/edwards25519
+- name: golang.org/x/net
+  version: ab555f366c4508dbe0802550b1b20c46c5c18aa0
+  subpackages:
+  - bpf
+  - context
+  - internal/iana
+  - internal/socket
+  - ipv4
+  - ipv6
+  - websocket
+- name: golang.org/x/sys
+  version: 062cd7e4e68206d8bab9b18396626e855c992658
+  subpackages:
+  - unix
+- name: gopkg.in/redis.v5
+  version: 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
+testImports:
+- name: github.com/gogo/protobuf
+  version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
+  subpackages:
+  - proto
