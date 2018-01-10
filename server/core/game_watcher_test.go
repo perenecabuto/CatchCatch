@@ -47,6 +47,7 @@ func TestGameWatcher(t *testing.T) {
 	gameID := "test-gamewatcher-game-1"
 	g := game.NewGame(gameID)
 	g.SetPlayer(playerID, 0, 0)
+	g.Start()
 	evt := &game.GameEvent{Name: game.GameStarted}
 
 	gameService.On("ObserveGamesEvents", ctx,
@@ -60,7 +61,7 @@ func TestGameWatcher(t *testing.T) {
 	expected, _ := proto.Marshal(&protobuf.GameInfo{
 		EventName: proto.String("game:started"),
 		Id:        &g.ID, Game: &g.ID,
-		Role: proto.String(string("undefined")),
+		Role: proto.String(string("target")),
 	})
 	c.AssertCalled(t, "Send", expected)
 }
