@@ -13,6 +13,7 @@ LOCAL_BRANCH = master
 %-beta: DOKKU_HOST=159.203.15.29
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
+
 test:
 	$(SERVER_SRC) go test -cover -v ./...
 
@@ -72,3 +73,7 @@ setup-ssl:
 	$(DOKKU_CMD) domains:add     catchcatch $(DOMAIN)
 	$(DOKKU_CMD) config:set --no-restart catchcatch DOKKU_LETSENCRYPT_EMAIL=perenecabuto@gmail.com
 	$(DOKKU_CMD) letsencrypt catchcatch
+
+update-deps:
+	-go get github.com/Masterminds/glide
+	$(SERVER_SRC) glide update
