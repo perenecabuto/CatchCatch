@@ -1,5 +1,5 @@
-hash: ed55ad469dbf489c7f119ffba31adc91f7fc4fa9312f1baaad2daa976b745c47
-updated: 2018-01-10T21:31:44.826234506-02:00
+hash: f44c651f1be9dbfdd14f817d64aec273ba09fce3478f00f73a85f7eb48cb203f
+updated: 2018-01-10T22:12:11.701523134-02:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
@@ -10,7 +10,7 @@ imports:
 - name: github.com/erikstmartin/go-testdb
   version: 8d10e4a1bae52cd8b81ffdec3445890d6dccab3d
 - name: github.com/go-redis/redis
-  version: ce05aa5775d74a7314b83570c15cd8cc66ed1696
+  version: 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
   subpackages:
   - internal
   - internal/consistenthash
@@ -52,17 +52,6 @@ imports:
   - oid
 - name: github.com/miekg/dns
   version: f5ac34d755eb6975958108413c7802a782ca16c8
-- name: github.com/perenecabuto/CatchCatch
-  version: d225c14393c9c1ece7901ed855dffb1c9d6ac095
-  subpackages:
-  - server/core
-  - server/execfunc
-  - server/game
-  - server/metrics
-  - server/model
-  - server/protobuf
-  - server/service
-  - server/websocket
 - name: github.com/pkg/errors
   version: e881fd58d78e04cf6d0de1217f8707c8cc2249bc
 - name: github.com/pmezard/go-difflib
@@ -117,8 +106,6 @@ imports:
   version: 062cd7e4e68206d8bab9b18396626e855c992658
   subpackages:
   - unix
-- name: gopkg.in/redis.v5
-  version: 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
 testImports:
 - name: github.com/gogo/protobuf
   version: 342cbe0a04158f6dcb03ca0079991a51a4248c02

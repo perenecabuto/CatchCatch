@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	redis "github.com/go-redis/redis"
 	zconf "github.com/grandcat/zeroconf"
 	uuid "github.com/satori/go.uuid"
-	redis "gopkg.in/redis.v5"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/execfunc"

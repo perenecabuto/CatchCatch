@@ -3,8 +3,8 @@ package service
 import (
 	"github.com/perenecabuto/CatchCatch/server/model"
 
+	redis "github.com/go-redis/redis"
 	geo "github.com/kellydunn/golang-geo"
-	redis "gopkg.in/redis.v5"
 )
 
 var (

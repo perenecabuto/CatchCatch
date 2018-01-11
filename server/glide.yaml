@@ -1,5 +1,7 @@
 package: github.com/perenecabuto/CatchCatch/server
 import:
+- package: github.com/go-redis/redis
+  version: ^6.8.0
 - package: github.com/gobwas/ws
   subpackages:
   - wsutil
@@ -13,16 +15,6 @@ import:
   - client/v2
 - package: github.com/kellydunn/golang-geo
   version: ^0.7.0
-- package: github.com/perenecabuto/CatchCatch
-  subpackages:
-  - server/core
-  - server/execfunc
-  - server/game
-  - server/metrics
-  - server/model
-  - server/protobuf
-  - server/service
-  - server/websocket
 - package: github.com/quorzz/redis-protocol
 - package: github.com/satori/go.uuid
   version: ^1.2.0
@@ -40,8 +32,6 @@ import:
 - package: golang.org/x/net
   subpackages:
   - websocket
-- package: gopkg.in/redis.v5
-  version: ^6.8.0
 testImport:
 - package: github.com/gogo/protobuf
   version: ^0.5.0
