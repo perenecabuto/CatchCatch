@@ -8,7 +8,7 @@ import (
 func TestNotify(t *testing.T) {
 	m, err := NewMetricsCollector("http://localhost:8086", "catchcatch", "", "")
 	if err != nil {
-		t.Fatal(err)
+		t.Skip(err)
 	}
 	if err := m.Ping(); err != nil {
 		t.Skip(err)
