@@ -20,6 +20,7 @@ func TestNewGameWorker(t *testing.T) {
 	w := NewGameWorker(serverID, gameService)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	gameService.On("Remove", gameID).Return(nil)
 
 	gameService.On("ObservePlayersCrossGeofences",
 		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
@@ -62,12 +63,9 @@ func TestNewGameWorker(t *testing.T) {
 	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
 		return assert.Equal(t, gameID, g.ID)
 	})
-	matchServerID := mock.MatchedBy(func(actualServerID string) bool {
-		return assert.Equal(t, serverID, actualServerID)
-	})
 	matchGameEvent := mock.MatchedBy(func(evt game.GameEvent) bool {
 		expected := game.GameStarted
 		return assert.Equal(t, expected, evt.Name)
 	})
-	gameService.AssertCalled(t, "Update", matchGameID, matchServerID, matchGameEvent)
+	gameService.AssertCalled(t, "Update", matchGameID, serverID, matchGameEvent)
 }
