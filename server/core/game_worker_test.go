@@ -69,3 +69,44 @@ func TestNewGameWorker(t *testing.T) {
 	})
 	gameService.AssertCalled(t, "Update", matchGameID, serverID, matchGameEvent)
 }
+
+func TestCloseWhenFinish(t *testing.T) {
+	t.Parallel()
+
+	serverID := "test-gameworker-server-1"
+	gameID := "test-gameworker-game-1"
+	gameService := new(mocks.GameService)
+	w := NewGameWorker(serverID, gameService)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	gameService.On("IsGameRunning", mock.Anything).Return(false, nil)
+	gameService.On("Create", mock.Anything, mock.Anything).Return(nil)
+	gameService.On("Remove", mock.Anything).Return(nil)
+	gameService.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	gameService.On("ObservePlayersCrossGeofences",
+		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
+			fn(gameID, model.Player{})
+			return true
+		}),
+	).Return(nil)
+
+	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
+		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
+			fn(model.Player{ID: "1", Lon: 0, Lat: 0}, false)
+			return true
+		}),
+	).Return(nil)
+
+	w.WatchGames(ctx)
+	<-time.NewTimer(time.Second).C
+
+	cancel()
+	<-time.NewTimer(time.Second).C
+
+	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
+		return assert.Equal(t, gameID, g.ID)
+	})
+	gameService.AssertCalled(t, "Update", matchGameID, serverID, mock.AnythingOfType("game.GameEvent"))
+	gameService.AssertCalled(t, "Remove", gameID)
+}
