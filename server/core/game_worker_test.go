@@ -14,45 +14,23 @@ import (
 )
 
 func TestNewGameWorker(t *testing.T) {
+	t.Parallel()
+
 	serverID := "test-gameworker-server-1"
 	gameID := "test-gameworker-game-1"
-	gameService := new(mocks.GameService)
-	w := NewGameWorker(serverID, gameService)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	gameService.On("Remove", gameID).Return(nil)
-
-	gameService.On("ObservePlayersCrossGeofences",
-		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
-			fn(gameID, model.Player{})
-			return true
-		}),
-	).Return(nil)
-
-	gameService.On("IsGameRunning", gameID).Return(false, nil)
-	gameService.On("Create", gameID, serverID).Return(nil)
-
-	wait := make(chan interface{})
 	playerIDs := []string{
 		"test-gameworker-player-1",
 		"test-gameworker-player-2",
 		"test-gameworker-player-3",
 	}
-	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
-		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
-			for _, id := range playerIDs {
-				p, exit := model.Player{ID: id, Lon: 0, Lat: 0}, false
-				fn(p, exit)
-			}
-			go func() {
-				<-time.NewTimer(time.Second).C
-				wait <- new(interface{})
-			}()
-			return true
-		}),
-	).Return(nil)
 
-	gameService.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	gameService, wait := newMockedGameService(ctx,
+		serverID, gameID, playerIDs)
+	defer close(wait)
+	w := NewGameWorker(serverID, gameService)
 
 	err := w.WatchGames(ctx)
 	assert.NoError(t, err)
@@ -73,34 +51,19 @@ func TestNewGameWorker(t *testing.T) {
 func TestCloseWhenFinish(t *testing.T) {
 	t.Parallel()
 
+	ctx, cancel := context.WithCancel(context.Background())
 	serverID := "test-gameworker-server-1"
 	gameID := "test-gameworker-game-1"
-	gameService := new(mocks.GameService)
+	playerIDs := []string{
+		"test-gameworker-player-1",
+		"test-gameworker-player-2",
+		"test-gameworker-player-3",
+	}
+
+	gameService, _ := newMockedGameService(ctx, serverID, gameID, playerIDs)
 	w := NewGameWorker(serverID, gameService)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	gameService.On("IsGameRunning", mock.Anything).Return(false, nil)
-	gameService.On("Create", mock.Anything, mock.Anything).Return(nil)
-	gameService.On("Remove", mock.Anything).Return(nil)
-	gameService.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-	gameService.On("ObservePlayersCrossGeofences",
-		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
-			fn(gameID, model.Player{})
-			return true
-		}),
-	).Return(nil)
-
-	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
-		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
-			fn(model.Player{ID: "1", Lon: 0, Lat: 0}, false)
-			return true
-		}),
-	).Return(nil)
-
 	w.WatchGames(ctx)
 	<-time.NewTimer(time.Second).C
-
 	cancel()
 	<-time.NewTimer(time.Second).C
 
@@ -109,4 +72,49 @@ func TestCloseWhenFinish(t *testing.T) {
 	})
 	gameService.AssertCalled(t, "Update", matchGameID, serverID, mock.AnythingOfType("game.GameEvent"))
 	gameService.AssertCalled(t, "Remove", gameID)
+}
+
+func newMockedGameService(ctx context.Context, serverID, gameID string, playerIDs []string) (*mocks.GameService, chan interface{}) {
+	gameService := new(mocks.GameService)
+	gameService.On("Remove", gameID).Return(nil)
+
+	gameService.On("ObservePlayersCrossGeofences",
+		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
+			fn(gameID, model.Player{})
+			return true
+		}),
+	).Return(nil)
+
+	gameService.On("IsGameRunning", gameID).Return(false, nil)
+	gameService.On("Create", gameID, serverID).Return(nil)
+	gameService.On("Remove", gameID).Return(nil)
+	gameService.On("Update", gameID, mock.Anything, mock.Anything).Return(nil)
+
+	wait := make(chan interface{})
+
+	gameService.On("ObservePlayersCrossGeofences",
+		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
+			fn(gameID, model.Player{})
+			wait <- new(interface{})
+			return true
+		}),
+	).Return(nil)
+
+	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
+		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
+			for _, id := range playerIDs {
+				p, exit := model.Player{ID: id, Lon: 0, Lat: 0}, false
+				fn(p, exit)
+			}
+			go func() {
+				<-time.NewTimer(time.Second).C
+				wait <- new(interface{})
+			}()
+			return true
+		}),
+	).Return(nil)
+
+	gameService.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	return gameService, wait
 }
