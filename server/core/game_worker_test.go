@@ -5,11 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perenecabuto/CatchCatch/server/game"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/mocks"
 	"github.com/perenecabuto/CatchCatch/server/model"
 )
