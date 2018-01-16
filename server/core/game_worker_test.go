@@ -41,11 +41,11 @@ func TestNewGameWorker(t *testing.T) {
 	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
 		return assert.Equal(t, gameID, g.ID)
 	})
-	matchGameEvent := mock.MatchedBy(func(evt game.GameEvent) bool {
+	matchedEvent := mock.MatchedBy(func(evt game.Event) bool {
 		expected := game.GameStarted
 		return assert.Equal(t, expected, evt.Name)
 	})
-	gameService.AssertCalled(t, "Update", matchGameID, serverID, matchGameEvent)
+	gameService.AssertCalled(t, "Update", matchGameID, serverID, matchedEvent)
 }
 
 func TestCloseWhenFinish(t *testing.T) {
@@ -70,7 +70,7 @@ func TestCloseWhenFinish(t *testing.T) {
 	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
 		return assert.Equal(t, gameID, g.ID)
 	})
-	gameService.AssertCalled(t, "Update", matchGameID, serverID, mock.AnythingOfType("game.GameEvent"))
+	gameService.AssertCalled(t, "Update", matchGameID, serverID, mock.AnythingOfType("game.Event"))
 	gameService.AssertCalled(t, "Remove", gameID)
 }
 

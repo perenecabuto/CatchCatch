@@ -26,7 +26,7 @@ func (_m *GameService) Create(gameID string, serverID string) error {
 }
 
 // GameByID provides a mock function with given fields: gameID
-func (_m *GameService) GameByID(gameID string) (*game.Game, *game.GameEvent, error) {
+func (_m *GameService) GameByID(gameID string) (*game.Game, *game.Event, error) {
 	ret := _m.Called(gameID)
 
 	var r0 *game.Game
@@ -38,12 +38,12 @@ func (_m *GameService) GameByID(gameID string) (*game.Game, *game.GameEvent, err
 		}
 	}
 
-	var r1 *game.GameEvent
-	if rf, ok := ret.Get(1).(func(string) *game.GameEvent); ok {
+	var r1 *game.Event
+	if rf, ok := ret.Get(1).(func(string) *game.Event); ok {
 		r1 = rf(gameID)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*game.GameEvent)
+			r1 = ret.Get(1).(*game.Event)
 		}
 	}
 
@@ -93,11 +93,11 @@ func (_m *GameService) ObserveGamePlayers(ctx context.Context, gameID string, ca
 }
 
 // ObserveGamesEvents provides a mock function with given fields: ctx, callback
-func (_m *GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.GameEvent) error) error {
+func (_m *GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.Event) error) error {
 	ret := _m.Called(ctx, callback)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, func(*game.Game, *game.GameEvent) error) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, func(*game.Game, *game.Event) error) error); ok {
 		r0 = rf(ctx, callback)
 	} else {
 		r0 = ret.Error(0)
@@ -135,11 +135,11 @@ func (_m *GameService) Remove(gameID string) error {
 }
 
 // Update provides a mock function with given fields: g, serverID, evt
-func (_m *GameService) Update(g *game.Game, serverID string, evt game.GameEvent) error {
+func (_m *GameService) Update(g *game.Game, serverID string, evt game.Event) error {
 	ret := _m.Called(g, serverID, evt)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*game.Game, string, game.GameEvent) error); ok {
+	if rf, ok := ret.Get(0).(func(*game.Game, string, game.Event) error); ok {
 		r0 = rf(g, serverID, evt)
 	} else {
 		r0 = ret.Error(0)

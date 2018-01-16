@@ -58,7 +58,7 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 	g := game.NewGame(gameID)
 	gCtx, stop := context.WithCancel(ctx)
 
-	evtChan := make(chan game.GameEvent, 100)
+	evtChan := make(chan game.Event, 100)
 	defer close(evtChan)
 	gameTimer := time.NewTimer(time.Hour)
 	defer gameTimer.Stop()
@@ -67,7 +67,7 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 
 	go func() {
 		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, exit bool) error {
-			var evt game.GameEvent
+			var evt game.Event
 			var err error
 			if exit {
 				evt, err = g.RemovePlayer(p.ID)

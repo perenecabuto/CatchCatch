@@ -70,14 +70,14 @@ const (
 
 type GameService interface {
 	Create(gameID, serverID string) error
-	Update(g *game.Game, serverID string, evt game.GameEvent) error
+	Update(g *game.Game, serverID string, evt game.Event) error
 	Remove(gameID string) error
 	IsGameRunning(gameID string) (bool, error)
-	GameByID(gameID string) (*game.Game, *game.GameEvent, error)
+	GameByID(gameID string) (*game.Game, *game.Event, error)
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
 	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
-	ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.GameEvent) error) error
+	ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.Event) error) error
 }
 
 type Tile38GameService struct {
@@ -117,7 +117,7 @@ func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
 	return time.Now().Before(expiration), nil
 }
 
-func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.GameEvent) error {
+func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.Event) error {
 	extra, _ := sjson.Set("", "event", evt)
 	extra, _ = sjson.Set(extra, "updated_at", time.Now().Unix())
 	extra, _ = sjson.Set(extra, "server_id", serverID)
@@ -126,7 +126,7 @@ func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.Game
 	return gs.repo.SetFeatureExtraData("game", g.ID, extra)
 }
 
-func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.GameEvent, error) {
+func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.Event, error) {
 	data, err := gs.repo.FeatureExtraData("game", gameID)
 	if err == ErrFeatureNotFound {
 		return nil, nil, nil
@@ -135,12 +135,12 @@ func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.GameEven
 		return nil, nil, err
 	}
 
-	players := make(map[string]*game.GamePlayer)
+	players := make(map[string]*game.Player)
 	pdata := gjson.Get(data, "players").Array()
 	for _, pd := range pdata {
-		p := &game.GamePlayer{
+		p := &game.Player{
 			Player:       model.Player{ID: pd.Get("id").String(), Lon: pd.Get("lon").Float(), Lat: pd.Get("lat").Float()},
-			Role:         game.GameRole(pd.Get("Role").String()),
+			Role:         game.Role(pd.Get("Role").String()),
 			DistToTarget: pd.Get("DistToTarget").Float(),
 			Loose:        pd.Get("Loose").Bool(),
 		}
@@ -148,13 +148,13 @@ func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.GameEven
 	}
 
 	edata := gjson.Get(data, "event")
-	evt := &game.GameEvent{Name: game.GameEventName(edata.Get("Name").String())}
+	evt := &game.Event{Name: game.EventName(edata.Get("Name").String())}
 	if p := players[edata.Get("Player.ID").String()]; p != nil {
 		evt.Player = *p
 	}
 
 	started := gjson.Get(data, "started").Bool()
-	var target *game.GamePlayer
+	var target *game.Game
 	for _, p := range players {
 		if p.Role == game.GameRoleTarget {
 			target = p
@@ -190,7 +190,7 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 	})
 }
 
-func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.GameEvent) error) error {
+func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.Event) error) error {
 	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultGeoEventRange, func(d *Detection) error {
 		gameID, playerID := d.FeatID, d.NearByFeatID
 		game, evt, err := gs.GameByID(gameID)

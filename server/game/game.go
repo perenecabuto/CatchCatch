@@ -11,29 +11,29 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/model"
 )
 
-// GameEventName represent game events
-type GameEventName string
+// EventName represent game events
+type EventName string
 
-// GameEventName options
+// EventName options
 const (
-	GameCreated               GameEventName = "game:created"
-	GameStarted               GameEventName = "game:started"
-	GameFinished              GameEventName = "game:finished"
-	GameNothingHappens        GameEventName = "game:nothing"
-	GamePlayerAdded           GameEventName = "game:player:added"
-	GamePlayerRemoved         GameEventName = "game:player:removed"
-	GameTargetWin             GameEventName = "game:target:win"
-	GameLastPlayerDetected    GameEventName = "game:finish"
-	GamePlayerLoose           GameEventName = "game:player:loose"
-	GameTargetLoose           GameEventName = "game:target:reached"
-	GamePlayerNearToTarget    GameEventName = "game:player:near"
-	GameRunningWithoutPlayers GameEventName = "game:empty"
+	GameCreated               EventName = "game:created"
+	GameStarted               EventName = "game:started"
+	GameFinished              EventName = "game:finished"
+	GameNothingHappens        EventName = "game:nothing"
+	GamePlayerAdded           EventName = "game:player:added"
+	GamePlayerRemoved         EventName = "game:player:removed"
+	GameTargetWin             EventName = "game:target:win"
+	GameLastPlayerDetected    EventName = "game:player:last"
+	GamePlayerLoose           EventName = "game:player:loose"
+	GameTargetLoose           EventName = "game:target:reached"
+	GamePlayerNearToTarget    EventName = "game:player:near"
+	GameRunningWithoutPlayers EventName = "game:empty"
 )
 
-// GameEvent is returned when something happens in the game
-type GameEvent struct {
-	Name   GameEventName
-	Player GamePlayer
+// Event is returned when something happens in the game
+type Event struct {
+	Name   EventName
+	Player Player
 }
 
 var (
@@ -42,28 +42,28 @@ var (
 	// ErrPlayerIsNotInTheGame happens when try to change or remove an player not in the game
 	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
 	// GameEventNothing is the NULL event
-	GameEventNothing = GameEvent{Name: GameNothingHappens}
+	GameEventNothing = Event{Name: GameNothingHappens}
 )
 
-// GameRole represents GamePlayer role
-type GameRole string
+// Role represents Player role
+type Role string
 
-// GameRole options
+// Role options
 const (
-	GameRoleUndefined GameRole = "undefined"
-	GameRoleTarget    GameRole = "target"
-	GameRoleHunter    GameRole = "hunter"
+	GameRoleUndefined Role = "undefined"
+	GameRoleTarget    Role = "target"
+	GameRoleHunter    Role = "hunter"
 )
 
-// GamePlayer wraps player and its role in the game
-type GamePlayer struct {
+// Player wraps model.Player and its role in the game
+type Player struct {
 	model.Player
-	Role         GameRole
+	Role         Role
 	DistToTarget float64
 	Loose        bool
 }
 
-func (gp GamePlayer) String() string {
+func (gp Player) String() string {
 	return fmt.Sprintf("[ID: %s, Role: %s, DistToTarget: %f, Loose: %v]",
 		gp.ID, gp.Role, gp.DistToTarget, gp.Loose)
 }
@@ -72,20 +72,22 @@ func (gp GamePlayer) String() string {
 type Game struct {
 	ID       string
 	started  bool
-	players  map[string]*GamePlayer
+	players  map[string]*Player
 	targetID string
 }
 
 // NewGame create a game with duration
 func NewGame(id string) *Game {
 	return &Game{ID: id, started: false,
-		players: make(map[string]*GamePlayer)}
+		players: make(map[string]*Player)}
 }
 
-func NewGameWithParams(gameID string, started bool, players map[string]*GamePlayer, targetID string) *Game {
+// NewGameWithParams ...
+func NewGameWithParams(gameID string, started bool, players map[string]*Player, targetID string) *Game {
 	return &Game{gameID, started, players, targetID}
 }
 
+// TargetID returns the targe player id
 func (g Game) TargetID() string {
 	return g.targetID
 }
@@ -97,30 +99,30 @@ func (g Game) String() string {
 /*
 Start the game
 */
-func (g *Game) Start() GameEvent {
+func (g *Game) Start() Event {
 	if g.started {
 		return GameEventNothing
 	}
 	log.Println("game:", g.ID, ":start!!!!!!")
 	g.setPlayersRoles()
 	g.started = true
-	return GameEvent{Name: GameStarted}
+	return Event{Name: GameStarted}
 }
 
 // Stop the game
-func (g *Game) Stop() GameEvent {
+func (g *Game) Stop() Event {
 	if !g.started {
 		return GameEventNothing
 	}
 	log.Println("game:", g.ID, ":stop!!!!!!!")
 	g.started = false
-	g.players = make(map[string]*GamePlayer)
-	return GameEvent{Name: GameFinished}
+	g.players = make(map[string]*Player)
+	return Event{Name: GameFinished}
 }
 
 // Players return game players
-func (g *Game) Players() []GamePlayer {
-	players := make([]GamePlayer, len(g.players))
+func (g *Game) Players() []Player {
+	players := make([]Player, len(g.players))
 	i := 0
 	for _, p := range g.players {
 		players[i] = *p
@@ -129,8 +131,8 @@ func (g *Game) Players() []GamePlayer {
 	return players
 }
 
-// GameInfo ...
-type GameInfo struct {
+// Info ...
+type Info struct {
 	Role string `json:"role"`
 	Game string `json:"game"`
 }
@@ -141,24 +143,24 @@ type PlayerRank struct {
 	Points int    `json:"points"`
 }
 
-// GameRank ...
-type GameRank struct {
+// Rank ...
+type Rank struct {
 	Game       string       `json:"game"`
 	PlayerRank []PlayerRank `json:"points_per_player"`
 	PlayerIDs  []string     `json:"-"`
 }
 
-// NewGameRank creates a GameRank
-func NewGameRank(gameName string) *GameRank {
-	return &GameRank{Game: gameName, PlayerRank: make([]PlayerRank, 0), PlayerIDs: make([]string, 0)}
+// NewGameRank creates a Rank
+func NewGameRank(gameName string) *Rank {
+	return &Rank{Game: gameName, PlayerRank: make([]PlayerRank, 0), PlayerIDs: make([]string, 0)}
 }
 
 // ByPlayersDistanceToTarget returns a game rank for players based on minimum distance to the target player
-func (rank GameRank) ByPlayersDistanceToTarget(players []GamePlayer) GameRank {
+func (rank Rank) ByPlayersDistanceToTarget(players []Player) Rank {
 	if len(players) == 0 {
 		return rank
 	}
-	playersDistToTarget := map[GamePlayer]float64{}
+	playersDistToTarget := map[Player]float64{}
 	for _, p := range players {
 		playersDistToTarget[p] = p.DistToTarget
 		rank.PlayerIDs = append(rank.PlayerIDs, p.Player.ID)
@@ -183,7 +185,7 @@ func (rank GameRank) ByPlayersDistanceToTarget(players []GamePlayer) GameRank {
 }
 
 // Rank returns the rank of the players in this game
-func (g Game) Rank() GameRank {
+func (g Game) Rank() Rank {
 	players := g.Players()
 	return NewGameRank(g.ID).ByPlayersDistanceToTarget(players)
 }
@@ -201,13 +203,13 @@ The rule is:
     - it can send messages to the player
     - it receives sessions to notify anything to this player games
 */
-func (g *Game) SetPlayer(id string, lon, lat float64) (GameEvent, error) {
+func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
 	if !g.started {
 		if _, exists := g.players[id]; !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
-			g.players[id] = &GamePlayer{
+			g.players[id] = &Player{
 				model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false}
-			return GameEvent{Name: GamePlayerAdded}, nil
+			return Event{Name: GamePlayerAdded}, nil
 		}
 		return GameEventNothing, nil
 	}
@@ -222,9 +224,9 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (GameEvent, error) {
 		p.DistToTarget = p.DistTo(target.Player)
 		if p.DistToTarget <= 20 {
 			target.Loose = true
-			return GameEvent{Name: GameTargetLoose, Player: *p}, nil
+			return Event{Name: GameTargetLoose, Player: *p}, nil
 		} else if p.DistToTarget <= 100 {
-			return GameEvent{Name: GamePlayerNearToTarget, Player: *p}, nil
+			return Event{Name: GamePlayerNearToTarget, Player: *p}, nil
 		}
 	}
 	return GameEventNothing, nil
@@ -237,32 +239,32 @@ The role is:
     - it receives sessions to send messages to its players
     - it must remove players from the game
 */
-func (g *Game) RemovePlayer(id string) (GameEvent, error) {
+func (g *Game) RemovePlayer(id string) (Event, error) {
 	p, exists := g.players[id]
 	if !exists {
 		return GameEventNothing, ErrPlayerIsNotInTheGame
 	}
 	if !g.started {
 		delete(g.players, id)
-		return GameEvent{Name: GamePlayerRemoved, Player: *p}, nil
+		return Event{Name: GamePlayerRemoved, Player: *p}, nil
 	}
 
 	g.players[id].Loose = true
-	playersInGame := make([]*GamePlayer, 0)
+	playersInGame := make([]*Player, 0)
 	for _, gp := range g.players {
 		if !gp.Loose {
 			playersInGame = append(playersInGame, gp)
 		}
 	}
 	if len(playersInGame) == 1 {
-		return GameEvent{Name: GameLastPlayerDetected, Player: *p}, nil
+		return Event{Name: GameLastPlayerDetected, Player: *p}, nil
 	} else if len(playersInGame) == 0 {
-		return GameEvent{Name: GameRunningWithoutPlayers, Player: *p}, nil
+		return Event{Name: GameRunningWithoutPlayers, Player: *p}, nil
 	} else if id == g.targetID {
-		return GameEvent{Name: GameTargetLoose, Player: *p}, nil
+		return Event{Name: GameTargetLoose, Player: *p}, nil
 	}
 
-	return GameEvent{Name: GamePlayerLoose, Player: *p}, nil
+	return Event{Name: GamePlayerLoose, Player: *p}, nil
 }
 
 func (g *Game) setPlayersRoles() {
@@ -277,7 +279,7 @@ func (g *Game) setPlayersRoles() {
 	}
 }
 
-func raffleTargetPlayer(players map[string]*GamePlayer) string {
+func raffleTargetPlayer(players map[string]*Player) string {
 	rand.New(rand.NewSource(time.Now().Unix()))
 	ids := make([]string, 0)
 	for id := range players {

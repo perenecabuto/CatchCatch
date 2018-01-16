@@ -32,7 +32,7 @@ func TestGameMustSetPlayersRolesOnStart(t *testing.T) {
 			t.Fatal("Wrong game player role", p)
 		}
 	}
-	roles := make(map[GameRole]int)
+	roles := make(map[Role]int)
 	for _, p := range g.Players() {
 		roles[p.Role]++
 	}
@@ -84,14 +84,14 @@ func TestGamePlayersDistToTargetMustBeConsistent(t *testing.T) {
 	g.SetPlayer("player3", 0.0001, 0.00001)
 	g.Start()
 
-	playersAfterStart := make([]GamePlayer, len(g.Players()))
+	playersAfterStart := make([]Player, len(g.Players()))
 	copy(playersAfterStart, g.Players())
 
 	g.SetPlayer("player1", 0, 0)
 	g.SetPlayer("player2", 0.00001, 0)
 	g.SetPlayer("player3", 0.0001, 0.00001)
 
-	playersAfterSet := make(map[string]GamePlayer)
+	playersAfterSet := make(map[string]Player)
 	for _, p := range g.Players() {
 		playersAfterSet[p.ID] = p
 	}
