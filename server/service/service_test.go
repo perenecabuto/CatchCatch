@@ -45,6 +45,23 @@ func TestTile38LocationServiceCreate(t *testing.T) {
 		gameID, matchPayload)
 }
 
+func TestTile38LocationServiceMustGetNewGame(t *testing.T) {
+	repo := &repo_mocks.Repository{}
+	stream := &repo_mocks.EventStream{}
+	service := NewGameService(repo, stream)
+
+	repo.On("FeatureExtraData", "game", gameID).
+		Return("", nil)
+
+	players := map[string]*game.Player{}
+	expectedGame := game.NewGameWithParams(gameID, false, players, "")
+
+	game, evt, err := service.GameByID(gameID)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedGame, game)
+	assert.NotNil(t, evt)
+}
+
 func assertDateEqual(t *testing.T, date1, date2 time.Time) bool {
 	return assert.Condition(t, func() bool {
 		return assert.Equal(t, date1.Day(), date2.Day()) &&

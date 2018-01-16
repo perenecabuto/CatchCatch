@@ -158,15 +158,15 @@ func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.Event, e
 	}
 
 	started := gjson.Get(data, "started").Bool()
-	var target *game.Game
+	var targetID string
 	for _, p := range players {
 		if p.Role == game.GameRoleTarget {
-			target = p
+			targetID = p.ID
 			break
 		}
 	}
 
-	return game.NewGameWithParams(gameID, started, players, target.ID), evt, nil
+	return game.NewGameWithParams(gameID, started, players, targetID), evt, nil
 }
 
 func (gs *Tile38GameService) Remove(gameID string) error {
