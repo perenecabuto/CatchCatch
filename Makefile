@@ -1,6 +1,7 @@
 TILE38PORT := 9851
 
 SERVER_SRC := cd server;
+BINARY := server
 
 DOKKU_CMD = ssh dokku@$(DOKKU_HOST)
 DOKKU_ROOT_CMD = ssh root@$(DOKKU_HOST) dokku
@@ -37,10 +38,10 @@ docker-compose: build
 	docker-compose up --build
 
 run: run-tile38
-	$(SERVER_SRC) CompileDaemon -color -command "./catchcatch-server -zconf"
+	$(SERVER_SRC) CompileDaemon -color -command "./$(BINARY) -zconf"
 
 run-debug:
-	$(SERVER_SRC) CompileDaemon -color -command "./catchcatch-server -zconf -debug"
+	$(SERVER_SRC) CompileDaemon -color -command "./$(BINARY) -zconf -debug"
 
 run-influxdb:
 	@-docker rm -f influxdb-local
