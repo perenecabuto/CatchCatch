@@ -1,4 +1,4 @@
-package service
+package repository
 
 import (
 	"github.com/perenecabuto/CatchCatch/server/model"
@@ -7,7 +7,7 @@ import (
 	geo "github.com/kellydunn/golang-geo"
 )
 
-var (
+const (
 	// ErrFeatureNotFound happens when feature does not exists in the storage
 	ErrFeatureNotFound = redis.Nil
 )

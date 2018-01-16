@@ -8,9 +8,13 @@ import (
 
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
+	"github.com/perenecabuto/CatchCatch/server/service/repository"
+
 	gjson "github.com/tidwall/gjson"
 	sjson "github.com/tidwall/sjson"
 )
+
+const ErrFeatureNotFound = repository.ErrFeatureNotFound
 
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
@@ -21,11 +25,11 @@ type PlayerLocationService interface {
 
 // Tile38PlayerLocationService manages player locations
 type Tile38PlayerLocationService struct {
-	repo Repository
+	repo repository.Repository
 }
 
 // NewPlayerLocationService build a PlayerLocationService
-func NewPlayerLocationService(repo Repository) PlayerLocationService {
+func NewPlayerLocationService(repo repository.Repository) PlayerLocationService {
 	return &Tile38PlayerLocationService{repo}
 }
 
@@ -81,11 +85,11 @@ type GameService interface {
 }
 
 type Tile38GameService struct {
-	repo   Repository
-	stream EventStream
+	repo   repository.Repository
+	stream repository.EventStream
 }
 
-func NewGameService(repo Repository, stream EventStream) GameService {
+func NewGameService(repo repository.Repository, stream repository.EventStream) GameService {
 	return &Tile38GameService{repo, stream}
 }
 
@@ -106,7 +110,7 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) error {
 
 func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
 	data, err := gs.repo.FeatureExtraData("game", gameID)
-	if err == ErrFeatureNotFound {
+	if err == repository.ErrFeatureNotFound {
 		return false, nil
 	}
 	if err != nil {
@@ -128,7 +132,7 @@ func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.Even
 
 func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.Event, error) {
 	data, err := gs.repo.FeatureExtraData("game", gameID)
-	if err == ErrFeatureNotFound {
+	if err == repository.ErrFeatureNotFound {
 		return nil, nil, nil
 	}
 	if err != nil {
@@ -173,7 +177,7 @@ func (gs *Tile38GameService) Remove(gameID string) error {
 }
 
 func (gs *Tile38GameService) ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error {
-	return gs.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 0, func(d *Detection) error {
+	return gs.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 0, func(d *repository.Detection) error {
 		gameID := d.NearByFeatID
 		if gameID == "" {
 			return nil
@@ -184,14 +188,14 @@ func (gs *Tile38GameService) ObservePlayersCrossGeofences(ctx context.Context, c
 }
 
 func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error {
-	return gs.stream.StreamIntersects(ctx, "player", "game", gameID, func(d *Detection) error {
+	return gs.stream.StreamIntersects(ctx, "player", "game", gameID, func(d *repository.Detection) error {
 		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
-		return callback(p, d.Intersects == Exit)
+		return callback(p, d.Intersects == repository.Exit)
 	})
 }
 
 func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.Event) error) error {
-	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultGeoEventRange, func(d *Detection) error {
+	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
 		gameID, playerID := d.FeatID, d.NearByFeatID
 		game, evt, err := gs.GameByID(gameID)
 		if err != nil {
@@ -219,13 +223,13 @@ type GeoFeatureService interface {
 type PlayerNearToFeatureCallback func(playerID string, distTo float64, f model.Feature) error
 type PlayersAroundCallback func(playerID string, movingPlayer model.Player, exit bool) error
 
-func NewGeoFeatureService(repo Repository, stream EventStream) GeoFeatureService {
+func NewGeoFeatureService(repo repository.Repository, stream repository.EventStream) GeoFeatureService {
 	return &Tile38GeoFeatureService{repo, stream}
 }
 
 type Tile38GeoFeatureService struct {
-	repo   Repository
-	stream EventStream
+	repo   repository.Repository
+	stream repository.EventStream
 }
 
 func (s *Tile38GeoFeatureService) FeaturesByGroup(group string) ([]*model.Feature, error) {
@@ -245,16 +249,16 @@ func (s *Tile38GeoFeatureService) Clear() error {
 }
 
 func (s *Tile38GeoFeatureService) ObservePlayersAround(ctx context.Context, callback PlayersAroundCallback) error {
-	return s.stream.StreamNearByEvents(ctx, "player", "player", "*", DefaultGeoEventRange, func(d *Detection) error {
+	return s.stream.StreamNearByEvents(ctx, "player", "player", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
 		playerID := d.NearByFeatID
 		movingPlayer := model.Player{ID: d.FeatID, Lon: d.Lon, Lat: d.Lat}
-		return callback(playerID, movingPlayer, d.Intersects == Exit)
+		return callback(playerID, movingPlayer, d.Intersects == repository.Exit)
 	})
 }
 
 func (s *Tile38GeoFeatureService) ObservePlayerNearToFeature(ctx context.Context, group string, callback PlayerNearToFeatureCallback) error {
-	return s.stream.StreamNearByEvents(ctx, group, "player", "*", DefaultGeoEventRange, func(d *Detection) error {
-		if d.Intersects == Inside {
+	return s.stream.StreamNearByEvents(ctx, group, "player", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
+		if d.Intersects == repository.Inside {
 			playerID := d.NearByFeatID
 			f := model.Feature{ID: d.FeatID, Group: group, Coordinates: d.Coordinates}
 			return callback(playerID, d.NearByMeters, f)

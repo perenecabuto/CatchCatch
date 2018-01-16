@@ -16,6 +16,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/execfunc"
 	"github.com/perenecabuto/CatchCatch/server/metrics"
 	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/service/repository"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
@@ -51,9 +52,9 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stream := service.NewEventStream(*tile38Addr)
+	stream := repository.NewEventStream(*tile38Addr)
 	client := mustConnectTile38(*debugMode)
-	repo := service.NewRepository(client)
+	repo := repository.NewRepository(client)
 	playerService := service.NewPlayerLocationService(repo)
 	gameService := service.NewGameService(repo, stream)
 	featService := service.NewGeoFeatureService(repo, stream)
