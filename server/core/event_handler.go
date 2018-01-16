@@ -31,6 +31,7 @@ func NewEventHandler(server *websocket.WSServer, players service.PlayerLocationS
 
 // Event handlers
 
+// OnConnection handles game and admin connection events
 func (h *EventHandler) OnConnection(c *websocket.WSConnListener) {
 	player, err := h.newPlayer(c)
 	if err != nil {

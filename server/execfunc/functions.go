@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// RecoverWrapper is http middleware to recover from panics
 func RecoverWrapper(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := WithRecover(func() error {
@@ -22,6 +23,7 @@ func RecoverWrapper(h http.Handler) http.Handler {
 	})
 }
 
+// WithRecover wraps functions and turns its panics into errors
 func WithRecover(fn func() error) (err error) {
 	defer func() {
 		r := recover()
@@ -34,6 +36,7 @@ func WithRecover(fn func() error) (err error) {
 	return fn()
 }
 
+// OnExit traps application to run function before exit
 func OnExit(fn func()) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)

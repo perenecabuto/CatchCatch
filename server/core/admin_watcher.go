@@ -12,11 +12,13 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
+// AdminWatcher is responsable to watch and notify admins about game events
 type AdminWatcher struct {
 	service service.GeoFeatureService
 	wss     *websocket.WSServer
 }
 
+// NewAdminWatcher creates a new game watcher
 func NewAdminWatcher(service service.GeoFeatureService, wss *websocket.WSServer) *AdminWatcher {
 	return &AdminWatcher{service, wss}
 }
