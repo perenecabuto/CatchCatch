@@ -8,17 +8,20 @@ import (
 	"github.com/stretchr/testify/mock"
 	gjson "github.com/tidwall/gjson"
 
+	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/mocks/repo_mocks"
 	"github.com/perenecabuto/CatchCatch/server/model"
 )
 
-func TestTile38LocationService(t *testing.T) {
+var (
+	gameID   = "test-tile38service-game1"
+	serverID = "test-tile38service-server1"
+)
+
+func TestTile38LocationServiceCreate(t *testing.T) {
 	repo := &repo_mocks.Repository{}
 	stream := &repo_mocks.EventStream{}
 	service := NewGameService(repo, stream)
-
-	gameID := "test-tile38service-game1"
-	serverID := "test-tile38service-server1"
 
 	gameFeat := &model.Feature{ID: gameID, Coordinates: ""}
 	repo.On("FeatureByID", "geofences", gameID).Return(gameFeat, nil)
