@@ -62,6 +62,33 @@ func TestTile38LocationServiceMustGetNewGame(t *testing.T) {
 	assert.NotNil(t, evt)
 }
 
+func TestTile38LocationServiceMustGetGameWithPlayers(t *testing.T) {
+	repo := &repo_mocks.Repository{}
+	stream := &repo_mocks.EventStream{}
+	service := NewGameService(repo, stream)
+
+	repo.On("FeatureExtraData", "game", gameID).
+		Return(`{
+			"started": true,
+			"players": [
+			{"id": "player-1", "Role": "hunter", "DistToTarget": 0, "Loose": false},
+			{"id": "player-2", "Role": "hunter", "DistToTarget": 0, "Loose": false},
+			{"id": "player-3", "Role": "target", "DistToTarget": 0, "Loose": false},
+		]}`, nil)
+
+	players := map[string]*game.Player{
+		"player-1": &game.Player{Player: model.Player{ID: "player-1"}, Role: game.GameRoleHunter},
+		"player-2": &game.Player{Player: model.Player{ID: "player-2"}, Role: game.GameRoleHunter},
+		"player-3": &game.Player{Player: model.Player{ID: "player-3"}, Role: game.GameRoleTarget},
+	}
+	expectedGame := game.NewGameWithParams(gameID, true, players, "player-3")
+
+	game, evt, err := service.GameByID(gameID)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedGame, game)
+	assert.NotNil(t, evt)
+}
+
 func assertDateEqual(t *testing.T, date1, date2 time.Time) bool {
 	return assert.Condition(t, func() bool {
 		return assert.Equal(t, date1.Day(), date2.Day()) &&
