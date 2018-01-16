@@ -28,7 +28,9 @@ coverage:
 
 gen-mocks:
 	-go get github.com/vektra/mockery/...
-	$(SERVER_SRC) mockery -all
+	$(SERVER_SRC) mockery -all -dir service
+	$(SERVER_SRC) mockery -all -dir websocket
+	
 
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
