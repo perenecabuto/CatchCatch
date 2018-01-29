@@ -1,7 +1,8 @@
 ---
-version: '2'
+version: '3'
 services:
     web:
+        image: perenecabuto/catchcatch
         build: .
         ports:
             - "5050:5050"
@@ -19,20 +20,63 @@ services:
         depends_on:
             - tile38
             - influxdb
-            
-    influxdb:
-        image: influxdb
-        ports:
-            - "8086:8086"
+        networks:
+            - traefik-net
+            - internal            
+        deploy:
+            replicas: 3
+            labels:
+                - "traefik.port=5050"
+                - "traefik.docker.network=traefik-net"
+                - "traefik.frontend.rule=Host:catchcatch.local"
 
     tile38:
         image: tile38/tile38
         ports:
             - "9851:9851"
-    
+        networks:
+            - internal
+
+    influxdb:
+        image: influxdb
+        ports:
+            - "8086:8086"
+        networks:
+            - internal
+
     grafana:
         image: grafana/grafana
         ports:
             - "3000:3000"
         links:
             - influxdb
+        networks:
+            - internal
+            - traefik-net
+        deploy:
+            labels:
+                - "traefik.port=3000"
+                - "traefik.docker.network=traefik-net"
+                - "traefik.frontend.rule=Host:grafana.catchcatch.com"
+
+    traefik:
+        image: traefik
+        command: --docker \
+            --docker.swarmmode \
+            --docker.domain=traefik \
+            --docker.watch \
+            --api
+        networks:
+            - traefik-net
+        ports:
+            - 80:80
+            - 8080:8080
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /dev/null:/traefik.toml
+
+networks:
+  traefik-net:
+    external: true
+  internal:
+    external: false
