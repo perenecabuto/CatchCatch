@@ -9,6 +9,10 @@ DOKKU_ROOT_CMD = ssh root@$(DOKKU_HOST) dokku
 DOKKU_HOST = 50.116.10.21
 LOCAL_BRANCH = master
 
+DOCKER_MACHINE_BINARY := docker-machine-Linux-x86_64
+DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.0/$(DOCKER_MACHINE_BINARY)
+
+
 %-digitalocean: DOKKU_HOST=192.34.56.53
 %-digitalocean: DOMAIN=catchcatch.ddns.net
 %-beta: DOKKU_HOST=159.203.15.29
@@ -80,3 +84,8 @@ setup-ssl:
 update-deps:
 	-go get github.com/Masterminds/glide
 	$(SERVER_SRC) glide update
+
+install-docker-machine:
+	wget -c $(DOCKER_MACHINE_URL)
+	chmod +x $(DOCKER_MACHINE_BINARY)
+	mv $(DOCKER_MACHINE_BINARY) $(HOME)/bin/docker-machine
