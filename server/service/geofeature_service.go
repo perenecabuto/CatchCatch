@@ -1,6 +1,7 @@
 package service
 
 import (
+	geo "github.com/kellydunn/golang-geo"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
 )
@@ -8,7 +9,7 @@ import (
 const ErrFeatureNotFound = repository.ErrFeatureNotFound
 
 type GeoFeatureService interface {
-	FeaturesAroundPlayer(group string, player model.Player) ([]*model.Feature, error)
+	FeaturesAroundPoint(group string, p *geo.Point) ([]*model.Feature, error)
 	FeaturesByGroup(group string) ([]*model.Feature, error)
 	SetFeature(group, id, geojson string) error
 	Clear() error
@@ -26,8 +27,8 @@ func (s *Tile38GeoFeatureService) FeaturesByGroup(group string) ([]*model.Featur
 	return s.repo.Features(group)
 }
 
-func (s *Tile38GeoFeatureService) FeaturesAroundPlayer(group string, p model.Player) ([]*model.Feature, error) {
-	return s.repo.FeaturesAround(group, p.Point())
+func (s *Tile38GeoFeatureService) FeaturesAroundPoint(group string, p *geo.Point) ([]*model.Feature, error) {
+	return s.repo.FeaturesAround(group, p)
 }
 
 func (s *Tile38GeoFeatureService) SetFeature(group, id, geojson string) error {

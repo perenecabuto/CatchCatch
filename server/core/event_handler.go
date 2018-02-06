@@ -100,7 +100,7 @@ func (h *EventHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func
 func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *websocket.WSConnListener) func([]byte) {
 	return func([]byte) {
 		go func() {
-			games, err := h.geo.FeaturesAroundPlayer("geofences", *player)
+			games, err := h.geo.FeaturesAroundPoint("geofences", player.Point())
 			if err != nil {
 				log.Println("Error to request games:", err)
 				return
