@@ -56,74 +56,88 @@ func (gw GameWorker) watchGame(ctx context.Context, gameID string) error {
 	}
 
 	g := game.NewGame(gameID)
-	gCtx, stop := context.WithCancel(ctx)
+	gCtx, evtChan := gw.listenToGameEvents(ctx, g)
+	return gw.watchGamePlayers(gCtx, g, evtChan)
+}
 
-	evtChan := make(chan game.Event, 100)
-	defer close(evtChan)
+func (gw GameWorker) watchGamePlayers(
+	ctx context.Context, g *game.Game, evtChan chan game.Event) error {
+	return gw.service.ObserveGamePlayers(ctx, g.ID, func(p model.Player, exit bool) error {
+		var evt game.Event
+		var err error
+		if exit {
+			evt, err = g.RemovePlayer(p.ID)
+		} else {
+			evt, err = g.SetPlayer(p.ID, p.Lat, p.Lon)
+		}
+		if err != nil {
+			return err
+		}
+		if evt.Name != game.GameNothingHappens {
+			evtChan <- evt
+		}
+		return nil
+	})
+}
+
+func (gw GameWorker) listenToGameEvents(ctx context.Context, g *game.Game) (context.Context, chan game.Event) {
+	gCtx, stop := context.WithCancel(ctx)
+	defer stop()
 	gameTimer := time.NewTimer(time.Hour)
 	defer gameTimer.Stop()
 	gameHealthCheckTicker := time.NewTicker(30 * time.Second)
 	defer gameHealthCheckTicker.Stop()
 
+	evtChan := make(chan game.Event)
+	// TODO: monitor all game events
 	go func() {
-		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, exit bool) error {
-			var evt game.Event
-			var err error
-			if exit {
-				evt, err = g.RemovePlayer(p.ID)
-			} else {
-				evt, err = g.SetPlayer(p.ID, p.Lat, p.Lon)
+		for {
+			select {
+			case evt, ok := <-evtChan:
+				if !ok {
+					stop()
+					continue
+				}
+				log.Printf("GameWorker:%s:gameevent:%-v", g.ID, evt)
+
+				switch evt.Name {
+				case game.GameTargetWin,
+					game.GameTargetLoose,
+					game.GameLastPlayerDetected,
+					game.GameRunningWithoutPlayers:
+					gw.service.Update(g, gw.serverID, evt)
+					stop()
+				case game.GamePlayerNearToTarget:
+					gw.service.Update(g, gw.serverID, evt)
+				case game.GamePlayerAdded, game.GamePlayerRemoved:
+					// TODO: monitor game start
+					ready := !g.Started() && len(g.Players()) >= MinPlayersPerGame
+					if ready {
+						gameTimer = time.NewTimer(5 * time.Minute)
+						evt = g.Start()
+						gw.service.Update(g, gw.serverID, evt)
+					}
+				}
+			case <-gameHealthCheckTicker.C:
+				// TODO: do not send events for this
+				err := gw.service.Update(g, gw.serverID, game.GameEventNothing)
+				if err != nil {
+					log.Println("GameWorker:watchGame:healthcheck:error:", err)
+				}
+			case <-gameTimer.C:
+				log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
+				stop()
+			case <-ctx.Done():
+				log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
+				evt := g.Stop()
+				// TODO store serverID in another store,
+				// maybe a env kv store like etcd
+				gw.service.Update(g, gw.serverID, evt)
+				gw.service.Remove(g.ID)
+				return
 			}
-			if err != nil {
-				return err
-			}
-			if evt.Name != game.GameNothingHappens {
-				evtChan <- evt
-			}
-			return nil
-		})
-		if err != nil {
-			log.Println("Worker:watchGame:error:", err)
-			stop()
 		}
 	}()
 
-	for {
-		select {
-		case evt := <-evtChan:
-			log.Printf("GameWorker:%s:gameevent:%-v", gameID, evt)
-
-			switch evt.Name {
-			case game.GameTargetWin, game.GameTargetLoose, game.GameLastPlayerDetected, game.GameRunningWithoutPlayers:
-				gw.service.Update(g, gw.serverID, evt)
-				stop()
-			case game.GamePlayerNearToTarget:
-				gw.service.Update(g, gw.serverID, evt)
-			case game.GamePlayerAdded, game.GamePlayerRemoved:
-				// TODO: monitor game start
-				ready := !g.Started() && len(g.Players()) >= MinPlayersPerGame
-				if ready {
-					gameTimer = time.NewTimer(5 * time.Minute)
-					evt = g.Start()
-					gw.service.Update(g, gw.serverID, evt)
-				}
-			}
-		case <-gameHealthCheckTicker.C:
-			// TODO do not send events for this
-			err := gw.service.Update(g, gw.serverID, game.GameEventNothing)
-			if err != nil {
-				log.Println("GameWorker:watchGame:healthcheck:error:", err)
-			}
-		case <-gameTimer.C:
-			log.Printf("GameWorker:watchGame:stop:game:%s", gameID)
-			stop()
-		case <-gCtx.Done():
-			log.Printf("GameWorker:watchGame:done:game:%s", gameID)
-			stop()
-			evt := g.Stop()
-			gw.service.Update(g, gw.serverID, evt)
-			gw.service.Remove(gameID)
-			return nil
-		}
-	}
+	return gCtx, evtChan
 }
