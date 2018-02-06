@@ -39,7 +39,7 @@ func TestWatchCheckPointsMustNotifyPlayersNearToCheckPoinstsTheDistToIt(t *testi
 	distToCheckPoint := 12.0
 	checkPoint := model.Feature{Group: "checkpoint", ID: "checkpoint1"}
 
-	geoS := w.service.(*MockGeoServiceWithCallback)
+	geoS := w.service.(*MockPlayerServiceWithCallback)
 	geoS.PlayerNearToFeatureCallback(playerID, distToCheckPoint, checkPoint)
 
 	expected, _ := proto.Marshal(&protobuf.Detection{
@@ -55,21 +55,21 @@ func TestWatchCheckPointsMustNotifyPlayersNearToCheckPoinstsTheDistToIt(t *testi
 
 func createAdminWatcher() *AdminWatcher {
 	wss := websocket.NewWSServer(&mocks.WSDriver{})
-	geoService := &MockGeoServiceWithCallback{}
-	return NewAdminWatcher(geoService, wss)
+	playerService := &MockPlayerServiceWithCallback{}
+	return NewAdminWatcher(playerService, wss)
 }
 
-type MockGeoServiceWithCallback struct {
-	mocks.GeoFeatureService
+type MockPlayerServiceWithCallback struct {
+	mocks.PlayerLocationService
 	PlayersAroundCallback       service.PlayersAroundCallback
 	PlayerNearToFeatureCallback service.PlayerNearToFeatureCallback
 }
 
-func (gs *MockGeoServiceWithCallback) ObservePlayersAround(_ context.Context, cb service.PlayersAroundCallback) error {
+func (gs *MockPlayerServiceWithCallback) ObservePlayersAround(_ context.Context, cb service.PlayersAroundCallback) error {
 	gs.PlayersAroundCallback = cb
 	return nil
 }
-func (gs *MockGeoServiceWithCallback) ObservePlayerNearToFeature(_ context.Context, _ string, cb service.PlayerNearToFeatureCallback) error {
+func (gs *MockPlayerServiceWithCallback) ObservePlayerNearToFeature(_ context.Context, _ string, cb service.PlayerNearToFeatureCallback) error {
 	gs.PlayerNearToFeatureCallback = cb
 	return nil
 }
