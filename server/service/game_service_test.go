@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	gameID   = "test-tile38service-game1"
-	serverID = "test-tile38service-server1"
+	gameID   = "test-game-service-game1"
+	serverID = "test-game-service-server1"
 )
 
-func TestTile38LocationServiceCreate(t *testing.T) {
+func TestGameServiceCreate(t *testing.T) {
 	repo := &repo_mocks.Repository{}
 	stream := &repo_mocks.EventStream{}
 	service := NewGameService(repo, stream)
@@ -45,7 +45,7 @@ func TestTile38LocationServiceCreate(t *testing.T) {
 		gameID, matchPayload)
 }
 
-func TestTile38LocationServiceMustGetNewGame(t *testing.T) {
+func TestGameServiceMustGetNewGame(t *testing.T) {
 	repo := &repo_mocks.Repository{}
 	stream := &repo_mocks.EventStream{}
 	service := NewGameService(repo, stream)
@@ -62,7 +62,7 @@ func TestTile38LocationServiceMustGetNewGame(t *testing.T) {
 	assert.NotNil(t, evt)
 }
 
-func TestTile38LocationServiceMustGetGameWithPlayers(t *testing.T) {
+func TestGameServiceMustGetGameWithPlayers(t *testing.T) {
 	repo := &repo_mocks.Repository{}
 	stream := &repo_mocks.EventStream{}
 	service := NewGameService(repo, stream)
