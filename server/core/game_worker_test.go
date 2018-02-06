@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,8 +28,7 @@ func TestNewGameWorker(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	gameService, wait := newMockedGameService(ctx,
-		serverID, gameID, playerIDs)
+	gameService, wait := newMockedGameService(ctx, serverID, gameID, playerIDs)
 	defer close(wait)
 	w := NewGameWorker(serverID, gameService)
 
@@ -80,7 +80,7 @@ func newMockedGameService(ctx context.Context, serverID, gameID string, playerID
 
 	gameService.On("ObservePlayersCrossGeofences",
 		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
-			fn(gameID, model.Player{})
+			go fn(gameID, model.Player{})
 			return true
 		}),
 	).Return(nil)
@@ -94,22 +94,27 @@ func newMockedGameService(ctx context.Context, serverID, gameID string, playerID
 
 	gameService.On("ObservePlayersCrossGeofences",
 		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
-			fn(gameID, model.Player{})
-			wait <- new(interface{})
+			go fn(gameID, model.Player{})
+			go func() { wait <- new(interface{}) }()
 			return true
 		}),
 	).Return(nil)
 
 	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
 		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
-			for _, id := range playerIDs {
-				p, exit := model.Player{ID: id, Lon: 0, Lat: 0}, false
-				fn(p, exit)
-			}
+			var wg sync.WaitGroup
+			wg.Add(len(playerIDs))
 			go func() {
-				<-time.NewTimer(time.Second).C
+				wg.Wait()
 				wait <- new(interface{})
 			}()
+			for _, id := range playerIDs {
+				p, exit := model.Player{ID: id, Lon: 0, Lat: 0}, false
+				go func() {
+					fn(p, exit)
+					wg.Done()
+				}()
+			}
 			return true
 		}),
 	).Return(nil)
