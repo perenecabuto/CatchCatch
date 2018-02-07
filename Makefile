@@ -43,11 +43,17 @@ build:
 docker-compose: build
 	docker-compose up --build
 
-run: run-tile38
+run: run-tile38 run-nats
 	$(SERVER_SRC) CompileDaemon -color -command "./$(BINARY) -zconf"
 
 run-debug:
 	$(SERVER_SRC) CompileDaemon -color -command "./$(BINARY) -zconf -debug"
+
+run-nats:
+	@-docker rm -f nats-local
+	@docker run --restart unless-stopped -p 4222:4222 \
+		--name nats-local \
+		-d nats
 
 run-influxdb:
 	@-docker rm -f influxdb-local
