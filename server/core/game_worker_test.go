@@ -85,8 +85,9 @@ func newMockedGameService(ctx context.Context, serverID, gameID string, playerID
 		}),
 	).Return(nil)
 
+	g, _ := game.NewGame(gameID)
 	gameService.On("IsGameRunning", gameID).Return(false, nil)
-	gameService.On("Create", gameID, serverID).Return(nil)
+	gameService.On("Create", gameID, serverID).Return(g, nil)
 	gameService.On("Remove", gameID).Return(nil)
 	gameService.On("Update", gameID, mock.Anything, mock.Anything).Return(nil)
 
