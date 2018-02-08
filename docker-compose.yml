@@ -15,9 +15,11 @@ services:
             - "-influxdb-addr"
             - "http://influxdb:8086"
         links:
+            - nats
             - tile38
             - influxdb
         depends_on:
+            - nats
             - tile38
             - influxdb
         networks:
@@ -34,6 +36,13 @@ services:
         image: tile38/tile38
         ports:
             - "9851:9851"
+        networks:
+            - internal
+
+    nats:
+        image: nats
+        ports:
+            - "4222:4222"
         networks:
             - internal
 
