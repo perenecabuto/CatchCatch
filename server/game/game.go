@@ -85,8 +85,13 @@ func NewGame(id string) (*Game, Event) {
 }
 
 // NewGameWithParams ...
-func NewGameWithParams(gameID string, started bool, players map[string]*Player, targetID string) *Game {
-	return &Game{gameID, started, players, targetID}
+func NewGameWithParams(gameID string, started bool, players []Player, targetID string) *Game {
+	mPlayers := map[string]*Player{}
+	for _, p := range players {
+		copy := p
+		mPlayers[p.ID] = &copy
+	}
+	return &Game{gameID, started, mPlayers, targetID}
 }
 
 // TargetID returns the targe player id
