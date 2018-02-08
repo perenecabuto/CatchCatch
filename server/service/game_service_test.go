@@ -1,16 +1,17 @@
 package service
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	gjson "github.com/tidwall/gjson"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
-	"github.com/perenecabuto/CatchCatch/server/mocks/repo_mocks"
 	"github.com/perenecabuto/CatchCatch/server/model"
+
+	"github.com/perenecabuto/CatchCatch/server/mocks/repo_mocks"
 )
 
 var (
@@ -34,12 +35,12 @@ func TestGameServiceCreate(t *testing.T) {
 	service.Create(gameID, serverID)
 
 	matchPayload := mock.MatchedBy(func(payload string) bool {
-		actualServerID := gjson.Get(payload, "server_id").String()
-		actualUpdatedAt := gjson.Get(payload, "updated_at").Int()
-		updateDate := time.Unix(actualUpdatedAt, 0)
+		gameEvt := GameEvent{}
+		json.Unmarshal([]byte(payload), &gameEvt)
 
-		return assert.Equal(t, actualServerID, serverID) &&
-			assertDateEqual(t, now, updateDate)
+		return assert.Equal(t, gameEvt.Event, game.GameEventCreated) &&
+			assert.Equal(t, serverID, gameEvt.ServerID) &&
+			assertDateEqual(t, now, gameEvt.LastUpdate)
 	})
 	repo.AssertCalled(t, "SetFeatureExtraData", "game",
 		gameID, matchPayload)
@@ -50,11 +51,12 @@ func TestGameServiceMustGetNewGame(t *testing.T) {
 	stream := &repo_mocks.EventStream{}
 	service := NewGameService(repo, stream)
 
-	repo.On("FeatureExtraData", "game", gameID).
-		Return("", nil)
-
-	players := map[string]*game.Player{}
+	players := make([]game.Player, 0)
 	expectedGame := game.NewGameWithParams(gameID, false, players, "")
+
+	gameEvt := GameEvent{Game: *expectedGame, Event: game.GameEventNothing}
+	serialized, _ := json.Marshal(gameEvt)
+	repo.On("FeatureExtraData", "game", gameID).Return(string(serialized), nil)
 
 	game, evt, err := service.GameByID(gameID)
 	assert.NoError(t, err)
@@ -67,26 +69,22 @@ func TestGameServiceMustGetGameWithPlayers(t *testing.T) {
 	stream := &repo_mocks.EventStream{}
 	service := NewGameService(repo, stream)
 
-	repo.On("FeatureExtraData", "game", gameID).
-		Return(`{
-			"started": true,
-			"players": [
-			{"id": "player-1", "Role": "hunter", "DistToTarget": 0, "Loose": false},
-			{"id": "player-2", "Role": "hunter", "DistToTarget": 0, "Loose": false},
-			{"id": "player-3", "Role": "target", "DistToTarget": 0, "Loose": false},
-		]}`, nil)
-
-	players := map[string]*game.Player{
-		"player-1": &game.Player{Player: model.Player{ID: "player-1"}, Role: game.GameRoleHunter},
-		"player-2": &game.Player{Player: model.Player{ID: "player-2"}, Role: game.GameRoleHunter},
-		"player-3": &game.Player{Player: model.Player{ID: "player-3"}, Role: game.GameRoleTarget},
+	players := []game.Player{
+		game.Player{Player: model.Player{ID: "player-1"}, Role: game.GameRoleHunter},
+		game.Player{Player: model.Player{ID: "player-2"}, Role: game.GameRoleHunter},
+		game.Player{Player: model.Player{ID: "player-3"}, Role: game.GameRoleTarget},
 	}
 	expectedGame := game.NewGameWithParams(gameID, true, players, "player-3")
 
+	gameEvt := GameEvent{Game: *expectedGame, Event: game.GameEventNothing}
+	serialized, _ := json.Marshal(gameEvt)
+	repo.On("FeatureExtraData", "game", gameID).Return(string(serialized), nil)
+
 	game, evt, err := service.GameByID(gameID)
+
 	assert.NoError(t, err)
 	assert.Equal(t, expectedGame, game)
-	assert.NotNil(t, evt)
+	assert.Equal(t, gameEvt.Event, *evt)
 }
 
 func assertDateEqual(t *testing.T, date1, date2 time.Time) bool {

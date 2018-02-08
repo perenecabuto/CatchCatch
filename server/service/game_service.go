@@ -2,14 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
-	gjson "github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
 )
 
 const (
@@ -18,7 +17,7 @@ const (
 )
 
 type GameService interface {
-	Create(gameID, serverID string) error
+	Create(gameID, serverID string) (*game.Game, error)
 	Update(g *game.Game, serverID string, evt game.Event) error
 	Remove(gameID string) error
 	IsGameRunning(gameID string) (bool, error)
@@ -26,7 +25,7 @@ type GameService interface {
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
 	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
-	ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.Event) error) error
+	ObserveGamesEvents(ctx context.Context, callback func(game.Game, game.Event) error) error
 }
 
 type Tile38GameService struct {
@@ -34,84 +33,79 @@ type Tile38GameService struct {
 	stream repository.EventStream
 }
 
-func NewGameService(repo repository.Repository, stream repository.EventStream) GameService {
-	return &Tile38GameService{repo, stream}
+func NewGameService(r repository.Repository, s repository.EventStream) GameService {
+	return &Tile38GameService{r, s}
 }
 
-func (gs *Tile38GameService) Create(gameID string, serverID string) error {
+func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game, error) {
 	f, err := gs.repo.FeatureByID("geofences", gameID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = gs.repo.SetFeature("game", gameID, f.Coordinates)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	extra, _ := sjson.Set("", "updated_at", time.Now().Unix())
-	extra, _ = sjson.Set(extra, "server_id", serverID)
-	return gs.repo.SetFeatureExtraData("game", gameID, extra)
+	game, evt := game.NewGame(gameID)
+	gameEvt := &GameEvent{Game: *game, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
+	serialized, err := json.Marshal(gameEvt)
+	if err != nil {
+		return nil, err
+	}
+	err = gs.repo.SetFeatureExtraData("game", gameID, string(serialized))
+	if err != nil {
+		return nil, err
+	}
+	return game, nil
 }
 
 func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
-	data, err := gs.repo.FeatureExtraData("game", gameID)
-	if err == repository.ErrFeatureNotFound {
-		return false, nil
-	}
+	gameEvt, err := gs.findGameEvent(gameID)
 	if err != nil {
 		return false, err
 	}
-	lastUpdate := time.Unix(gjson.Get(data, "updated_at").Int(), 0)
+	lastUpdate := gameEvt.LastUpdate
 	expiration := lastUpdate.Add(20 * time.Second)
 	return time.Now().Before(expiration), nil
 }
 
 func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.Event) error {
-	extra, _ := sjson.Set("", "event", evt)
-	extra, _ = sjson.Set(extra, "updated_at", time.Now().Unix())
-	extra, _ = sjson.Set(extra, "server_id", serverID)
-	extra, _ = sjson.Set(extra, "players", g.Players())
-	extra, _ = sjson.Set(extra, "started", g.Started())
-	return gs.repo.SetFeatureExtraData("game", g.ID, extra)
+	gameEvt := &GameEvent{Game: *g, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
+	serialized, err := json.Marshal(gameEvt)
+	if err != nil {
+		return err
+	}
+	err = gs.repo.SetFeatureExtraData("game", g.ID, string(serialized))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.Event, error) {
+func (gs *Tile38GameService) findGameEvent(gameID string) (*GameEvent, error) {
 	data, err := gs.repo.FeatureExtraData("game", gameID)
-	if err == repository.ErrFeatureNotFound {
-		return nil, nil, nil
+	if err != nil {
+		return nil, err
 	}
+	gameEvt := GameEvent{}
+	err = json.Unmarshal([]byte(data), &gameEvt)
+	return &gameEvt, err
+}
+
+var GameEventNotFound = repository.ErrFeatureNotFound
+
+func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.Event, error) {
+	gameEvt, err := gs.findGameEvent(gameID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	players := make(map[string]*game.Player)
-	pdata := gjson.Get(data, "players").Array()
-	for _, pd := range pdata {
-		p := &game.Player{
-			Player:       model.Player{ID: pd.Get("id").String(), Lon: pd.Get("lon").Float(), Lat: pd.Get("lat").Float()},
-			Role:         game.Role(pd.Get("Role").String()),
-			DistToTarget: pd.Get("DistToTarget").Float(),
-			Loose:        pd.Get("Loose").Bool(),
-		}
-		players[p.ID] = p
-	}
-
-	edata := gjson.Get(data, "event")
-	evt := &game.Event{Name: game.EventName(edata.Get("Name").String())}
-	if p := players[edata.Get("Player.ID").String()]; p != nil {
-		evt.Player = *p
-	}
-
-	started := gjson.Get(data, "started").Bool()
-	var targetID string
-	for _, p := range players {
-		if p.Role == game.GameRoleTarget {
-			targetID = p.ID
-			break
-		}
-	}
-
-	return game.NewGameWithParams(gameID, started, players, targetID), evt, nil
+	started := gameEvt.Game.Started()
+	players := gameEvt.Game.Players()
+	targetID := gameEvt.Game.TargetID()
+	evt := gameEvt.Event
+	return game.NewGameWithParams(gameID, started, players, targetID), &evt, nil
 }
 
 func (gs *Tile38GameService) Remove(gameID string) error {
@@ -139,7 +133,7 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 	})
 }
 
-func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, *game.Event) error) error {
+func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(game.Game, game.Event) error) error {
 	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
 		gameID, playerID := d.FeatID, d.NearByFeatID
 		game, evt, err := gs.GameByID(gameID)
@@ -151,6 +145,13 @@ func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback fu
 			return nil
 		}
 
-		return callback(game, evt)
+		return callback(*game, *evt)
 	})
+}
+
+type GameEvent struct {
+	Game       game.Game
+	Event      game.Event
+	LastUpdate time.Time
+	ServerID   string
 }
