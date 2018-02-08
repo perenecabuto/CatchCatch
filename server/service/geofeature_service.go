@@ -9,7 +9,7 @@ import (
 const ErrFeatureNotFound = repository.ErrFeatureNotFound
 
 type GeoFeatureService interface {
-	FeaturesAroundPoint(group string, p *geo.Point) ([]*model.Feature, error)
+	FeaturesAroundPoint(group string, point *geo.Point) ([]*model.Feature, error)
 	FeaturesByGroup(group string) ([]*model.Feature, error)
 	SetFeature(group, id, geojson string) error
 	Clear() error
@@ -27,8 +27,8 @@ func (s *Tile38GeoFeatureService) FeaturesByGroup(group string) ([]*model.Featur
 	return s.repo.Features(group)
 }
 
-func (s *Tile38GeoFeatureService) FeaturesAroundPoint(group string, p *geo.Point) ([]*model.Feature, error) {
-	return s.repo.FeaturesAround(group, p)
+func (s *Tile38GeoFeatureService) FeaturesAroundPoint(group string, point *geo.Point) ([]*model.Feature, error) {
+	return s.repo.FeaturesAround(group, point)
 }
 
 func (s *Tile38GeoFeatureService) SetFeature(group, id, geojson string) error {
