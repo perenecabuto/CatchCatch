@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -103,19 +102,16 @@ func newMockedGameService(ctx context.Context, serverID, gameID string, playerID
 
 	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
 		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
-			var wg sync.WaitGroup
-			wg.Add(len(playerIDs))
 			go func() {
-				wg.Wait()
+				<-time.NewTimer(time.Second).C
 				wait <- new(interface{})
 			}()
-			for _, id := range playerIDs {
-				p, exit := model.Player{ID: id, Lon: 0, Lat: 0}, false
-				go func() {
-					fn(p, exit)
-					wg.Done()
-				}()
-			}
+			go func() {
+				for _, id := range playerIDs {
+					p, exit := model.Player{ID: id, Lon: 0, Lat: 0}, false
+					go fn(p, exit)
+				}
+			}()
 			return true
 		}),
 	).Return(nil)
