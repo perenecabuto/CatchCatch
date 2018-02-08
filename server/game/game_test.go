@@ -2,10 +2,17 @@ package game
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
+func TestNewGameMustReturnCreatedEvent(t *testing.T) {
+	_, e := NewGame("test")
+	assert.Equal(t, GameEventCreated, e)
+}
+
 func TestGameMustAddPlayers(t *testing.T) {
-	g := NewGame("test")
+	g, _ := NewGame("test")
 	g.SetPlayer("player1", 0, 0)
 	g.SetPlayer("player2", 0, 0)
 	g.SetPlayer("player3", 0, 0)
@@ -16,7 +23,7 @@ func TestGameMustAddPlayers(t *testing.T) {
 }
 
 func TestGameMustSetPlayersRolesOnStart(t *testing.T) {
-	g := NewGame("test")
+	g, _ := NewGame("test")
 	g.SetPlayer("player1", 0, 0)
 	g.SetPlayer("player2", 0, 0)
 	g.SetPlayer("player3", 0, 0)
@@ -45,7 +52,7 @@ func TestGameMustSetPlayersRolesOnStart(t *testing.T) {
 }
 
 func TestGameMustSetDistToTargetWhenStart(t *testing.T) {
-	g := NewGame("test")
+	g, _ := NewGame("test")
 	g.SetPlayer("player1", 0.0, 0.0)
 	g.SetPlayer("player2", 0.0, 0.0)
 	g.SetPlayer("target", 0.0, 0.0)
@@ -78,7 +85,7 @@ func TestGameMustSetDistToTargetWhenStart(t *testing.T) {
 }
 
 func TestGamePlayersDistToTargetMustBeConsistent(t *testing.T) {
-	g := NewGame("test")
+	g, _ := NewGame("test")
 	g.SetPlayer("player1", 0, 0)
 	g.SetPlayer("player2", 0.00001, 0)
 	g.SetPlayer("player3", 0.0001, 0.00001)
@@ -105,7 +112,7 @@ func TestGamePlayersDistToTargetMustBeConsistent(t *testing.T) {
 }
 
 func TestGameRank(t *testing.T) {
-	g := NewGame("test")
+	g, _ := NewGame("test")
 	g.SetPlayer("player1", 0.0, 0.0)
 	g.SetPlayer("player2", 0.0, 0.0)
 	g.SetPlayer("target", 0.0, 0.0)

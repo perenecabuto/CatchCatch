@@ -43,6 +43,8 @@ var (
 	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
 	// GameEventNothing is the NULL event
 	GameEventNothing = Event{Name: GameNothingHappens}
+	// GameEventCreated happens after a game is created
+	GameEventCreated = Event{Name: GameCreated}
 )
 
 // Role represents Player role
@@ -77,9 +79,9 @@ type Game struct {
 }
 
 // NewGame create a game with duration
-func NewGame(id string) *Game {
-	return &Game{ID: id, started: false,
-		players: make(map[string]*Player)}
+func NewGame(id string) (*Game, Event) {
+	return &Game{ID: id, started: false, players: make(map[string]*Player)},
+		GameEventCreated
 }
 
 // NewGameWithParams ...
