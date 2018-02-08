@@ -50,7 +50,7 @@ func (gw *GameWatcher) WatchGameEventsForever(ctx context.Context) {
 // WatchGameEvents observers game events and notify players
 // TODO: monitor game watches
 func (gw *GameWatcher) WatchGameEvents(ctx context.Context) error {
-	return gw.service.ObserveGamesEvents(ctx, func(g *game.Game, evt *game.Event) error {
+	return gw.service.ObserveGamesEvents(ctx, func(g game.Game, evt game.Event) error {
 		p := evt.Player
 		switch evt.Name {
 		case game.GameStarted:
@@ -71,14 +71,14 @@ func (gw *GameWatcher) WatchGameEvents(ctx context.Context) error {
 			gw.wss.Emit(g.TargetID(), &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
 			gw.wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"),
 				Dist: &p.DistToTarget})
-			gw.sendGameRank(g)
+			gw.sendGameRank(&g)
 
 		case game.GameTargetWin:
 			gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:target:win")})
-			gw.sendGameRank(g)
+			gw.sendGameRank(&g)
 
 		case game.GameFinished:
-			gw.sendGameRank(g)
+			gw.sendGameRank(&g)
 		}
 
 		return nil

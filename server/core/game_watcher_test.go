@@ -45,14 +45,14 @@ func TestGameWatcher(t *testing.T) {
 	defer cancel()
 
 	gameID := "test-gamewatcher-game-1"
-	g := game.NewGame(gameID)
+	g, _ := game.NewGame(gameID)
 	g.SetPlayer(playerID, 0, 0)
 	g.Start()
-	evt := &game.Event{Name: game.GameStarted}
+	evt := game.Event{Name: game.GameStarted}
 
 	gameService.On("ObserveGamesEvents", ctx,
-		mock.MatchedBy(func(fn func(g *game.Game, evt *game.Event) error) bool {
-			fn(g, evt)
+		mock.MatchedBy(func(fn func(g game.Game, evt game.Event) error) bool {
+			fn(*g, evt)
 			return true
 		})).Return(nil)
 
