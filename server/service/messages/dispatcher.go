@@ -10,10 +10,10 @@ type Dispatcher interface {
 }
 
 type Nats struct {
-	conn nats.Conn
+	conn *nats.Conn
 }
 
-func NewNatsDispatcher(c nats.Conn) Dispatcher {
+func NewNatsDispatcher(c *nats.Conn) Dispatcher {
 	return &Nats{c}
 }
 
