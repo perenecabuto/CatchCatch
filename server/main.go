@@ -10,12 +10,14 @@ import (
 
 	redis "github.com/go-redis/redis"
 	zconf "github.com/grandcat/zeroconf"
+	nats "github.com/nats-io/go-nats"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/execfunc"
 	"github.com/perenecabuto/CatchCatch/server/metrics"
 	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/service/messages"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
@@ -56,7 +58,10 @@ func main() {
 	client := mustConnectTile38(*debugMode)
 	repo := repository.NewRepository(client)
 	playerService := service.NewPlayerLocationService(repo, stream)
-	gameService := service.NewGameService(repo, stream)
+
+	natsConn := mustConnectNats(nats.DefaultURL)
+	dispatcher := messages.NewNatsDispatcher(natsConn)
+	gameService := service.NewGameService(repo, stream, dispatcher)
 	featService := service.NewGeoFeatureService(repo)
 	wsHandler := selectWsDriver(*wsdriver)
 	server := websocket.NewWSServer(wsHandler)
@@ -107,4 +112,12 @@ func tile38DebugWrapper(oldProcess func(cmd redis.Cmder) error) func(cmd redis.C
 		log.Println("TILE38 DEBUG:", cmd.String())
 		return oldProcess(cmd)
 	}
+}
+
+func mustConnectNats(url string) *nats.Conn {
+	conn, err := nats.Connect(url)
+	if err != nil {
+		log.Panic("Nat connection:", err)
+	}
+	return conn
 }

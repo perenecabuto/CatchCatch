@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/perenecabuto/CatchCatch/server/service/messages"
+
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
@@ -29,12 +31,13 @@ type GameService interface {
 }
 
 type Tile38GameService struct {
-	repo   repository.Repository
-	stream repository.EventStream
+	repo     repository.Repository
+	stream   repository.EventStream
+	messages messages.Dispatcher
 }
 
-func NewGameService(r repository.Repository, s repository.EventStream) GameService {
-	return &Tile38GameService{r, s}
+func NewGameService(r repository.Repository, s repository.EventStream, m messages.Dispatcher) GameService {
+	return &Tile38GameService{r, s, m}
 }
 
 func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game, error) {
