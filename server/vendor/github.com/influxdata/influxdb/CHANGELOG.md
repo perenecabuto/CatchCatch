@@ -1,3 +1,57 @@
+## v1.5.0 [unreleased]
+
+### Breaking changes
+
+* The default logging format has been changed. See [#9055](https://github.com/influxdata/influxdb/pull/9055) for details.
+
+### Features
+
+- [#8495](https://github.com/influxdata/influxdb/pull/8495): Improve CLI connection warnings
+- [#3019](https://github.com/influxdata/influxdb/issues/3019): Backup utility prints a list of backup files.
+- [#9146](https://github.com/influxdata/influxdb/issues/9146): Backup/Restore can produce/consume data in the same format as the enterprise backup/restore tool.
+- [#8880](https://github.com/influxdata/influxdb/issues/8879): Restore runs in online mode, does not delete existing databases
+- [#8879](https://github.com/influxdata/influxdb/issues/8879): Export functionality using start/end to filter exported data by timestamp
+- [#9084](https://github.com/influxdata/influxdb/pull/9084): Handle high cardinality deletes in TSM engine
+- [#9162](https://github.com/influxdata/influxdb/pull/9162): Improve inmem index startup performance for high cardinality.
+- [#8491](https://github.com/influxdata/influxdb/pull/8491): Add further tsi support for streaming/copying shards.
+- [#9181](https://github.com/influxdata/influxdb/pull/9181): Schedule a full compaction after a successful import
+- [#9218](https://github.com/influxdata/influxdb/pull/9218): Add Prometheus `/metrics` endpoint.
+- [#9213](https://github.com/influxdata/influxdb/pull/9213): Add ability to generate shard digests.
+- [#9184](https://github.com/influxdata/influxdb/pull/9184): Allow setting the node id in the influx cli program.
+
+### Bugfixes
+
+- [#9095](https://github.com/influxdata/influxdb/pull/9095): Refuse extra arguments to influx CLI
+- [#9058](https://github.com/influxdata/influxdb/issues/9058): Fix space required after regex operator. Thanks @stop-start!
+- [#9109](https://github.com/influxdata/influxdb/issues/9109): Fix: panic: sync: WaitGroup is reused before previous Wait has returned
+- [#9163](https://github.com/influxdata/influxdb/pull/9163): Fix race condition in the merge iterator close method.
+- [#9144](https://github.com/influxdata/influxdb/issues/9144): Fix query compilation so multiple nested distinct calls is allowable
+- [#8789](https://github.com/influxdata/influxdb/issues/8789): Fix CLI to allow quoted database names in use statement
+- [#9208](https://github.com/influxdata/influxdb/pull/9208): Updated client 4xx error message when response body length is zero.
+- [#9230](https://github.com/influxdata/influxdb/pull/9230): Remove extraneous newlines from the log.
+- [#9226](https://github.com/influxdata/influxdb/issues/9226): Allow lone boolean literals in a condition expression.
+- [#9235](https://github.com/influxdata/influxdb/pull/9235): Improve performance when writes exceed `max-values-per-tag` or `max-series`.
+- [#9216](https://github.com/influxdata/influxdb/issues/9216): Prevent a panic when a query simultaneously finishes and is killed at the same time.
+- [#9255](https://github.com/influxdata/influxdb/issues/9255): Fix missing sorting of blocks by time when compacting.
+- [#9327](https://github.com/influxdata/influxdb/pull/9327): wal: update lastWriteTime behavior
+- [#9290](https://github.com/influxdata/influxdb/issues/9290): Fix regression to allow binary operations on literals.
+- [#9342](https://github.com/influxdata/influxdb/pull/9342): Fix data races in tcp.Mux and tcp.listener
+- [#9353](https://github.com/influxdata/influxdb/pull/9353): Fix panic in msgpack httpd WriteResponse error handler.
+- [#9335](https://github.com/influxdata/influxdb/pull/9335): Prevent race condition caused by WaitGroup re-use
+- [#9386](https://github.com/influxdata/influxdb/issues/9386): Fix stddev() call to report itself as always returning a float.
+
+## v1.4.3 [unreleased]
+
+### Configuration Changes
+
+#### `[data]` Section
+
+The default value for `cache-snapshot-memory-size` has been changed from `25m` to `256m`.
+
+### Bugfixes
+
+- [#9201](https://github.com/influxdata/influxdb/issues/9201): Fix higher disk i/o utilization
+
 ## v1.4.2 [2017-11-15]
 
 Refer to the 1.4.0 breaking changes section if `influxd` fails to start with an `incompatible tsi1 index MANIFEST` error.
@@ -76,7 +130,7 @@ refuse to open, and will most likely see the following error message:
 - [#8690](https://github.com/influxdata/influxdb/issues/8690): Implicitly decide on a lower limit for fill queries when none is present.
 - [#8947](https://github.com/influxdata/influxdb/pull/8947): Add `EXPLAIN ANALYZE` command, which produces a detailed execution plan of a `SELECT` statement.
 - [#8963](https://github.com/influxdata/influxdb/pull/8963): Streaming inmem2tsi conversion.
-- [#8995](https://github.com/influxdata/influxdb/pull/8995): Sort & validate TSI key value insertion. 
+- [#8995](https://github.com/influxdata/influxdb/pull/8995): Sort & validate TSI key value insertion.
 - [#8968](https://github.com/influxdata/influxdb/issues/8968): Make client errors more helpful on downstream errs. Thanks @darkliquid!
 - [#8984](https://github.com/influxdata/influxdb/pull/8984): EXACT and estimated CARDINALITY queries.
 - [#8893](https://github.com/influxdata/influxdb/pull/8893): Handle nil MeasurementIterator.
@@ -84,6 +138,7 @@ refuse to open, and will most likely see the following error message:
 - [#9021](https://github.com/influxdata/influxdb/pull/9021): Update to go 1.9.2
 - [#8891](https://github.com/influxdata/influxdb/pull/8891): Allow human-readable byte sizes in config
 - [#9073](https://github.com/influxdata/influxdb/pull/9073): Improve SHOW TAG KEYS performance.
+- [#7355](https://github.com/influxdata/influxdb/issues/7355): Create a command to truncate shard groups
 
 ### Bugfixes
 
@@ -1527,7 +1582,7 @@ This released introduced an updated write path and clustering design. The data f
 ### Bugfixes
 - [#2776](https://github.com/influxdata/influxdb/issues/2776): Re-implement retention policy enforcement.
 - [#2635](https://github.com/influxdata/influxdb/issues/2635): Fix querying against boolean field in WHERE clause.
-- [#2644](https://github.com/influxdata/influxdb/issues/2644): Make SHOW queries work with FROM /<regex>/.
+- [#2644](https://github.com/influxdata/influxdb/issues/2644): Make SHOW queries work with FROM /\<regex\>/.
 - [#2501](https://github.com/influxdata/influxdb/issues/2501): Name the FlagSet for the shell and add a version flag. Thanks @neonstalwart
 - [#2647](https://github.com/influxdata/influxdb/issues/2647): Fixes typos in sample config file - thanks @claws!
 

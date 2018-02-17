@@ -1,0 +1,58 @@
+syntax="proto2";
+
+package protobuf;
+
+message Simple {
+    required string event_name = 1;
+    optional string id = 2;
+}
+
+message Feature {
+    required string event_name = 1;
+    required string group = 2;
+    optional string id = 3;
+    optional string coords = 4;
+}
+
+message Player {
+    required string event_name = 1;
+    required string id = 2;
+    required double lon = 3;
+    required double lat = 4;
+}
+
+message GameInfo {
+    required string event_name = 1;
+    required string id = 2;
+    required string game = 3;
+    required string role = 4;
+}
+
+message GameRank {
+    required string event_name = 1;
+    required string id = 2;
+    required string game = 3;
+    repeated PlayerRank players_rank = 4;
+}
+
+message PlayerRank {
+    required string player = 1;
+    required int32 points = 2;
+}
+
+message Distance {
+    required string event_name = 1;
+    optional string id = 2;
+    required double dist = 3;
+}
+
+message Detection {
+    required string event_name = 1;
+    required string id = 2;
+    required string feat_id = 3;
+    optional double lat = 4;
+    optional double lon = 5;
+    optional string near_by_feat_id = 6;
+    optional double near_by_meters = 7;
+    optional string intersects = 8;
+}

@@ -1,5 +1,5 @@
-hash: f44c651f1be9dbfdd14f817d64aec273ba09fce3478f00f73a85f7eb48cb203f
-updated: 2018-01-10T22:12:11.701523134-02:00
+hash: 4b567f4bb0592cc5e8c0d9b1bc7ff47a82eb91d5412e940960cc647b801f3c70
+updated: 2018-02-17T00:16:23.574227-02:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
@@ -10,32 +10,33 @@ imports:
 - name: github.com/erikstmartin/go-testdb
   version: 8d10e4a1bae52cd8b81ffdec3445890d6dccab3d
 - name: github.com/go-redis/redis
-  version: 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
+  version: fa7f64f7f27348658ecfa71dd71dfb2d112e2f86
   subpackages:
   - internal
   - internal/consistenthash
   - internal/hashtag
   - internal/pool
   - internal/proto
+  - internal/singleflight
 - name: github.com/gobwas/httphead
-  version: 01c9b01b368a438f615030bbbd5e4f9e0023e15c
+  version: 2c6c146eadee0b69f856f87e3e9f1d0cd6aad2f5
 - name: github.com/gobwas/pool
   version: e294a5482d9a8523f8e6b2744ea2185083c838af
   subpackages:
   - pbufio
   - pbytes
 - name: github.com/gobwas/ws
-  version: 915eed3240022c5265584c55032ef1b8c8f84168
+  version: c8595a6266aa8b97b14e7406cf059cd240b34100
   subpackages:
   - wsutil
 - name: github.com/golang/protobuf
-  version: 1e59b77b52bf8e4b449a57e6f79f21226d571845
+  version: 925541529c1fa6821df4e44ce2723319eb2be768
   subpackages:
   - proto
 - name: github.com/grandcat/zeroconf
   version: 8219919fca892353a082b184bca66db55c55b583
 - name: github.com/influxdata/influxdb
-  version: 6d2685d1738277a1c2672fc58df7994627769be6
+  version: 35b44cc2f0ac78c26a852ea1f0a5992a2f440a76
   subpackages:
   - client/v2
   - models
@@ -47,13 +48,33 @@ imports:
   subpackages:
   - yaml
 - name: github.com/lib/pq
-  version: 83612a56d3dd153a94a629cd64925371c9adad78
+  version: 88edab0803230a3898347e77b474f8c1820a1f20
   subpackages:
   - oid
 - name: github.com/miekg/dns
-  version: f5ac34d755eb6975958108413c7802a782ca16c8
+  version: 5364553f1ee9cddc7ac8b62dce148309c386695b
+- name: github.com/nats-io/go-nats
+  version: d66cb54e6b7bdd93f0b28afc8450d84c780dfb68
+  subpackages:
+  - encoders/builtin
+  - util
+- name: github.com/nats-io/nuid
+  version: 33c603157d6fd1b0ac2599bcc4a286b36479a06d
+- name: github.com/perenecabuto/CatchCatch
+  version: d225c14393c9c1ece7901ed855dffb1c9d6ac095
+  subpackages:
+  - server/core
+  - server/execfunc
+  - server/game
+  - server/metrics
+  - server/model
+  - server/protobuf
+  - server/service
+  - server/service/messages
+  - server/service/repository
+  - server/websocket
 - name: github.com/pkg/errors
-  version: e881fd58d78e04cf6d0de1217f8707c8cc2249bc
+  version: 30136e27e2ac8d167177e8a583aa4c3fea5be833
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -63,9 +84,9 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/stretchr/objx
-  version: bc43df392909781b3b7b1912fcf414b6e088936e
+  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
-  version: b91bfb9ebec76498946beb6af7c0230c7cc7ba6c
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
   - assert
   - mock
@@ -76,7 +97,7 @@ imports:
   - expvar
   - influxdb
 - name: github.com/tidwall/gjson
-  version: e62d62a3e1e9f324346170bbc04333341f803dfb
+  version: 87033efcaec6215741137e8ca61952c53ef2685d
 - name: github.com/tidwall/match
   version: 1731857f09b1f38450e2c12409748407822dc6be
 - name: github.com/tidwall/sjson
@@ -93,7 +114,7 @@ imports:
   - ed25519
   - ed25519/internal/edwards25519
 - name: golang.org/x/net
-  version: ab555f366c4508dbe0802550b1b20c46c5c18aa0
+  version: 9dfe39835686865bff950a07b394c12a98ddc811
   subpackages:
   - bpf
   - context
@@ -108,6 +129,6 @@ imports:
   - unix
 testImports:
 - name: github.com/gogo/protobuf
-  version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
+  version: 1adfc126b41513cc696b209667c8656ea7aac67c
   subpackages:
   - proto

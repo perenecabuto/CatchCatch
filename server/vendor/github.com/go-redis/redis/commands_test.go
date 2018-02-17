@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/internal"
 )
 
 var _ = Describe("Commands", func() {
@@ -72,6 +73,16 @@ var _ = Describe("Commands", func() {
 		It("should Select", func() {
 			pipe := client.Pipeline()
 			sel := pipe.Select(1)
+			_, err := pipe.Exec()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(sel.Err()).NotTo(HaveOccurred())
+			Expect(sel.Val()).To(Equal("OK"))
+		})
+
+		It("should SwapDB", func() {
+			pipe := client.Pipeline()
+			sel := pipe.SwapDB(1, 2)
 			_, err := pipe.Exec()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -447,7 +458,7 @@ var _ = Describe("Commands", func() {
 
 			pttl := client.PTTL("key")
 			Expect(pttl.Err()).NotTo(HaveOccurred())
-			Expect(pttl.Val()).To(BeNumerically("~", expiration, 10*time.Millisecond))
+			Expect(pttl.Val()).To(BeNumerically("~", expiration, 100*time.Millisecond))
 		})
 
 		It("should PExpireAt", func() {
@@ -466,7 +477,7 @@ var _ = Describe("Commands", func() {
 
 			pttl := client.PTTL("key")
 			Expect(pttl.Err()).NotTo(HaveOccurred())
-			Expect(pttl.Val()).To(BeNumerically("~", expiration, 10*time.Millisecond))
+			Expect(pttl.Val()).To(BeNumerically("~", expiration, 100*time.Millisecond))
 		})
 
 		It("should PTTL", func() {
@@ -481,7 +492,7 @@ var _ = Describe("Commands", func() {
 
 			pttl := client.PTTL("key")
 			Expect(pttl.Err()).NotTo(HaveOccurred())
-			Expect(pttl.Val()).To(BeNumerically("~", expiration, 10*time.Millisecond))
+			Expect(pttl.Val()).To(BeNumerically("~", expiration, 100*time.Millisecond))
 		})
 
 		It("should RandomKey", func() {
@@ -582,7 +593,7 @@ var _ = Describe("Commands", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(size).To(Equal(int64(3)))
 
-			els, err := client.Sort("list", redis.Sort{
+			els, err := client.Sort("list", &redis.Sort{
 				Offset: 0,
 				Count:  2,
 				Order:  "ASC",
@@ -608,7 +619,7 @@ var _ = Describe("Commands", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			{
-				els, err := client.Sort("list", redis.Sort{
+				els, err := client.Sort("list", &redis.Sort{
 					Get: []string{"object_*"},
 				}).Result()
 				Expect(err).NotTo(HaveOccurred())
@@ -616,12 +627,52 @@ var _ = Describe("Commands", func() {
 			}
 
 			{
-				els, err := client.SortInterfaces("list", redis.Sort{
+				els, err := client.SortInterfaces("list", &redis.Sort{
 					Get: []string{"object_*"},
 				}).Result()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(els).To(Equal([]interface{}{nil, "value2", nil}))
 			}
+		})
+
+		It("should Sort and Store", func() {
+			size, err := client.LPush("list", "1").Result()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(Equal(int64(1)))
+
+			size, err = client.LPush("list", "3").Result()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(Equal(int64(2)))
+
+			size, err = client.LPush("list", "2").Result()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(Equal(int64(3)))
+
+			n, err := client.SortStore("list", "list2", &redis.Sort{
+				Offset: 0,
+				Count:  2,
+				Order:  "ASC",
+			}).Result()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(int64(2)))
+
+			els, err := client.LRange("list2", 0, -1).Result()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(els).To(Equal([]string{"1", "2"}))
+		})
+
+		It("should Touch", func() {
+			set1 := client.Set("touch1", "hello", 0)
+			Expect(set1.Err()).NotTo(HaveOccurred())
+			Expect(set1.Val()).To(Equal("OK"))
+
+			set2 := client.Set("touch2", "hello", 0)
+			Expect(set2.Err()).NotTo(HaveOccurred())
+			Expect(set2.Val()).To(Equal("OK"))
+
+			touch := client.Touch("touch1", "touch2", "touch3")
+			Expect(touch.Err()).NotTo(HaveOccurred())
+			Expect(touch.Val()).To(Equal(int64(2)))
 		})
 
 		It("should TTL", func() {
@@ -2941,6 +2992,15 @@ var _ = Describe("Commands", func() {
 			).Result()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vals).To(Equal([]interface{}{"key", "hello"}))
+		})
+
+		It("returns all values after an error", func() {
+			vals, err := client.Eval(
+				`return {12, {err="error"}, "abc"}`,
+				nil,
+			).Result()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vals).To(Equal([]interface{}{int64(12), internal.RedisError("error"), "abc"}))
 		})
 
 	})

@@ -190,13 +190,11 @@ var _ = Describe("ClusterClient", func() {
 
 	assertClusterClient := func() {
 		It("should GET/SET/DEL", func() {
-			val, err := client.Get("A").Result()
+			err := client.Get("A").Err()
 			Expect(err).To(Equal(redis.Nil))
-			Expect(val).To(Equal(""))
 
-			val, err = client.Set("A", "VALUE", 0).Result()
+			err = client.Set("A", "VALUE", 0).Err()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(val).To(Equal("OK"))
 
 			Eventually(func() string {
 				return client.Get("A").Val()
@@ -295,9 +293,9 @@ var _ = Describe("ClusterClient", func() {
 			}
 			wg.Wait()
 
-			n, err := client.Get("key").Int64()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(int64(100)))
+			Eventually(func() string {
+				return client.Get("key").Val()
+			}, 30*time.Second).Should(Equal("100"))
 		})
 
 		Describe("pipelining", func() {
@@ -319,6 +317,14 @@ var _ = Describe("ClusterClient", func() {
 					cmds, err := pipe.Exec()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(cmds).To(HaveLen(14))
+
+					_ = client.ForEachNode(func(node *redis.Client) error {
+						defer GinkgoRecover()
+						Eventually(func() int64 {
+							return node.DBSize().Val()
+						}, 30*time.Second).ShouldNot(BeZero())
+						return nil
+					})
 
 					for _, key := range keys {
 						slot := hashtag.Slot(key)
@@ -570,13 +576,15 @@ var _ = Describe("ClusterClient", func() {
 			opt = redisClusterOptions()
 			client = cluster.clusterClient(opt)
 
-			_ = client.ForEachMaster(func(master *redis.Client) error {
-				return master.FlushDB().Err()
-			})
-
 			_ = client.ForEachSlave(func(slave *redis.Client) error {
+				defer GinkgoRecover()
+
+				_ = client.ForEachMaster(func(master *redis.Client) error {
+					return master.FlushDB().Err()
+				})
+
 				Eventually(func() int64 {
-					return client.DBSize().Val()
+					return slave.DBSize().Val()
 				}, 30*time.Second).Should(Equal(int64(0)))
 				return slave.ClusterFailover().Err()
 			})
@@ -661,7 +669,7 @@ var _ = Describe("ClusterClient without valid nodes", func() {
 
 	It("returns an error", func() {
 		err := client.Ping().Err()
-		Expect(err).To(MatchError("redis: cannot load cluster slots"))
+		Expect(err).To(MatchError("ERR This instance has cluster support disabled"))
 	})
 
 	It("pipeline returns an error", func() {
@@ -669,7 +677,7 @@ var _ = Describe("ClusterClient without valid nodes", func() {
 			pipe.Ping()
 			return nil
 		})
-		Expect(err).To(MatchError("redis: cannot load cluster slots"))
+		Expect(err).To(MatchError("ERR This instance has cluster support disabled"))
 	})
 })
 
@@ -717,7 +725,7 @@ var _ = Describe("ClusterClient timeout", func() {
 		})
 	}
 
-	const pause = time.Second
+	const pause = 2 * time.Second
 
 	Context("read/write timeout", func() {
 		BeforeEach(func() {
@@ -734,7 +742,8 @@ var _ = Describe("ClusterClient timeout", func() {
 		})
 
 		AfterEach(func() {
-			client.ForEachNode(func(client *redis.Client) error {
+			_ = client.ForEachNode(func(client *redis.Client) error {
+				defer GinkgoRecover()
 				Eventually(func() error {
 					return client.Ping().Err()
 				}, 2*pause).ShouldNot(HaveOccurred())
