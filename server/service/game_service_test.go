@@ -11,6 +11,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 
+	"github.com/perenecabuto/CatchCatch/server/mocks/messages_mocks"
 	"github.com/perenecabuto/CatchCatch/server/mocks/repo_mocks"
 )
 
@@ -22,7 +23,8 @@ var (
 func TestGameServiceCreate(t *testing.T) {
 	repo := &repo_mocks.Repository{}
 	stream := &repo_mocks.EventStream{}
-	service := NewGameService(repo, stream)
+	dispatcher := &messages_mocks.Dispatcher{}
+	service := NewGameService(repo, stream, dispatcher)
 
 	gameFeat := &model.Feature{ID: gameID, Coordinates: ""}
 	repo.On("FeatureByID", "geofences", gameID).Return(gameFeat, nil)
@@ -49,7 +51,8 @@ func TestGameServiceCreate(t *testing.T) {
 func TestGameServiceMustGetNewGame(t *testing.T) {
 	repo := &repo_mocks.Repository{}
 	stream := &repo_mocks.EventStream{}
-	service := NewGameService(repo, stream)
+	dispatcher := &messages_mocks.Dispatcher{}
+	service := NewGameService(repo, stream, dispatcher)
 
 	players := make([]game.Player, 0)
 	expectedGame := game.NewGameWithParams(gameID, false, players, "")
@@ -67,7 +70,8 @@ func TestGameServiceMustGetNewGame(t *testing.T) {
 func TestGameServiceMustGetGameWithPlayers(t *testing.T) {
 	repo := &repo_mocks.Repository{}
 	stream := &repo_mocks.EventStream{}
-	service := NewGameService(repo, stream)
+	dispatcher := &messages_mocks.Dispatcher{}
+	service := NewGameService(repo, stream, dispatcher)
 
 	players := []game.Player{
 		game.Player{Player: model.Player{ID: "player-1"}, Role: game.GameRoleHunter},
