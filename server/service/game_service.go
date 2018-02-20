@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"time"
 
 	"github.com/perenecabuto/CatchCatch/server/service/messages"
@@ -16,6 +15,8 @@ import (
 const (
 	// DefaultGeoEventRange set the watcher radar radius size
 	DefaultGeoEventRange = 5000
+	// GameChangeTopic is the topic used for game updates on messages.Dispatcher
+	GameChangeTopic = "game:update"
 )
 
 type GameService interface {
@@ -60,9 +61,14 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game,
 	if err != nil {
 		return nil, err
 	}
+	err = gs.messages.Publish(GameChangeTopic, serialized)
+	if err != nil {
+		return nil, err
+	}
 	return game, nil
 }
 
+// TODO: remove this and only check if game exists
 func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
 	gameEvt, err := gs.findGameEvent(gameID)
 	if err != nil {
@@ -83,7 +89,7 @@ func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.Even
 	if err != nil {
 		return err
 	}
-	return nil
+	return gs.messages.Publish(GameChangeTopic, serialized)
 }
 
 func (gs *Tile38GameService) findGameEvent(gameID string) (*GameEvent, error) {
@@ -137,18 +143,13 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 }
 
 func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(game.Game, game.Event) error) error {
-	return gs.stream.StreamNearByEvents(ctx, "game", "player", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
-		gameID, playerID := d.FeatID, d.NearByFeatID
-		game, evt, err := gs.GameByID(gameID)
+	return gs.messages.Subscribe(GameChangeTopic, func(data []byte) error {
+		gameEvt := GameEvent{}
+		err := json.Unmarshal(data, &gameEvt)
 		if err != nil {
 			return err
 		}
-		log.Println("game:event", evt, ":game:", game, ":player:", playerID)
-		if game == nil {
-			return nil
-		}
-
-		return callback(*game, *evt)
+		return callback(gameEvt.Game, gameEvt.Event)
 	})
 }
 
