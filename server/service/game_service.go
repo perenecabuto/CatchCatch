@@ -15,6 +15,7 @@ import (
 const (
 	// DefaultGeoEventRange set the watcher radar radius size
 	DefaultGeoEventRange = 5000
+
 	// GameChangeTopic is the topic used for game updates on messages.Dispatcher
 	GameChangeTopic = "game:update"
 )

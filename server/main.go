@@ -75,7 +75,7 @@ func main() {
 	})
 
 	go worker.WatchGames(ctx)
-	go gWatcher.WatchGameEventsForever(ctx)
+	go gWatcher.WatchGameEvents(ctx)
 	go aWatcher.WatchCheckpoints(ctx)
 	go aWatcher.WatchGeofences(ctx)
 	go aWatcher.WatchPlayers(ctx)

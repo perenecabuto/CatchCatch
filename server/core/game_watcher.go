@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -30,21 +29,6 @@ type GameWatcher struct {
 // NewGameWatcher builds GameWatecher
 func NewGameWatcher(serverID string, service service.GameService, wss *websocket.WSServer) *GameWatcher {
 	return &GameWatcher{serverID, wss, service}
-}
-
-// WatchGameEventsForever run WatchGameEvents
-// if any error occur log it and run again, forever \o/
-func (gw *GameWatcher) WatchGameEventsForever(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if err := gw.WatchGameEvents(ctx); err != nil {
-				log.Panic("WatchGamesForever:error:", err)
-			}
-		}
-	}
 }
 
 // WatchGameEvents observers game events and notify players
