@@ -5,6 +5,8 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"reflect"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -74,11 +76,13 @@ func main() {
 		server.CloseAll()
 	})
 
-	go worker.WatchGames(ctx)
-	go gWatcher.WatchGameEvents(ctx)
-	go aWatcher.WatchCheckpoints(ctx)
-	go aWatcher.WatchGeofences(ctx)
-	go aWatcher.WatchPlayers(ctx)
+	startInBG(ctx,
+		worker.WatchGames,
+		gWatcher.WatchGameEvents,
+		aWatcher.WatchCheckpoints,
+		aWatcher.WatchGeofences,
+		aWatcher.WatchPlayers,
+	)
 
 	eventH := core.NewEventHandler(server, playerService, featService)
 	server.SetEventHandler(eventH)
@@ -120,4 +124,16 @@ func mustConnectNats(url string) *nats.Conn {
 		log.Panic("Nat connection:", err)
 	}
 	return conn
+}
+
+func startInBG(ctx context.Context, funcs ...func(context.Context) error) {
+	for _, fn := range funcs {
+		go func(ctx context.Context, fn func(context.Context) error) {
+			err := fn(ctx)
+			if err != nil {
+				fnname := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+				log.Fatalf("Background Task<%s> error: %s", fnname, err)
+			}
+		}(ctx, fn)
+	}
 }
