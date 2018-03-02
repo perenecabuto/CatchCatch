@@ -72,6 +72,9 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game,
 // TODO: remove this and only check if game exists
 func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
 	gameEvt, err := gs.findGameEvent(gameID)
+	if err == ErrFeatureNotFound {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
