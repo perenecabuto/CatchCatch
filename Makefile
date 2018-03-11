@@ -19,8 +19,9 @@ DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
 
+test: 
 test:
-	$(SERVER_SRC) go test -cover -v ./...
+	$(SERVER_SRC) GO_TEST_CACHE=0 go test -cover -race -v ./...
 
 test-forever:
 	$(SERVER_SRC) CompileDaemon -color -command "go test -v ./..."

@@ -132,12 +132,16 @@ func (g *Game) Stop() Event {
 
 // Players return game players
 func (g *Game) Players() []Player {
+	g.playersLock.RLock()
 	players := make([]Player, len(g.players))
+	g.playersLock.RUnlock()
 	i := 0
+	g.playersLock.Lock()
 	for _, p := range g.players {
 		players[i] = *p
 		i++
 	}
+	g.playersLock.Unlock()
 	return players
 }
 
@@ -214,8 +218,12 @@ The rule is:
     - it receives sessions to notify anything to this player games
 */
 func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
+	g.playersLock.RLock()
+	p, exists := g.players[id]
+	g.playersLock.RUnlock()
+
 	if !g.started {
-		if _, exists := g.players[id]; !exists {
+		if !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
 
 			g.playersLock.Lock()
@@ -227,7 +235,6 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
 		}
 		return GameEventNothing, nil
 	}
-	p, exists := g.players[id]
 	if !exists {
 		return GameEventNothing, nil
 	}
