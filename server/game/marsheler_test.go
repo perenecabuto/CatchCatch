@@ -23,12 +23,12 @@ var (
 			"id": "game-test-1",
 			"started": true,
 			"targetID": "target-1",
-			"players": [
-				{"id":"hunter-1", "Loose":false, "lon":0, "lat":0, "Role":"hunter", "DistToTarget":0}, 
-				{"id":"hunter-2", "Loose":true , "lon":0, "lat":0, "Role":"hunter", "DistToTarget":10}, 
-				{"id":"hunter-3", "Loose":false, "lon":42, "lat":31, "Role":"hunter", "DistToTarget":0}, 
-				{"id":"target-1", "Loose":false, "lon":0, "lat":0, "Role":"target", "DistToTarget":0}
-			]
+			"players": {
+				"hunter-1": {"id":"hunter-1", "Loose":false, "lon":0, "lat":0, "Role":"hunter", "DistToTarget":0}, 
+				"hunter-2": {"id":"hunter-2", "Loose":true , "lon":0, "lat":0, "Role":"hunter", "DistToTarget":10}, 
+				"hunter-3": {"id":"hunter-3", "Loose":false, "lon":42, "lat":31, "Role":"hunter", "DistToTarget":0}, 
+				"target-1": {"id":"target-1", "Loose":false, "lon":0, "lat":0, "Role":"target", "DistToTarget":0}
+			}
 		}
 	`)
 )
