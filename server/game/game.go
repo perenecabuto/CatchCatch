@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
@@ -76,6 +77,8 @@ type Game struct {
 	started  bool
 	players  map[string]*Player
 	targetID string
+
+	playersLock sync.RWMutex
 }
 
 // NewGame create a game with duration
@@ -91,7 +94,7 @@ func NewGameWithParams(gameID string, started bool, players []Player, targetID s
 		copy := p
 		mPlayers[p.ID] = &copy
 	}
-	return &Game{gameID, started, mPlayers, targetID}
+	return &Game{ID: gameID, started: started, players: mPlayers, targetID: targetID}
 }
 
 // TargetID returns the targe player id
@@ -214,8 +217,12 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
 	if !g.started {
 		if _, exists := g.players[id]; !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
+
+			g.playersLock.Lock()
 			g.players[id] = &Player{
 				model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false}
+			g.playersLock.Unlock()
+
 			return Event{Name: GamePlayerAdded}, nil
 		}
 		return GameEventNothing, nil
