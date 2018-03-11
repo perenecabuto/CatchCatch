@@ -35,11 +35,11 @@ func TestGoredisWorkerManagerAddWorker(t *testing.T) {
 
 	grManager := manager.(*worker.GoredisWorkerManager)
 
-	actualWorkers := grManager.Workers()
+	actualWorkers := grManager.WorkersIDs()
 
 	assert.Len(t, actualWorkers, 3)
-	assert.Contains(t, actualWorkers, worker1)
-	assert.Contains(t, actualWorkers, worker2)
-	assert.Contains(t, actualWorkers, worker3)
-	assert.NotContains(t, actualWorkers, worker4)
+	assert.Contains(t, actualWorkers, worker1.ID())
+	assert.Contains(t, actualWorkers, worker2.ID())
+	assert.Contains(t, actualWorkers, worker3.ID())
+	assert.NotContains(t, actualWorkers, "worker4")
 }

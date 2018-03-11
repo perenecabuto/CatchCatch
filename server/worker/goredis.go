@@ -41,15 +41,15 @@ func (m *GoredisWorkerManager) Add(w Worker) {
 func (m *GoredisWorkerManager) Run(w Worker, params map[string]string) error {
 }
 
-// Workers managed workers
-func (m *GoredisWorkerManager) Workers() []Worker {
-	workers := make([]Worker, len(m.workers))
+// WorkersIDs return managed workers ids
+func (m *GoredisWorkerManager) WorkersIDs() []string {
+	ids := make([]string, len(m.workers))
 	m.workersLock.RLock()
 	count := 0
 	for _, w := range m.workers {
-		workers[count] = w
+		ids[count] = w.ID()
 		count++
 	}
 	m.workersLock.RUnlock()
-	return workers
+	return ids
 }
