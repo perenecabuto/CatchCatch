@@ -43,3 +43,27 @@ func TestGoredisWorkerManagerAddWorker(t *testing.T) {
 	assert.Contains(t, actualWorkers, worker3.ID())
 	assert.NotContains(t, actualWorkers, "worker4")
 }
+
+func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
+	client := redis.NewClient(opts)
+	manager := worker.NewGoredisWorkerManager(client)
+
+	runChan := make(chan map[string]string)
+	worker1.job = func(params map[string]string) error {
+		runChan <- params
+		return nil
+	}
+
+	manager.Start()
+	manager.Add(worker1)
+
+	expected := map[string]string{
+		"param1": "value1", "param2": "value2",
+	}
+	err := manager.Run(worker1, expected)
+	assert.NoError(t, err)
+
+	actual := <-runChan
+	assert.Equal(t, expected, actual)
+}
+
