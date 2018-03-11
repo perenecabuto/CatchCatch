@@ -42,6 +42,7 @@ func (wm *GocraftWorkerManager) Start(ctx context.Context) {
 	wm.pool.Start()
 }
 
+// Started returns if manager is started \o/
 func (wm *GocraftWorkerManager) Started() bool {
 	return wm.started
 }
