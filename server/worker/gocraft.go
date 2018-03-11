@@ -96,6 +96,22 @@ func (wm *GocraftWorkerManager) Flush() error {
 	return nil
 }
 
+// BusyWorkers returns a list of running workers
+func (wm *GocraftWorkerManager) BusyWorkers() ([]string, error) {
+	client := work.NewClient("catchcatch", wm.enqueuer.Pool)
+	observations, err := client.WorkerObservations()
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, ob := range observations {
+		if ob.IsBusy {
+			names = append(names, ob.JobName)
+		}
+	}
+	return names, nil
+}
+
 // writeLock attempts to grab a redis lock. The error returned is safe to ignore
 // if all you care about is whether or not the lock was acquired successfully.
 func writeLock(pool *redis.Pool, name, secret string, ttl uint64) (bool, error) {

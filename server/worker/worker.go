@@ -10,6 +10,7 @@ type Manager interface {
 	Add(w Worker)
 	Run(w Worker, params map[string]string) error
 
+	BusyWorkers() ([]string, error)
 	Flush() error
 }
 

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/gocraft/work"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/perenecabuto/CatchCatch/server/worker"
@@ -101,14 +100,8 @@ func TestGocraftWorkerManager(t *testing.T) {
 
 	time.Sleep(time.Second * 10)
 
-	client := work.NewClient("catchcatch", redisPool1)
-	observations, _ := client.WorkerObservations()
-	var busyObservations []*work.WorkerObservation
-	for _, ob := range observations {
-		if ob.IsBusy {
-			busyObservations = append(busyObservations, ob)
-		}
-	}
+	runningWorkers, err := manager1.BusyWorkers()
+	assert.NoError(t, err)
 
 	go manager1.Stop()
 	go manager2.Stop()
@@ -116,5 +109,5 @@ func TestGocraftWorkerManager(t *testing.T) {
 
 	time.Sleep(time.Second * 10)
 
-	assert.Equal(t, 1, len(busyObservations))
+	assert.Equal(t, 1, len(runningWorkers))
 }

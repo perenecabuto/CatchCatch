@@ -115,6 +115,11 @@ func (m *GoredisWorkerManager) WorkersIDs() []string {
 	return ids
 }
 
+// BusyWorkers return a list of busy workers
+func (m *GoredisWorkerManager) BusyWorkers() ([]string, error) {
+	return ids, nil
+}
+
 // Flush workers task queue
 func (m *GoredisWorkerManager) Flush() error {
 	cmd := m.redis.Del(queue)
