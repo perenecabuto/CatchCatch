@@ -13,6 +13,9 @@ import (
 type GocraftWorkerManager struct {
 	pool     *work.WorkerPool
 	enqueuer *work.Enqueuer
+
+	started bool
+	stop    chan interface{}
 }
 
 // NewGocraftWorkerManager creates a new GocraftWorkerManager
@@ -25,12 +28,31 @@ func NewGocraftWorkerManager(pool *redis.Pool) Manager {
 }
 
 // Start the worker manager pool
-func (wm *GocraftWorkerManager) Start() {
+func (wm *GocraftWorkerManager) Start(ctx context.Context) {
+	go func() {
+		wm.started = true
+		select {
+		case <-ctx.Done():
+			go wm.Stop()
+		case <-wm.stop:
+			wm.started = false
+			return
+		}
+	}()
 	wm.pool.Start()
+}
+
+func (wm *GocraftWorkerManager) Started() bool {
+	return wm.started
 }
 
 // Stop the worker manager pool
 func (wm *GocraftWorkerManager) Stop() {
+	select {
+	case <-wm.stop:
+	default:
+		return
+	}
 	wm.pool.Stop()
 }
 

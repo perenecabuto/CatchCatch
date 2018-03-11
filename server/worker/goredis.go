@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -20,26 +21,36 @@ const (
 type GoredisWorkerManager struct {
 	redis *redis.Client
 
-	workers     map[string]Worker
 	workersLock sync.RWMutex
+	workers map[string]Worker
 
-	stop chan interface{}
+	started int32
+	stop    chan interface{}
 }
 
 // NewGoredisWorkerManager create a new GoredisWorkerManager
 func NewGoredisWorkerManager(client *redis.Client) Manager {
-	return &GoredisWorkerManager{redis: client, workers: make(map[string]Worker)}
+	return &GoredisWorkerManager{redis: client, workers: make(map[string]Worker), stop: make(chan interface{}, 1)}
+}
+
+// Started return if worker is started
+func (m *GoredisWorkerManager) Started() bool {
+	return atomic.LoadInt32(&m.started) == 1
 }
 
 // Start listening tasks events
 func (m *GoredisWorkerManager) Start(ctx context.Context) {
 	go func() {
 		log.Println("Starting.... with redis:", m.redis)
+		atomic.StoreInt32(&m.started, 1)
 
 		ticker := time.NewTicker(queueInterval)
 		for {
 			select {
+			case <-ctx.Done():
+				go m.Stop()
 			case <-m.stop:
+				atomic.StoreInt32(&m.started, 0)
 				return
 			case <-ticker.C:
 				cmd := m.redis.RPop(queue)
@@ -70,11 +81,7 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 
 // Stop ... ???
 func (m *GoredisWorkerManager) Stop() {
-	select {
-	case m.stop <- true:
-	default:
-		return
-	}
+	m.stop <- true
 }
 
 // Add add worker to this manager

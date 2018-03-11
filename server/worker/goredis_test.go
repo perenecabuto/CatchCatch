@@ -3,6 +3,7 @@ package worker_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/perenecabuto/CatchCatch/server/worker"
@@ -68,5 +69,20 @@ func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
 
 	actual := <-runChan
 	assert.Equal(t, expected, actual)
+}
+
+func TestGoredisWorkerManagerStopWhenContextDone(t *testing.T) {
+	client := redis.NewClient(opts)
+	manager := worker.NewGoredisWorkerManager(client)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	manager.Start(ctx)
+	time.Sleep(time.Millisecond * 10)
+	assert.True(t, manager.Started())
+
+	cancel()
+	time.Sleep(time.Millisecond * 100)
+	assert.False(t, manager.Started())
 }
 

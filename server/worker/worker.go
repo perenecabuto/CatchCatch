@@ -6,6 +6,7 @@ import "context"
 type Manager interface {
 	Start(ctx context.Context)
 	Stop()
+	Started() bool
 	Add(w Worker)
 	Run(w Worker, params map[string]string) error
 }
