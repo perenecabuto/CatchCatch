@@ -114,3 +114,9 @@ func (m *GoredisWorkerManager) WorkersIDs() []string {
 	m.workersLock.RUnlock()
 	return ids
 }
+
+// Flush workers task queue
+func (m *GoredisWorkerManager) Flush() error {
+	cmd := m.redis.Del(queue)
+	return m.redis.Process(cmd)
+}

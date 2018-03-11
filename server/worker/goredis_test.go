@@ -48,6 +48,7 @@ func TestGoredisWorkerManagerAddWorker(t *testing.T) {
 func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
 	client := redis.NewClient(opts)
 	manager := worker.NewGoredisWorkerManager(client)
+	manager.Flush()
 
 	runChan := make(chan map[string]string)
 	worker1.job = func(params map[string]string) error {

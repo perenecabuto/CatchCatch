@@ -89,6 +89,12 @@ func (wm *GocraftWorkerManager) Run(w Worker, params map[string]string) error {
 	return err
 }
 
+// Flush workers tasks
+func (wm *GocraftWorkerManager) Flush() error {
+	go wm.pool.Drain()
+	return nil
+}
+
 // writeLock attempts to grab a redis lock. The error returned is safe to ignore
 // if all you care about is whether or not the lock was acquired successfully.
 func writeLock(pool *redis.Pool, name, secret string, ttl uint64) (bool, error) {

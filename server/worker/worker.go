@@ -9,6 +9,8 @@ type Manager interface {
 	Started() bool
 	Add(w Worker)
 	Run(w Worker, params map[string]string) error
+
+	Flush() error
 }
 
 // Worker runs tasks
