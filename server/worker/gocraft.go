@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/garyburd/redigo/redis"
@@ -47,13 +48,21 @@ func (wm *GocraftWorkerManager) Add(w Worker) {
 		}
 		defer releaseLock(wm.enqueuer.Pool, lockKey, job.ID)
 
-		return w.Job(job.Args)
+		params := make(map[string]string)
+		for k, v := range job.Args {
+			params[k] = fmt.Sprint(v)
+		}
+		return w.Job(params)
 	})
 }
 
 // Run worker to process task
-func (wm *GocraftWorkerManager) Run(w Worker, params map[string]interface{}) error {
-	_, err := wm.enqueuer.Enqueue(w.ID(), params)
+func (wm *GocraftWorkerManager) Run(w Worker, params map[string]string) error {
+	args := make(map[string]interface{})
+	for k, v := range params {
+		args[k] = v
+	}
+	_, err := wm.enqueuer.Enqueue(w.ID(), args)
 	return err
 }
 

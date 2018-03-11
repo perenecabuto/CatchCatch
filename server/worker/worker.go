@@ -5,11 +5,11 @@ type Manager interface {
 	Start()
 	Stop()
 	Add(w Worker)
-	Run(w Worker, params map[string]interface{}) error
+	Run(w Worker, params map[string]string) error
 }
 
 // Worker runs tasks
 type Worker interface {
 	ID() string
-	Job(params map[string]interface{}) error
+	Job(params map[string]string) error
 }

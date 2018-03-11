@@ -38,8 +38,7 @@ func (m *GoredisWorkerManager) Add(w Worker) {
 }
 
 // Run a task into the worker
-func (m *GoredisWorkerManager) Run(w Worker, params map[string]interface{}) error {
-	panic("not implemented")
+func (m *GoredisWorkerManager) Run(w Worker, params map[string]string) error {
 }
 
 // Workers managed workers
