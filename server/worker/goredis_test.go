@@ -17,7 +17,6 @@ var (
 	dupWorker2 = &mockWorker{id: "worker1"}
 	worker3    = &mockWorker{id: "worker3"}
 	dupWorker3 = &mockWorker{id: "worker1"}
-	worker4    = &mockWorker{id: "worker4"}
 )
 
 func TestGoredisWorkerManagerAddWorker(t *testing.T) {
