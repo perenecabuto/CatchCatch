@@ -1,4 +1,4 @@
-package worker
+package worker_test
 
 import (
 	"log"
@@ -10,6 +10,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/gocraft/work"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
 func TestMain(m *testing.M) {
@@ -52,9 +54,9 @@ func TestGocraftWorkerManager(t *testing.T) {
 		},
 	}
 
-	manager1 := NewGocraftWorkerManager(redisPool1)
-	manager2 := NewGocraftWorkerManager(redisPool2)
-	manager3 := NewGocraftWorkerManager(redisPool3)
+	manager1 := worker.NewGocraftWorkerManager(redisPool1)
+	manager2 := worker.NewGocraftWorkerManager(redisPool2)
+	manager3 := worker.NewGocraftWorkerManager(redisPool3)
 
 	manager1.Start()
 	manager2.Start()
