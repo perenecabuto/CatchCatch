@@ -29,6 +29,11 @@ func TestMain(m *testing.M) {
 }
 
 func TestGocraftWorkerManager(t *testing.T) {
+	if os.Getenv("IGNORE_GOCRAFT_WORKER_TEST") != "" {
+		t.Skip()
+		return
+	}
+
 	_, err := redis.Dial("tcp", "localhost:6379")
 	if err != nil {
 		t.Skip("Redis connection error:", err)
