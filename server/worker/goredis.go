@@ -21,6 +21,8 @@ type GoredisWorkerManager struct {
 
 	workers     map[string]Worker
 	workersLock sync.RWMutex
+
+	stop chan interface{}
 }
 
 // NewGoredisWorkerManager create a new GoredisWorkerManager
@@ -36,6 +38,8 @@ func (m *GoredisWorkerManager) Start() {
 		ticker := time.NewTicker(queueInterval)
 		for {
 			select {
+			case <-m.stop:
+				return
 			case <-ticker.C:
 				cmd := m.redis.RPop(queue)
 				m.redis.Process(cmd)
@@ -65,7 +69,11 @@ func (m *GoredisWorkerManager) Start() {
 
 // Stop ... ???
 func (m *GoredisWorkerManager) Stop() {
-	panic("not implemented")
+	select {
+	case m.stop <- true:
+	default:
+		return
+	}
 }
 
 // Add add worker to this manager
