@@ -29,6 +29,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestGocraftWorkerManager(t *testing.T) {
+	_, err := redis.Dial("tcp", "localhost:6379")
+	if err != nil {
+		t.Skip("Redis connection error:", err)
+		return
+	}
+
 	redisPool1 := &redis.Pool{
 		MaxActive: 5,
 		MaxIdle:   5,
@@ -68,7 +74,7 @@ func TestGocraftWorkerManager(t *testing.T) {
 	manager2.Add(worker)
 	manager3.Add(worker)
 
-	err := manager1.Run(worker, nil)
+	err = manager1.Run(worker, nil)
 	assert.NoError(t, err)
 	err = manager1.Run(worker, nil)
 	assert.NoError(t, err)
