@@ -22,7 +22,7 @@ type GoredisWorkerManager struct {
 	redis *redis.Client
 
 	workersLock sync.RWMutex
-	workers map[string]Worker
+	workers     map[string]Worker
 
 	started int32
 	stop    chan interface{}
