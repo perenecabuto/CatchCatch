@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
@@ -31,7 +32,7 @@ func NewGoredisWorkerManager(client *redis.Client) Manager {
 }
 
 // Start listening tasks events
-func (m *GoredisWorkerManager) Start() {
+func (m *GoredisWorkerManager) Start(ctx context.Context) {
 	go func() {
 		log.Println("Starting.... with redis:", m.redis)
 

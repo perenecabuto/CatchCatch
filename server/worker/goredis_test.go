@@ -1,6 +1,7 @@
 package worker_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/go-redis/redis"
@@ -53,7 +54,10 @@ func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
 		return nil
 	}
 
-	manager.Start()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	manager.Start(ctx)
+
 	manager.Add(worker1)
 
 	expected := map[string]string{

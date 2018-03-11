@@ -1,6 +1,7 @@
 package worker_test
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -69,9 +70,11 @@ func TestGocraftWorkerManager(t *testing.T) {
 	manager2 := worker.NewGocraftWorkerManager(redisPool2)
 	manager3 := worker.NewGocraftWorkerManager(redisPool3)
 
-	manager1.Start()
-	manager2.Start()
-	manager3.Start()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	manager1.Start(ctx)
+	manager2.Start(ctx)
+	manager3.Start(ctx)
 
 	worker := &mockWorker{id: "worker1"}
 
