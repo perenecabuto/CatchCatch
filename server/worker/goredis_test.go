@@ -8,19 +8,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var opts = &redis.Options{Addr: "localhost:6379"}
+var (
+	opts = &redis.Options{Addr: "localhost:6379"}
+
+	worker1    = &mockWorker{id: "worker1"}
+	dupWorker1 = &mockWorker{id: "worker1"}
+	worker2    = &mockWorker{id: "worker2"}
+	dupWorker2 = &mockWorker{id: "worker1"}
+	worker3    = &mockWorker{id: "worker3"}
+	dupWorker3 = &mockWorker{id: "worker1"}
+	worker4    = &mockWorker{id: "worker4"}
+)
 
 func TestGoredisWorkerManagerAddWorker(t *testing.T) {
 	client := redis.NewClient(opts)
 	manager := worker.NewGoredisWorkerManager(client)
-
-	worker1 := mockWorker("worker1")
-	dupWorker1 := mockWorker("worker1")
-	worker2 := mockWorker("worker2")
-	dupWorker2 := mockWorker("worker1")
-	worker3 := mockWorker("worker3")
-	dupWorker3 := mockWorker("worker1")
-	worker4 := mockWorker("worker4")
 
 	manager.Add(worker1)
 	manager.Add(dupWorker1)

@@ -5,11 +5,19 @@ import (
 	"time"
 )
 
-type mockWorker string
+type mockWorker struct {
+	id  string
+	job func(params map[string]string) error
+}
 
-func (w mockWorker) ID() string {
-	return string(w)
+func (w *mockWorker) ID() string {
+	return w.id
+}
+
 func (w mockWorker) Job(params map[string]string) error {
+	if w.job != nil {
+		return w.job(params)
+	}
 	return defaultJob(w.ID(), params)
 }
 

@@ -68,7 +68,7 @@ func TestGocraftWorkerManager(t *testing.T) {
 	manager2.Start()
 	manager3.Start()
 
-	worker := mockWorker("worker1")
+	worker := &mockWorker{id: "worker1"}
 
 	manager1.Add(worker)
 	manager2.Add(worker)
