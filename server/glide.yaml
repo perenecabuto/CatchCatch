@@ -47,6 +47,10 @@ import:
 - package: golang.org/x/net
   subpackages:
   - websocket
+- package: github.com/garyburd/redigo
+  version: ^1.6.0
+  subpackages:
+  - redis
 testImport:
 - package: github.com/gogo/protobuf
   version: ^1.0.0

@@ -1,5 +1,5 @@
-hash: 4b567f4bb0592cc5e8c0d9b1bc7ff47a82eb91d5412e940960cc647b801f3c70
-updated: 2018-02-17T00:16:23.574227-02:00
+hash: 503a43d11a9e9d5a68186fed6e84d0cef2a88176202fba7734160af24368b49b
+updated: 2018-03-11T12:16:33.797135044-03:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
@@ -9,8 +9,13 @@ imports:
   - spew
 - name: github.com/erikstmartin/go-testdb
   version: 8d10e4a1bae52cd8b81ffdec3445890d6dccab3d
+- name: github.com/garyburd/redigo
+  version: a69d19351219b6dd56f274f96d85a7014a2ec34e
+  subpackages:
+  - internal
+  - redis
 - name: github.com/go-redis/redis
-  version: fa7f64f7f27348658ecfa71dd71dfb2d112e2f86
+  version: 9133634a132e00309476e2d9acbf0c8058d4c888
   subpackages:
   - internal
   - internal/consistenthash
@@ -18,6 +23,7 @@ imports:
   - internal/pool
   - internal/proto
   - internal/singleflight
+  - internal/util
 - name: github.com/gobwas/httphead
   version: 2c6c146eadee0b69f856f87e3e9f1d0cd6aad2f5
 - name: github.com/gobwas/pool
@@ -29,6 +35,8 @@ imports:
   version: c8595a6266aa8b97b14e7406cf059cd240b34100
   subpackages:
   - wsutil
+- name: github.com/gocraft/work
+  version: 85f9368380a04c40f55df767077154846ac819e2
 - name: github.com/golang/protobuf
   version: 925541529c1fa6821df4e44ce2723319eb2be768
   subpackages:
@@ -36,7 +44,7 @@ imports:
 - name: github.com/grandcat/zeroconf
   version: 8219919fca892353a082b184bca66db55c55b583
 - name: github.com/influxdata/influxdb
-  version: 35b44cc2f0ac78c26a852ea1f0a5992a2f440a76
+  version: 6ac835404e7e64ea7299a6eebcce1ab1ef15fe3c
   subpackages:
   - client/v2
   - models
@@ -81,6 +89,8 @@ imports:
   - difflib
 - name: github.com/quorzz/redis-protocol
   version: 8cdae60e7b8a0435899eeeee0f40f2d2cd495aa3
+- name: github.com/robfig/cron
+  version: 2315d5715e36303a941d907f038da7f7c44c773b
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/stretchr/objx
@@ -90,6 +100,7 @@ imports:
   subpackages:
   - assert
   - mock
+  - require
 - name: github.com/tevjef/go-runtime-metrics
   version: 527a540293077c77cf70479bbf9f8efb9f818cb2
   subpackages:
@@ -97,7 +108,7 @@ imports:
   - expvar
   - influxdb
 - name: github.com/tidwall/gjson
-  version: 87033efcaec6215741137e8ca61952c53ef2685d
+  version: 01f00f129617a6fe98941fb920d6c760241b54d2
 - name: github.com/tidwall/match
   version: 1731857f09b1f38450e2c12409748407822dc6be
 - name: github.com/tidwall/sjson

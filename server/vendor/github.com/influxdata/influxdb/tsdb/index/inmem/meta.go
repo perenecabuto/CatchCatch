@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"sort"
 	"sync"
-	"sync/atomic"
-	"time"
 
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/pkg/bytesutil"
@@ -367,7 +365,7 @@ func (m *measurement) ForEachSeriesByExpr(condition influxql.Expr, fn func(tags 
 // This will also populate the TagSet objects with the series IDs that match each tagset and any
 // influx filter expression that goes with the series
 // TODO: this shouldn't be exported. However, until tx.go and the engine get refactored into tsdb, we need it.
-func (m *measurement) TagSets(shardID uint64, opt query.IteratorOptions) ([]*query.TagSet, error) {
+func (m *measurement) TagSets(shardSeriesIDs *tsdb.SeriesIDSet, opt query.IteratorOptions) ([]*query.TagSet, error) {
 	// get the unique set of series ids and the filters that should be applied to each
 	ids, filters, err := m.filters(opt.Condition)
 	if err != nil {
@@ -402,7 +400,7 @@ func (m *measurement) TagSets(shardID uint64, opt query.IteratorOptions) ([]*que
 		}
 
 		s := m.seriesByID[id]
-		if s == nil || s.Deleted() {
+		if s == nil || s.Deleted() || !shardSeriesIDs.Contains(id) {
 			continue
 		}
 
@@ -859,6 +857,11 @@ func (m *measurement) WalkWhereForSeriesIds(expr influxql.Expr) (seriesIDs, Filt
 	case *influxql.ParenExpr:
 		// walk down the tree
 		return m.WalkWhereForSeriesIds(n.Expr)
+	case *influxql.BooleanLiteral:
+		if n.Val {
+			return m.SeriesIDs(), nil, nil
+		}
+		return nil, nil, nil
 	default:
 		return nil, nil, nil
 	}
@@ -1052,12 +1055,8 @@ func (a measurements) Union(other measurements) measurements {
 
 // series belong to a Measurement and represent unique time series in a database.
 type series struct {
-	mu sync.RWMutex
-	// lastModified tracks the last time the series was created.  If the series
-	// already exists and a request to create is received (a no-op), lastModified
-	// is increased to track that it is still in use.
-	lastModified int64
-	deleted      bool
+	mu      sync.RWMutex
+	deleted bool
 
 	// immutable
 	ID          uint64
@@ -1069,24 +1068,17 @@ type series struct {
 // newSeries returns an initialized series struct
 func newSeries(id uint64, m *measurement, key string, tags models.Tags) *series {
 	return &series{
-		ID:           id,
-		Measurement:  m,
-		Key:          key,
-		Tags:         tags,
-		lastModified: time.Now().UTC().UnixNano(),
+		ID:          id,
+		Measurement: m,
+		Key:         key,
+		Tags:        tags,
 	}
-}
-
-func (s *series) LastModified() int64 {
-	return atomic.LoadInt64(&s.lastModified)
 }
 
 // Delete marks this series as deleted.  A deleted series should not be returned for queries.
-func (s *series) Delete(ts int64) {
+func (s *series) Delete() {
 	s.mu.Lock()
-	if s.LastModified() < ts {
-		s.deleted = true
-	}
+	s.deleted = true
 	s.mu.Unlock()
 }
 

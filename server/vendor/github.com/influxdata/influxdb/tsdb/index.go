@@ -28,7 +28,7 @@ type Index interface {
 	DropMeasurement(name []byte) error
 	ForEachMeasurementName(fn func(name []byte) error) error
 
-	InitializeSeries(key, name []byte, tags models.Tags) error
+	InitializeSeries(keys, names [][]byte, tags []models.Tags) error
 	CreateSeriesIfNotExists(key, name []byte, tags models.Tags) error
 	CreateSeriesListIfNotExists(keys, names [][]byte, tags []models.Tags) error
 	DropSeries(seriesID uint64, key []byte, cascade bool) error
@@ -36,6 +36,7 @@ type Index interface {
 
 	MeasurementsSketches() (estimator.Sketch, estimator.Sketch, error)
 	SeriesN() int64
+	SeriesSketches() (estimator.Sketch, estimator.Sketch, error)
 
 	HasTagKey(name, key []byte) (bool, error)
 	HasTagValue(name, key, value []byte) (bool, error)
@@ -1788,6 +1789,12 @@ func (is IndexSet) seriesByExprIterator(name []byte, expr influxql.Expr, mf *Mea
 	case *influxql.ParenExpr:
 		return is.seriesByExprIterator(name, expr.Expr, mf)
 
+	case *influxql.BooleanLiteral:
+		if expr.Val {
+			return is.measurementSeriesIDIterator(name)
+		}
+		return nil, nil
+
 	default:
 		return nil, nil
 	}
@@ -2309,8 +2316,16 @@ func (is IndexSet) TagSets(sfile *SeriesFile, name []byte, opt query.IteratorOpt
 	itr, err := is.measurementSeriesByExprIterator(name, opt.Condition)
 	if err != nil {
 		return nil, err
-	} else if itr != nil {
-		defer itr.Close()
+	} else if itr == nil {
+		return nil, nil
+	}
+	defer itr.Close()
+
+	var dims []string
+	if len(opt.Dimensions) > 0 {
+		dims = make([]string, len(opt.Dimensions))
+		copy(dims, opt.Dimensions)
+		sort.Strings(dims)
 	}
 
 	// For every series, get the tag values for the requested tag keys i.e.
@@ -2318,52 +2333,69 @@ func (is IndexSet) TagSets(sfile *SeriesFile, name []byte, opt query.IteratorOpt
 	// TagSet are then grouped together, because for the purpose of GROUP BY
 	// they are part of the same composite series.
 	tagSets := make(map[string]*query.TagSet, 64)
+	var (
+		seriesN, maxSeriesN int
+		db                  = is.Database()
+	)
 
-	if itr != nil {
-		for {
-			e, err := itr.Next()
-			if err != nil {
-				return nil, err
-			} else if e.SeriesID == 0 {
-				break
-			}
+	if opt.MaxSeriesN > 0 {
+		maxSeriesN = opt.MaxSeriesN
+	} else {
+		maxSeriesN = int(^uint(0) >> 1)
+	}
 
-			// Skip if the series has been tombstoned.
-			key := sfile.SeriesKey(e.SeriesID)
-			if len(key) == 0 {
-				continue
-			}
-
-			_, tags := ParseSeriesKey(key)
-			if opt.Authorizer != nil && !opt.Authorizer.AuthorizeSeriesRead(is.Database(), name, tags) {
-				continue
-			}
-
-			tagsMap := make(map[string]string, len(opt.Dimensions))
-
-			// Build the TagSet for this series.
-			for _, dim := range opt.Dimensions {
-				tagsMap[dim] = tags.GetString(dim)
-			}
-
-			// Convert the TagSet to a string, so it can be added to a map
-			// allowing TagSets to be handled as a set.
-			tagsAsKey := MarshalTags(tagsMap)
-			tagSet, ok := tagSets[string(tagsAsKey)]
-			if !ok {
-				// This TagSet is new, create a new entry for it.
-				tagSet = &query.TagSet{
-					Tags: tagsMap,
-					Key:  tagsAsKey,
-				}
-			}
-
-			// Associate the series and filter with the Tagset.
-			tagSet.AddFilter(string(models.MakeKey(name, tags)), e.Expr)
-
-			// Ensure it's back in the map.
-			tagSets[string(tagsAsKey)] = tagSet
+	for {
+		se, err := itr.Next()
+		if err != nil {
+			return nil, err
+		} else if se.SeriesID == 0 {
+			break
 		}
+
+		// Skip if the series has been tombstoned.
+		key := sfile.SeriesKey(se.SeriesID)
+		if len(key) == 0 {
+			continue
+		}
+
+		if seriesN&0x3fff == 0x3fff {
+			// check every 16384 series if the query has been canceled
+			select {
+			case <-opt.InterruptCh:
+				return nil, query.ErrQueryInterrupted
+			default:
+			}
+		}
+
+		if seriesN > maxSeriesN {
+			return nil, fmt.Errorf("max-select-series limit exceeded: (%d/%d)", seriesN, opt.MaxSeriesN)
+		}
+
+		_, tags := ParseSeriesKey(key)
+		if opt.Authorizer != nil && !opt.Authorizer.AuthorizeSeriesRead(db, name, tags) {
+			continue
+		}
+
+		var tagsAsKey []byte
+		if len(dims) > 0 {
+			tagsAsKey = MakeTagsKey(dims, tags)
+		}
+
+		tagSet, ok := tagSets[string(tagsAsKey)]
+		if !ok {
+			// This TagSet is new, create a new entry for it.
+			tagSet = &query.TagSet{
+				Tags: nil,
+				Key:  tagsAsKey,
+			}
+		}
+
+		// Associate the series and filter with the Tagset.
+		tagSet.AddFilter(string(models.MakeKey(name, tags)), se.Expr)
+
+		// Ensure it's back in the map.
+		tagSets[string(tagsAsKey)] = tagSet
+		seriesN++
 	}
 
 	// Sort the series in each tag set.

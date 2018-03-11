@@ -15,6 +15,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/influxdb/logger"
+	"github.com/influxdata/influxdb/pkg/estimator/hll"
+
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/influxdb/pkg/estimator"
 	"github.com/influxdata/influxdb/pkg/limiter"
@@ -52,6 +55,10 @@ type Store struct {
 	// shared per-database indexes, only if using "inmem".
 	indexes map[string]interface{}
 
+	// Maintains a set of shards that are in the process of deletion.
+	// This prevents new shards from being created while old ones are being deleted.
+	pendingShardDeletes map[uint64]struct{}
+
 	EngineOptions EngineOptions
 
 	baseLogger *zap.Logger
@@ -67,13 +74,14 @@ type Store struct {
 func NewStore(path string) *Store {
 	logger := zap.NewNop()
 	return &Store{
-		databases:     make(map[string]struct{}),
-		path:          path,
-		sfiles:        make(map[string]*SeriesFile),
-		indexes:       make(map[string]interface{}),
-		EngineOptions: NewEngineOptions(),
-		Logger:        logger,
-		baseLogger:    logger,
+		databases:           make(map[string]struct{}),
+		path:                path,
+		sfiles:              make(map[string]*SeriesFile),
+		indexes:             make(map[string]interface{}),
+		pendingShardDeletes: make(map[uint64]struct{}),
+		EngineOptions:       NewEngineOptions(),
+		Logger:              logger,
+		baseLogger:          logger,
 	}
 }
 
@@ -98,13 +106,13 @@ func (s *Store) Statistics(tags map[string]string) []models.Statistic {
 	for _, database := range databases {
 		sc, err := s.SeriesCardinality(database)
 		if err != nil {
-			s.Logger.Error("cannot retrieve series cardinality", zap.Error(err))
+			s.Logger.Info("Cannot retrieve series cardinality", zap.Error(err))
 			continue
 		}
 
 		mc, err := s.MeasurementsCardinality(database)
 		if err != nil {
-			s.Logger.Error("cannot retrieve measurement cardinality", zap.Error(err))
+			s.Logger.Info("Cannot retrieve measurement cardinality", zap.Error(err))
 			continue
 		}
 
@@ -142,7 +150,7 @@ func (s *Store) Open() error {
 	s.closing = make(chan struct{})
 	s.shards = map[uint64]*Shard{}
 
-	s.Logger.Info(fmt.Sprintf("Using data dir: %v", s.Path()))
+	s.Logger.Info("Using data dir", zap.String("path", s.Path()))
 
 	// Create directory.
 	if err := os.MkdirAll(s.path, 0777); err != nil {
@@ -196,6 +204,9 @@ func (s *Store) loadShards() error {
 		s.Logger.Info("Compaction throughput limit disabled")
 	}
 
+	log, logEnd := logger.NewOperation(s.Logger, "Open store", "tsdb_open")
+	defer logEnd()
+
 	t := limiter.NewFixed(runtime.GOMAXPROCS(0))
 	resC := make(chan *res)
 	var n int
@@ -207,8 +218,9 @@ func (s *Store) loadShards() error {
 	}
 
 	for _, db := range dbDirs {
+		dbPath := filepath.Join(s.path, db.Name())
 		if !db.IsDir() {
-			s.Logger.Info("Not loading. Not a database directory.", zap.String("name", db.Name()))
+			log.Info("Skipping database dir", zap.String("name", db.Name()), zap.String("reason", "not a directory"))
 			continue
 		}
 
@@ -225,14 +237,15 @@ func (s *Store) loadShards() error {
 		}
 
 		// Load each retention policy within the database directory.
-		rpDirs, err := ioutil.ReadDir(filepath.Join(s.path, db.Name()))
+		rpDirs, err := ioutil.ReadDir(dbPath)
 		if err != nil {
 			return err
 		}
 
 		for _, rp := range rpDirs {
+			rpPath := filepath.Join(s.path, db.Name(), rp.Name())
 			if !rp.IsDir() {
-				s.Logger.Info(fmt.Sprintf("Skipping retention policy dir: %s. Not a directory", rp.Name()))
+				log.Info("Skipping retention policy dir", zap.String("name", rp.Name()), zap.String("reason", "not a directory"))
 				continue
 			}
 
@@ -241,7 +254,7 @@ func (s *Store) loadShards() error {
 				continue
 			}
 
-			shardDirs, err := ioutil.ReadDir(filepath.Join(s.path, db.Name(), rp.Name()))
+			shardDirs, err := ioutil.ReadDir(rpPath)
 			if err != nil {
 				return err
 			}
@@ -259,6 +272,7 @@ func (s *Store) loadShards() error {
 					// Shard file names are numeric shardIDs
 					shardID, err := strconv.ParseUint(sh, 10, 64)
 					if err != nil {
+						log.Info("invalid shard ID found at path", zap.String("path", path))
 						resC <- &res{err: fmt.Errorf("%s is not a valid ID. Skipping shard.", sh)}
 						return
 					}
@@ -284,12 +298,13 @@ func (s *Store) loadShards() error {
 
 					err = shard.Open()
 					if err != nil {
+						log.Info("Failed to open shard", logger.Shard(shardID), zap.Error(err))
 						resC <- &res{err: fmt.Errorf("Failed to open shard: %d: %s", shardID, err)}
 						return
 					}
 
 					resC <- &res{s: shard}
-					s.Logger.Info(fmt.Sprintf("%s opened in %s", path, time.Since(start)))
+					log.Info("Opened shard", zap.String("path", path), zap.Duration("duration", time.Since(start)))
 				}(db.Name(), rp.Name(), sh.Name())
 			}
 		}
@@ -300,7 +315,6 @@ func (s *Store) loadShards() error {
 	for i := 0; i < n; i++ {
 		res := <-resC
 		if res.err != nil {
-			s.Logger.Info(res.err.Error())
 			continue
 		}
 		s.shards[res.s.id] = res.s
@@ -344,6 +358,7 @@ func (s *Store) Close() error {
 	for _, sfile := range s.sfiles {
 		// Close out the series files.
 		if err := sfile.Close(); err != nil {
+			s.mu.Unlock()
 			return err
 		}
 	}
@@ -463,6 +478,12 @@ func (s *Store) CreateShard(database, retentionPolicy string, shardID uint64, en
 		return nil
 	}
 
+	// Shard may be undergoing a pending deletion. While the shard can be
+	// recreated, it must wait for the pending delete to finish.
+	if _, ok := s.pendingShardDeletes[shardID]; ok {
+		return fmt.Errorf("shard %d is pending deletion and cannot be created again until finished", shardID)
+	}
+
 	// Create the db and retention policy directories if they don't exist.
 	if err := os.MkdirAll(filepath.Join(s.path, database, retentionPolicy), 0700); err != nil {
 		return err
@@ -535,10 +556,28 @@ func (s *Store) DeleteShard(shardID uint64) error {
 	}
 
 	// Remove the shard from Store so it's not returned to callers requesting
-	// shards.
+	// shards. Also mark that this shard is currently being deleted in a separate
+	// map so that we do not have to retain the global store lock while deleting
+	// files.
 	s.mu.Lock()
+	if _, ok := s.pendingShardDeletes[shardID]; ok {
+		// We are already being deleted? This is possible if delete shard
+		// was called twice in sequence before the shard could be removed from
+		// the mapping.
+		// This is not an error because deleting a shard twice is not an error.
+		s.mu.Unlock()
+		return nil
+	}
 	delete(s.shards, shardID)
+	s.pendingShardDeletes[shardID] = struct{}{}
 	s.mu.Unlock()
+
+	// Ensure the pending deletion flag is cleared on exit.
+	defer func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		delete(s.pendingShardDeletes, shardID)
+	}()
 
 	// Get the shard's local bitset of series IDs.
 	index, err := sh.Index()
@@ -758,8 +797,9 @@ func byDatabase(name string) func(sh *Shard) bool {
 	}
 }
 
-// walkShards apply a function to each shard in parallel.  If any of the
-// functions return an error, the first error is returned.
+// walkShards apply a function to each shard in parallel. fn must be safe for
+// concurrent use. If any of the functions return an error, the first error is
+// returned.
 func (s *Store) walkShards(shards []*Shard, fn func(sh *Shard) error) error {
 	// struct to hold the result of opening each reader in a goroutine
 	type res struct {
@@ -849,7 +889,9 @@ func (s *Store) DiskSize() (int64, error) {
 	return size, nil
 }
 
-func (s *Store) estimateCardinality(dbName string, getSketches func(*Shard) (estimator.Sketch, estimator.Sketch, error)) (int64, error) {
+// sketchesForDatabase returns merged sketches for the provided database, by
+// walking each shard in the database and merging the sketches found there.
+func (s *Store) sketchesForDatabase(dbName string, getSketches func(*Shard) (estimator.Sketch, estimator.Sketch, error)) (estimator.Sketch, estimator.Sketch, error) {
 	var (
 		ss estimator.Sketch // Sketch estimating number of items.
 		ts estimator.Sketch // Sketch estimating number of tombstoned items.
@@ -859,37 +901,44 @@ func (s *Store) estimateCardinality(dbName string, getSketches func(*Shard) (est
 	shards := s.filterShards(byDatabase(dbName))
 	s.mu.RUnlock()
 
+	// Never return nil sketches. In the case that db exists but no data written
+	// return empty sketches.
+	if len(shards) == 0 {
+		ss, ts = hll.NewDefaultPlus(), hll.NewDefaultPlus()
+	}
+
 	// Iterate over all shards for the database and combine all of the sketches.
 	for _, shard := range shards {
 		s, t, err := getSketches(shard)
 		if err != nil {
-			return 0, err
+			return nil, nil, err
 		}
 
 		if ss == nil {
 			ss, ts = s, t
 		} else if err = ss.Merge(s); err != nil {
-			return 0, err
+			return nil, nil, err
 		} else if err = ts.Merge(t); err != nil {
-			return 0, err
+			return nil, nil, err
 		}
 	}
-
-	if ss != nil {
-		return int64(ss.Count() - ts.Count()), nil
-	}
-	return 0, nil
+	return ss, ts, nil
 }
 
-// SeriesCardinality returns the series cardinality for the provided database.
+// SeriesCardinality returns the exact series cardinality for the provided
+// database.
 //
-// Cardinality is calculated exactly by unioning all shards' bitsets of series IDs.
+// Cardinality is calculated exactly by unioning all shards' bitsets of series
+// IDs. The result of this method cannot be combined with any other results.
+//
 func (s *Store) SeriesCardinality(database string) (int64, error) {
 	s.mu.RLock()
 	shards := s.filterShards(byDatabase(database))
 	s.mu.RUnlock()
 
+	var setMu sync.Mutex
 	others := make([]*SeriesIDSet, 0, len(shards))
+
 	s.walkShards(shards, func(sh *Shard) error {
 		index, err := sh.Index()
 		if err != nil {
@@ -899,7 +948,10 @@ func (s *Store) SeriesCardinality(database string) (int64, error) {
 		if i, ok := index.(interface {
 			SeriesIDSet() *SeriesIDSet
 		}); ok {
-			others = append(others, i.SeriesIDSet())
+			seriesIDs := i.SeriesIDSet()
+			setMu.Lock()
+			others = append(others, seriesIDs)
+			setMu.Unlock()
 		} else {
 			return fmt.Errorf("unable to get series id set for index in shard at %s", sh.Path())
 		}
@@ -911,12 +963,46 @@ func (s *Store) SeriesCardinality(database string) (int64, error) {
 	return int64(ss.Cardinality()), nil
 }
 
-// MeasurementsCardinality returns the measurement cardinality for the provided
-// database.
+// SeriesSketches returns the sketches associated with the series data in all
+// the shards in the provided database.
 //
-// Cardinality is calculated using a sketch-based estimation.
+// The returned sketches can be combined with other sketches to provide an
+// estimation across distributed databases.
+func (s *Store) SeriesSketches(database string) (estimator.Sketch, estimator.Sketch, error) {
+	return s.sketchesForDatabase(database, func(sh *Shard) (estimator.Sketch, estimator.Sketch, error) {
+		if sh == nil {
+			return nil, nil, errors.New("shard nil, can't get cardinality")
+		}
+		return sh.SeriesSketches()
+	})
+}
+
+// MeasurementsCardinality returns an estimation of the measurement cardinality
+// for the provided database.
+//
+// Cardinality is calculated using a sketch-based estimation. The result of this
+// method cannot be combined with any other results.
 func (s *Store) MeasurementsCardinality(database string) (int64, error) {
-	return s.estimateCardinality(database, func(sh *Shard) (estimator.Sketch, estimator.Sketch, error) {
+	ss, ts, err := s.sketchesForDatabase(database, func(sh *Shard) (estimator.Sketch, estimator.Sketch, error) {
+		if sh == nil {
+			return nil, nil, errors.New("shard nil, can't get cardinality")
+		}
+		return sh.MeasurementsSketches()
+	})
+
+	if err != nil {
+		return 0, err
+	}
+	return int64(ss.Count() - ts.Count()), nil
+}
+
+// MeasurementsSketches returns the sketches associated with the measurement
+// data in all the shards in the provided database.
+//
+// The returned sketches can be combined with other sketches to provide an
+// estimation across distributed databases.
+func (s *Store) MeasurementsSketches(database string) (estimator.Sketch, estimator.Sketch, error) {
+	return s.sketchesForDatabase(database, func(sh *Shard) (estimator.Sketch, estimator.Sketch, error) {
 		if sh == nil {
 			return nil, nil, errors.New("shard nil, can't get cardinality")
 		}
@@ -1609,7 +1695,7 @@ func (s *Store) monitorShards() {
 			for _, sh := range s.shards {
 				if sh.IsIdle() {
 					if err := sh.Free(); err != nil {
-						s.Logger.Warn("error free cold shard resources:", zap.Error(err))
+						s.Logger.Warn("Error while freeing cold shard resources", zap.Error(err))
 					}
 				} else {
 					sh.SetCompactionsEnabled(true)
@@ -1667,7 +1753,7 @@ func (s *Store) monitorShards() {
 				indexSet := IndexSet{Indexes: []Index{firstShardIndex}, SeriesFile: sfile}
 				names, err := indexSet.MeasurementNamesByExpr(nil, nil)
 				if err != nil {
-					s.Logger.Warn("cannot retrieve measurement names", zap.Error(err))
+					s.Logger.Warn("Cannot retrieve measurement names", zap.Error(err))
 					return nil
 				}
 
@@ -1682,8 +1768,13 @@ func (s *Store) monitorShards() {
 
 						// Log at 80, 85, 90-100% levels
 						if perc == 80 || perc == 85 || perc >= 90 {
-							s.Logger.Info(fmt.Sprintf("WARN: %d%% of max-values-per-tag limit exceeded: (%d/%d), db=%s measurement=%s tag=%s",
-								perc, n, s.EngineOptions.Config.MaxValuesPerTag, db, name, k))
+							s.Logger.Warn("max-values-per-tag limit may be exceeded soon",
+								zap.String("perc", fmt.Sprintf("%d%%", perc)),
+								zap.Int("n", n),
+								zap.Int("max", s.EngineOptions.Config.MaxValuesPerTag),
+								logger.Database(db),
+								zap.ByteString("measurement", name),
+								zap.ByteString("tag", k))
 						}
 						return nil
 					})
