@@ -81,7 +81,7 @@ func TestGoredisWorkerManagerStopWhenContextDone(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	manager.Start(ctx)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 	assert.True(t, manager.Started())
 
 	cancel()
