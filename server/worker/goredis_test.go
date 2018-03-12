@@ -87,3 +87,49 @@ func TestGoredisWorkerManagerStopWhenContextDone(t *testing.T) {
 	assert.False(t, manager.Started())
 }
 
+func TestGoredisWorkerManagerRunTasks(t *testing.T) {
+	client1 := redis.NewClient(opts)
+	client2 := redis.NewClient(opts)
+	client3 := redis.NewClient(opts)
+
+	manager1 := worker.NewGoredisWorkerManager(client1)
+	manager2 := worker.NewGoredisWorkerManager(client2)
+	manager3 := worker.NewGoredisWorkerManager(client3)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	manager1.Start(ctx)
+	manager2.Start(ctx)
+	manager3.Start(ctx)
+
+	manager1.Flush()
+
+	manager1.Add(worker1)
+	manager2.Add(worker1)
+	manager3.Add(worker1)
+
+	var err error
+	err = manager1.Run(worker1, nil)
+	assert.NoError(t, err)
+	err = manager1.Run(worker1, nil)
+	assert.NoError(t, err)
+
+	err = manager2.Run(worker1, nil)
+	assert.NoError(t, err)
+	err = manager2.Run(worker1, nil)
+	assert.NoError(t, err)
+
+	err = manager3.Run(worker1, nil)
+	assert.NoError(t, err)
+	err = manager3.Run(worker1, nil)
+	assert.NoError(t, err)
+
+	runningTasks, err := manager1.BusyWorkers()
+	assert.NoError(t, err)
+
+	manager1.Stop()
+	manager2.Stop()
+	manager3.Stop()
+
+	assert.Equal(t, 6, len(runningTasks))
+}

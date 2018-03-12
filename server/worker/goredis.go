@@ -31,7 +31,7 @@ type GoredisWorkerManager struct {
 
 // NewGoredisWorkerManager create a new GoredisWorkerManager
 func NewGoredisWorkerManager(client *redis.Client) Manager {
-	return &GoredisWorkerManager{redis: client, workers: make(map[string]Worker), stop: make(chan interface{}, 1)}
+	return &GoredisWorkerManager{redis: client, workers: make(map[string]Worker), stop: make(chan interface{})}
 }
 
 // Started return if worker is started
@@ -54,17 +54,17 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 				atomic.StoreInt32(&m.started, 0)
 				return
 			case <-ticker.C:
-				cmd := m.redis.RPop(tasksQueue)
+				cmd := m.redis.RPopLPush(tasksQueue, processingQueue)
 				m.redis.Process(cmd)
 				err := cmd.Err()
 				if err == redis.Nil {
 					continue
 				}
 				if err != nil {
-					log.Println(err)
+					log.Println("Run job redis err:", err)
 					continue
 				}
-				encoded := cmd.String()
+				encoded := cmd.Val()
 				id := gjson.Get(encoded, "id").String()
 				w, exists := m.workers[id]
 				if !exists {
@@ -74,15 +74,29 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 				for k, v := range gjson.Get(encoded, "params").Map() {
 					params[k] = v.String()
 				}
-				w.Job(params)
+				err = w.Job(params)
+				if err != nil {
+					log.Println("Run job err:", err)
+				}
+				remCmd := m.redis.LRem(processingQueue, -1, encoded)
+				err = m.redis.Process(remCmd)
+				if err != nil {
+					log.Println("Done job redis err:", err)
+				}
+				log.Printf("Job <%s> done", id)
 			}
 		}
 	}()
 }
 
-// Stop ... ???
+// Stop processing worker events
 func (m *GoredisWorkerManager) Stop() {
-	m.stop <- true
+	timeout := time.NewTimer(time.Second)
+	select {
+	case m.stop <- true:
+	case <-timeout.C:
+		log.Println("GoredisWorkerManager.Stop(): timeout")
+	}
 }
 
 // Add add worker to this manager
