@@ -52,21 +52,22 @@ func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
 	manager.Flush()
 
 	runChan := make(chan map[string]string)
-	worker1.job = func(params map[string]string) error {
+	worker := &mockWorker{id: "worker1", job: func(params map[string]string) error {
 		runChan <- params
 		return nil
-	}
+	}}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	manager.Start(ctx)
+	defer manager.Stop()
 
-	manager.Add(worker1)
+	manager.Add(worker)
 
 	expected := map[string]string{
 		"param1": "value1", "param2": "value2",
 	}
-	err := manager.Run(worker1, expected)
+	err := manager.Run(worker, expected)
 	assert.NoError(t, err)
 
 	actual := <-runChan
