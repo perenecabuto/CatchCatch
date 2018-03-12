@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	queue         = "catchcatch:worker:queue"
-	queueInterval = time.Microsecond * 100
+	tasksQueue      = "catchcatch:worker:queue"
+	processingQueue = "catchcatch:worker:processing"
+	queueInterval   = time.Microsecond * 100
 )
 
 // GoredisWorkerManager is a simple manager implentation over go-redis
@@ -53,7 +54,7 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 				atomic.StoreInt32(&m.started, 0)
 				return
 			case <-ticker.C:
-				cmd := m.redis.RPop(queue)
+				cmd := m.redis.RPop(tasksQueue)
 				m.redis.Process(cmd)
 				err := cmd.Err()
 				if err == redis.Nil {
@@ -98,7 +99,7 @@ func (m *GoredisWorkerManager) Run(w Worker, params map[string]string) error {
 	if err != nil {
 		return err
 	}
-	cmd := m.redis.LPush(queue, encoded)
+	cmd := m.redis.LPush(tasksQueue, encoded)
 	return m.redis.Process(cmd)
 }
 
@@ -117,11 +118,21 @@ func (m *GoredisWorkerManager) WorkersIDs() []string {
 
 // BusyWorkers return a list of busy workers
 func (m *GoredisWorkerManager) BusyWorkers() ([]string, error) {
+	cmd := m.redis.LRange(processingQueue, 0, 100)
+	err := m.redis.Process(cmd)
+	encTasks, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, len(encTasks))
+	for i, encoded := range encTasks {
+		ids[i] = gjson.Get(encoded, "id").String()
+	}
 	return ids, nil
 }
 
 // Flush workers task queue
 func (m *GoredisWorkerManager) Flush() error {
-	cmd := m.redis.Del(queue)
+	cmd := m.redis.Del(tasksQueue)
 	return m.redis.Process(cmd)
 }
