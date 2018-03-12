@@ -8,6 +8,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/perenecabuto/CatchCatch/server/worker"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -96,40 +97,48 @@ func TestGoredisWorkerManagerRunTasks(t *testing.T) {
 	manager2 := worker.NewGoredisWorkerManager(client2)
 	manager3 := worker.NewGoredisWorkerManager(client3)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	manager1.Add(worker1)
+	manager1.Add(worker2)
+	manager1.Add(worker3)
+
+	manager2.Add(worker1)
+	manager2.Add(worker2)
+	manager2.Add(worker3)
+
+	manager3.Add(worker1)
+	manager3.Add(worker2)
+	manager3.Add(worker3)
+
+	manager1.Run(worker1, nil)
+	manager1.Run(worker2, nil)
+	manager1.Run(worker3, nil)
+	manager2.Run(worker1, nil)
+	manager2.Run(worker2, nil)
+	manager2.Run(worker3, nil)
+	manager3.Run(worker1, nil)
+	manager3.Run(worker2, nil)
+	manager3.Run(worker3, nil)
+
+	runningTasks, err := manager1.BusyWorkers()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(runningTasks))
+
+	ctx := context.Background()
 	manager1.Start(ctx)
 	manager2.Start(ctx)
 	manager3.Start(ctx)
 
-	manager1.Flush()
+	time.Sleep(time.Second)
 
-	manager1.Add(worker1)
-	manager2.Add(worker1)
-	manager3.Add(worker1)
-
-	var err error
-	err = manager1.Run(worker1, nil)
+	runningTasks, err = manager1.BusyWorkers()
 	assert.NoError(t, err)
-	err = manager1.Run(worker1, nil)
-	assert.NoError(t, err)
-
-	err = manager2.Run(worker1, nil)
-	assert.NoError(t, err)
-	err = manager2.Run(worker1, nil)
-	assert.NoError(t, err)
-
-	err = manager3.Run(worker1, nil)
-	assert.NoError(t, err)
-	err = manager3.Run(worker1, nil)
-	assert.NoError(t, err)
-
-	runningTasks, err := manager1.BusyWorkers()
-	assert.NoError(t, err)
+	require.Equal(t, 9, len(runningTasks))
 
 	manager1.Stop()
 	manager2.Stop()
 	manager3.Stop()
 
-	assert.Equal(t, 6, len(runningTasks))
+	runningTasks, err = manager1.BusyWorkers()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(runningTasks))
 }

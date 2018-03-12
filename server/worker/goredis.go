@@ -25,13 +25,14 @@ type GoredisWorkerManager struct {
 	workersLock sync.RWMutex
 	workers     map[string]Worker
 
-	started int32
-	stop    chan interface{}
+	started      int32
+	runningTasks int32
+	stop         chan interface{}
 }
 
 // NewGoredisWorkerManager create a new GoredisWorkerManager
 func NewGoredisWorkerManager(client *redis.Client) Manager {
-	return &GoredisWorkerManager{redis: client, workers: make(map[string]Worker), stop: make(chan interface{})}
+	return &GoredisWorkerManager{redis: client, workers: make(map[string]Worker), stop: make(chan interface{}, 1)}
 }
 
 // Started return if worker is started
@@ -64,38 +65,79 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 					log.Println("Run job redis err:", err)
 					continue
 				}
-				encoded := cmd.Val()
-				id := gjson.Get(encoded, "id").String()
-				w, exists := m.workers[id]
-				if !exists {
-					continue
-				}
-				params := make(map[string]string)
-				for k, v := range gjson.Get(encoded, "params").Map() {
-					params[k] = v.String()
-				}
-				err = w.Job(params)
-				if err != nil {
-					log.Println("Run job err:", err)
-				}
-				remCmd := m.redis.LRem(processingQueue, -1, encoded)
-				err = m.redis.Process(remCmd)
-				if err != nil {
-					log.Println("Done job redis err:", err)
-				}
-				log.Printf("Job <%s> done", id)
+				go m.processTask(cmd.Val())
 			}
 		}
 	}()
 }
 
+func (m *GoredisWorkerManager) processTask(encoded string) {
+	id := gjson.Get(encoded, "id").String()
+	w, exists := m.workers[id]
+	if !exists {
+		// TODO: requeue better
+		log.Println("Ignoring: worker no found", id, m.workers)
+		m.redis.LRem(processingQueue, -1, encoded).Err()
+		m.redis.LPush(tasksQueue, encoded)
+		time.Sleep(time.Second)
+		return
+	}
+
+	atomic.AddInt32(&m.runningTasks, 1)
+	params := make(map[string]string)
+	for k, v := range gjson.Get(encoded, "params").Map() {
+		params[k] = v.String()
+	}
+
+	err := w.Job(params)
+	if err != nil {
+		log.Println("Done job redis err:", err)
+
+		return
+	}
+	err = m.redis.LRem(processingQueue, -1, encoded).Err()
+	if err != nil {
+		log.Printf("Job <%s> processTask - err: %s", id, err.Error())
+	}
+	atomic.AddInt32(&m.runningTasks, -1)
+	log.Printf("Job <%s> done", id)
+}
+
 // Stop processing worker events
 func (m *GoredisWorkerManager) Stop() {
-	timeout := time.NewTimer(time.Second)
+	m.workersLock.Lock()
+	defer m.workersLock.Unlock()
+	if !m.Started() {
+		return
+	}
+	timeout := time.NewTimer(time.Second * 20)
+	defer timeout.Stop()
+
+	m.waitForRemainingTasks(timeout)
+
 	select {
 	case m.stop <- true:
+		return
 	case <-timeout.C:
 		log.Println("GoredisWorkerManager.Stop(): timeout")
+		return
+	}
+}
+
+func (m *GoredisWorkerManager) waitForRemainingTasks(timeout *time.Timer) {
+	waitForTasksTicker := time.NewTicker(queueInterval * 2)
+	defer waitForTasksTicker.Stop()
+	for {
+		runningTasks := atomic.LoadInt32(&m.runningTasks)
+		select {
+		case <-waitForTasksTicker.C:
+			if runningTasks == int32(0) {
+				return
+			}
+		case <-timeout.C:
+			log.Printf("GoredisWorkerManager.Stop(): timed out with %d remaining tasks", m.runningTasks)
+			return
+		}
 	}
 }
 
