@@ -25,7 +25,6 @@ func defaultJob(workerID string, params map[string]string) error {
 	log.Println("Starting job: ", workerID)
 	for i := 0; i < 10; i++ {
 		<-time.NewTimer(time.Millisecond * 100).C
-		log.Println("Last:" + time.Now().String())
 	}
 	return nil
 }
