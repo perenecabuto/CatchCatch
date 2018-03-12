@@ -56,7 +56,6 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 				return
 			case <-ticker.C:
 				cmd := m.redis.RPopLPush(tasksQueue, processingQueue)
-				m.redis.Process(cmd)
 				err := cmd.Err()
 				if err == redis.Nil {
 					continue
@@ -156,7 +155,7 @@ func (m *GoredisWorkerManager) Run(w Worker, params map[string]string) error {
 		return err
 	}
 	cmd := m.redis.LPush(tasksQueue, encoded)
-	return m.redis.Process(cmd)
+	return cmd.Err()
 }
 
 // WorkersIDs return managed workers ids
@@ -175,7 +174,6 @@ func (m *GoredisWorkerManager) WorkersIDs() []string {
 // BusyWorkers return a list of busy workers
 func (m *GoredisWorkerManager) BusyWorkers() ([]string, error) {
 	cmd := m.redis.LRange(processingQueue, 0, 100)
-	err := m.redis.Process(cmd)
 	encTasks, err := cmd.Result()
 	if err != nil {
 		return nil, err
@@ -189,6 +187,5 @@ func (m *GoredisWorkerManager) BusyWorkers() ([]string, error) {
 
 // Flush workers task queue
 func (m *GoredisWorkerManager) Flush() error {
-	cmd := m.redis.Del(tasksQueue)
-	return m.redis.Process(cmd)
+	return m.redis.Del(tasksQueue).Err()
 }
