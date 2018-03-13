@@ -8,7 +8,9 @@ type Manager interface {
 	Stop()
 	Started() bool
 	Add(w Worker)
+
 	Run(w Worker, params map[string]string) error
+	RunUnique(w Worker, params map[string]string) error
 
 	BusyWorkers() ([]string, error)
 	Flush() error

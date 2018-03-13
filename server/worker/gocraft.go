@@ -80,13 +80,23 @@ func (wm *GocraftWorkerManager) Add(w Worker) {
 	})
 }
 
-// Run worker to process task
+// Run adds task to be processed by worker
 func (wm *GocraftWorkerManager) Run(w Worker, params map[string]string) error {
 	args := make(map[string]interface{})
 	for k, v := range params {
 		args[k] = v
 	}
 	_, err := wm.enqueuer.Enqueue(w.ID(), args)
+	return err
+}
+
+// RunUnique adds a unique task to be processed by worker
+func (wm *GocraftWorkerManager) RunUnique(w Worker, params map[string]string) error {
+	args := make(map[string]interface{})
+	for k, v := range params {
+		args[k] = v
+	}
+	_, err := wm.enqueuer.EnqueueUnique(w.ID(), args)
 	return err
 }
 

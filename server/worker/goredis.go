@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -82,6 +83,20 @@ func (m *GoredisWorkerManager) processTask(encoded string) {
 		return
 	}
 
+	unique := gjson.Get(encoded, "unique").Bool()
+	if unique {
+		workerLockName := strings.Join([]string{tasksQueue, id, "lock"}, ":")
+		cmd := redis.NewStringCmd("SET", workerLockName, id, "PX", 30000, "NX")
+		m.redis.Process(cmd)
+		if cmd.Val() != "OK" {
+			log.Println("Unique task already running:", workerLockName)
+			m.redis.LRem(processingQueue, -1, encoded).Err()
+			return
+		}
+		log.Println("Run unique task:", workerLockName)
+		defer m.redis.Del(workerLockName)
+	}
+
 	atomic.AddInt32(&m.runningTasks, 1)
 	params := make(map[string]string)
 	for k, v := range gjson.Get(encoded, "params").Map() {
@@ -91,7 +106,6 @@ func (m *GoredisWorkerManager) processTask(encoded string) {
 	err := w.Job(params)
 	if err != nil {
 		log.Println("Done job redis err:", err)
-
 		return
 	}
 	err = m.redis.LRem(processingQueue, -1, encoded).Err()
@@ -147,15 +161,36 @@ func (m *GoredisWorkerManager) Add(w Worker) {
 	m.workersLock.Unlock()
 }
 
-// Run a task into the worker
+// Run a task the worker
 func (m *GoredisWorkerManager) Run(w Worker, params map[string]string) error {
-	encoded, _ := sjson.Set("", "id", w.ID())
-	encoded, err := sjson.Set(encoded, "params", params)
+	return m.run(w, params, false)
+}
+
+// RunUnique send a task the worker
+// but it will be ignored if the worker is already running a task with the same parameters
+func (m *GoredisWorkerManager) RunUnique(w Worker, params map[string]string) error {
+	return m.run(w, params, true)
+}
+
+func (m *GoredisWorkerManager) run(w Worker, params map[string]string, unique bool) error {
+	workerLockName := strings.Join([]string{tasksQueue, w.ID(), "lock"}, ":")
+	cmd := m.redis.Exists(workerLockName)
+	exists, err := cmd.Val() == 1, cmd.Err()
 	if err != nil {
 		return err
 	}
-	cmd := m.redis.LPush(tasksQueue, encoded)
-	return cmd.Err()
+	if exists {
+		log.Printf("Skiping worker<%s> is locked:", workerLockName)
+		return nil
+	}
+
+	encoded, _ := sjson.Set("", "id", w.ID())
+	encoded, _ = sjson.Set(encoded, "unique", unique)
+	encoded, err = sjson.Set(encoded, "params", params)
+	if err != nil {
+		return err
+	}
+	return m.redis.LPush(tasksQueue, encoded).Err()
 }
 
 // WorkersIDs return managed workers ids

@@ -8,7 +8,6 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/perenecabuto/CatchCatch/server/worker"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -133,11 +132,46 @@ func TestGoredisWorkerManagerRunTasks(t *testing.T) {
 
 	runningTasks, err = manager1.BusyWorkers()
 	assert.NoError(t, err)
-	require.Equal(t, 9, len(runningTasks))
+	assert.Equal(t, 9, len(runningTasks))
 
 	manager1.Stop()
 	manager2.Stop()
 	manager3.Stop()
+
+	runningTasks, err = manager1.BusyWorkers()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(runningTasks))
+}
+
+func TestGoredisWorkerManagerRunUniqueTasks(t *testing.T) {
+	client1 := redis.NewClient(opts)
+	client2 := redis.NewClient(opts)
+
+	manager1 := worker.NewGoredisWorkerManager(client1)
+	manager2 := worker.NewGoredisWorkerManager(client2)
+
+	ctx := context.Background()
+	manager1.Start(ctx)
+	manager2.Start(ctx)
+
+	manager1.Add(worker1)
+	manager1.Add(worker1)
+	manager2.Add(worker1)
+	manager2.Add(worker1)
+
+	manager1.RunUnique(worker1, nil)
+	manager1.RunUnique(worker1, nil)
+	manager2.RunUnique(worker1, nil)
+	manager2.RunUnique(worker1, nil)
+
+	time.Sleep(time.Millisecond * 100)
+
+	runningTasks, err := manager1.BusyWorkers()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(runningTasks))
+
+	manager1.Stop()
+	manager2.Stop()
 
 	runningTasks, err = manager1.BusyWorkers()
 	assert.NoError(t, err)
