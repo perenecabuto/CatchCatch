@@ -2,9 +2,7 @@ package worker_test
 
 import (
 	"context"
-	"log"
 	"os"
-	"os/signal"
 	"testing"
 	"time"
 
@@ -13,20 +11,6 @@ import (
 
 	"github.com/perenecabuto/CatchCatch/server/worker"
 )
-
-func TestMain(m *testing.M) {
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-
-	go func() {
-		for range signalChan {
-			log.Println("Received an interrupt, stopping services...")
-			os.Exit(0)
-		}
-	}()
-
-	os.Exit(m.Run())
-}
 
 func TestGocraftWorkerManager(t *testing.T) {
 	if os.Getenv("IGNORE_GOCRAFT_WORKER_TEST") != "" {

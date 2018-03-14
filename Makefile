@@ -21,8 +21,8 @@ DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.
 
 test: 
 test:
-	$(SERVER_SRC) GODEBUG=gocachetest="`date`" IGNORE_GOCRAFT_WORKER_TEST=1 \
-	go test -cover -race -v ./...
+	$(SERVER_SRC) IGNORE_GOCRAFT_WORKER_TEST=1 \
+	go test -count=1 -cover -race -v ./...
 
 test-forever:
 	$(SERVER_SRC) CompileDaemon -color -command "go test -v ./..."
