@@ -160,17 +160,17 @@ func (m *GoredisWorkerManager) Add(w Worker) {
 }
 
 // Run a task the worker
-func (m *GoredisWorkerManager) Run(w Worker, params map[string]interface{}) error {
+func (m *GoredisWorkerManager) Run(w Worker, params TaskParams) error {
 	return m.run(w, params, false)
 }
 
 // RunUnique send a task the worker
 // but it will be ignored if the worker is already running a task with the same parameters
-func (m *GoredisWorkerManager) RunUnique(w Worker, params map[string]interface{}) error {
+func (m *GoredisWorkerManager) RunUnique(w Worker, params TaskParams) error {
 	return m.run(w, params, true)
 }
 
-func (m *GoredisWorkerManager) run(w Worker, params map[string]interface{}, unique bool) error {
+func (m *GoredisWorkerManager) run(w Worker, params TaskParams, unique bool) error {
 	task := &Task{ID: uuid.New().String(), WorkerID: w.ID(), Unique: unique, Params: params}
 	cmd := m.redis.Exists(task.LockName())
 	exists, err := cmd.Val() == 1, cmd.Err()

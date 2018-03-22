@@ -71,18 +71,19 @@ func (wm *GocraftWorkerManager) Add(w Worker) {
 			return err
 		}
 		defer releaseLock(wm.enqueuer.Pool, lockKey, job.ID)
-		return w.Run(job.Args)
+		// FIXME: Pass a real context
+		return w.Run(context.Background(), TaskParams(job.Args))
 	})
 }
 
 // Run adds task to be processed by worker
-func (wm *GocraftWorkerManager) Run(w Worker, params map[string]interface{}) error {
+func (wm *GocraftWorkerManager) Run(w Worker, params TaskParams) error {
 	_, err := wm.enqueuer.Enqueue(w.ID(), params)
 	return err
 }
 
 // RunUnique adds a unique task to be processed by worker
-func (wm *GocraftWorkerManager) RunUnique(w Worker, params map[string]interface{}) error {
+func (wm *GocraftWorkerManager) RunUnique(w Worker, params TaskParams) error {
 	_, err := wm.enqueuer.EnqueueUnique(w.ID(), params)
 	return err
 }
