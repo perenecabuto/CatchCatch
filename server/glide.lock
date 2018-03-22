@@ -1,5 +1,5 @@
 hash: 503a43d11a9e9d5a68186fed6e84d0cef2a88176202fba7734160af24368b49b
-updated: 2018-03-11T12:16:33.797135044-03:00
+updated: 2018-03-22T08:33:41.573645703-03:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
@@ -15,7 +15,7 @@ imports:
   - internal
   - redis
 - name: github.com/go-redis/redis
-  version: 9133634a132e00309476e2d9acbf0c8058d4c888
+  version: 877867d2845fbaf86798befe410b6ceb6f5c29a3
   subpackages:
   - internal
   - internal/consistenthash
@@ -41,10 +41,12 @@ imports:
   version: 925541529c1fa6821df4e44ce2723319eb2be768
   subpackages:
   - proto
+- name: github.com/google/uuid
+  version: dec09d789f3dba190787f8b4454c7d3c936fed9e
 - name: github.com/grandcat/zeroconf
   version: 8219919fca892353a082b184bca66db55c55b583
 - name: github.com/influxdata/influxdb
-  version: 6ac835404e7e64ea7299a6eebcce1ab1ef15fe3c
+  version: a65e51e295525fd4ffd03937750841e26bf89bde
   subpackages:
   - client/v2
   - models
@@ -107,6 +109,8 @@ imports:
   - collector
   - expvar
   - influxdb
+- name: github.com/thoas/go-funk
+  version: 54489e5ff3900f4618607d32d680f8cf112bcb18
 - name: github.com/tidwall/gjson
   version: 01f00f129617a6fe98941fb920d6c760241b54d2
 - name: github.com/tidwall/match
