@@ -49,12 +49,14 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 		log.Println("Starting.... with redis:", m.redis)
 		atomic.StoreInt32(&m.started, 1)
 
+		wCtx, cancel := context.WithCancel(ctx)
 		ticker := time.NewTicker(queueInterval)
 		for {
 			select {
-			case <-ctx.Done():
+			case <-wCtx.Done():
 				go m.Stop()
 			case <-m.stop:
+				cancel()
 				atomic.StoreInt32(&m.started, 0)
 				return
 			case <-ticker.C:
@@ -67,13 +69,13 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 					log.Println("Run job redis err:", err)
 					continue
 				}
-				go m.processTask(cmd.Val())
+				go m.processTask(wCtx, cmd.Val())
 			}
 		}
 	}()
 }
 
-func (m *GoredisWorkerManager) processTask(encoded string) {
+func (m *GoredisWorkerManager) processTask(ctx context.Context, encoded string) {
 	task := &Task{}
 	json.Unmarshal([]byte(encoded), task)
 	w, exists := m.workers[task.WorkerID]
@@ -101,7 +103,7 @@ func (m *GoredisWorkerManager) processTask(encoded string) {
 
 	atomic.AddInt32(&m.runningTasks, 1)
 
-	err := w.Run(task.Params)
+	err := w.Run(ctx, task.Params)
 	if err != nil {
 		log.Println("Done job redis err:", err)
 		return

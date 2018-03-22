@@ -17,7 +17,7 @@ func (w *mockWorker) ID() string {
 	return w.id
 }
 
-func (w mockWorker) Run(params map[string]interface{}) error {
+func (w mockWorker) Run(_ context.Context, params worker.TaskParams) error {
 	if w.run != nil {
 		return w.run(params)
 	}
