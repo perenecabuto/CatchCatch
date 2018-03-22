@@ -1,6 +1,9 @@
 package worker
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 // Manager for workers and its tasks
 type Manager interface {
@@ -20,4 +23,17 @@ type Manager interface {
 type Worker interface {
 	ID() string
 	Job(params map[string]string) error
+}
+
+// Task represents a worker job
+type Task struct {
+	ID       string
+	WorkerID string
+	Unique   bool
+	Params   map[string]string
+}
+
+// LockName return a unique lock name for this task
+func (t Task) LockName() string {
+	return strings.Join([]string{tasksQueue, t.WorkerID, "lock"}, ":")
 }

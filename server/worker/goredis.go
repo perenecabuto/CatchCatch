@@ -2,15 +2,14 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
+	"github.com/google/uuid"
 )
 
 const (
@@ -72,48 +71,44 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 }
 
 func (m *GoredisWorkerManager) processTask(encoded string) {
-	id := gjson.Get(encoded, "id").String()
-	w, exists := m.workers[id]
+	task := &Task{}
+	json.Unmarshal([]byte(encoded), task)
+	w, exists := m.workers[task.WorkerID]
 	if !exists {
-		// TODO: requeue better
-		log.Println("Ignoring: worker no found", id, m.workers)
+		// FIXME: requeue better
+		log.Println("Ignoring task: worker not found", task.WorkerID, m.workers)
 		m.redis.LRem(processingQueue, -1, encoded).Err()
 		m.redis.LPush(tasksQueue, encoded)
 		time.Sleep(time.Second)
 		return
 	}
 
-	unique := gjson.Get(encoded, "unique").Bool()
-	if unique {
-		workerLockName := strings.Join([]string{tasksQueue, id, "lock"}, ":")
-		cmd := redis.NewStringCmd("SET", workerLockName, id, "PX", 30000, "NX")
+	if task.Unique {
+		lock := task.LockName()
+		cmd := redis.NewStringCmd("SET", lock, task.WorkerID, "PX", 30000, "NX")
 		m.redis.Process(cmd)
 		if cmd.Val() != "OK" {
-			log.Println("Unique task already running:", workerLockName)
+			log.Println("Unique task already running:", lock)
 			m.redis.LRem(processingQueue, -1, encoded).Err()
 			return
 		}
-		log.Println("Run unique task:", workerLockName)
-		defer m.redis.Del(workerLockName)
+		log.Println("Run unique task:", lock)
+		defer m.redis.Del(lock)
 	}
 
 	atomic.AddInt32(&m.runningTasks, 1)
-	params := make(map[string]string)
-	for k, v := range gjson.Get(encoded, "params").Map() {
-		params[k] = v.String()
-	}
 
-	err := w.Job(params)
+	err := w.Job(task.Params)
 	if err != nil {
 		log.Println("Done job redis err:", err)
 		return
 	}
 	err = m.redis.LRem(processingQueue, -1, encoded).Err()
 	if err != nil {
-		log.Printf("Job <%s> processTask - err: %s", id, err.Error())
+		log.Printf("Job <%s> processTask - err: %s", task.WorkerID, err.Error())
 	}
 	atomic.AddInt32(&m.runningTasks, -1)
-	log.Printf("Job <%s> done", id)
+	log.Printf("Job <%s> done", task.WorkerID)
 }
 
 // Stop processing worker events
@@ -173,23 +168,18 @@ func (m *GoredisWorkerManager) RunUnique(w Worker, params map[string]string) err
 }
 
 func (m *GoredisWorkerManager) run(w Worker, params map[string]string, unique bool) error {
-	workerLockName := strings.Join([]string{tasksQueue, w.ID(), "lock"}, ":")
-	cmd := m.redis.Exists(workerLockName)
+	task := &Task{ID: uuid.New().String(), WorkerID: w.ID(), Unique: unique, Params: params}
+	cmd := m.redis.Exists(task.LockName())
 	exists, err := cmd.Val() == 1, cmd.Err()
 	if err != nil {
 		return err
 	}
 	if exists {
-		log.Printf("Skiping worker<%s> is locked:", workerLockName)
+		log.Printf("Skiping worker<%s> is locked:", task.LockName())
 		return nil
 	}
 
-	encoded, _ := sjson.Set("", "id", w.ID())
-	encoded, _ = sjson.Set(encoded, "unique", unique)
-	encoded, err = sjson.Set(encoded, "params", params)
-	if err != nil {
-		return err
-	}
+	encoded, _ := json.Marshal(task)
 	return m.redis.LPush(tasksQueue, encoded).Err()
 }
 
@@ -206,18 +196,33 @@ func (m *GoredisWorkerManager) WorkersIDs() []string {
 	return ids
 }
 
-// BusyWorkers return a list of busy workers
+// BusyWorkers ...
 func (m *GoredisWorkerManager) BusyWorkers() ([]string, error) {
+	tasks, err := m.RunningTasks()
+	if err != nil {
+		return nil, err
+	}
+	ids := make(map[string]interface{})
+	for _, t := range tasks {
+		ids[t.WorkerID] = nil
+	}
+	return funk.Keys(ids).([]string), nil
+}
+
+// RunningTasks return all running tasks
+func (m *GoredisWorkerManager) RunningTasks() ([]Task, error) {
 	cmd := m.redis.LRange(processingQueue, 0, 100)
 	encTasks, err := cmd.Result()
 	if err != nil {
 		return nil, err
 	}
-	ids := make([]string, len(encTasks))
+	tasks := make([]Task, len(encTasks))
 	for i, encoded := range encTasks {
-		ids[i] = gjson.Get(encoded, "id").String()
+		task := &Task{}
+		json.Unmarshal([]byte(encoded), task)
+		tasks[i] = *task
 	}
-	return ids, nil
+	return tasks, nil
 }
 
 // Flush workers task queue
