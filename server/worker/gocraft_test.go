@@ -13,12 +13,15 @@ import (
 )
 
 func TestGocraftWorkerManager(t *testing.T) {
+	t.Skip("Avoiding Gocraft implementation")
+
 	if os.Getenv("IGNORE_GOCRAFT_WORKER_TEST") != "" {
 		t.Skip()
 		return
 	}
 
-	_, err := redis.Dial("tcp", "localhost:6379")
+	redisAddress := "localhost:6379"
+	_, err := redis.Dial("tcp", redisAddress)
 	if err != nil {
 		t.Skip("Redis connection error:", err)
 		return
@@ -29,7 +32,7 @@ func TestGocraftWorkerManager(t *testing.T) {
 		MaxIdle:   5,
 		Wait:      true,
 		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", "localhost:6379")
+			return redis.Dial("tcp", redisAddress)
 		},
 	}
 	redisPool2 := &redis.Pool{
@@ -37,7 +40,7 @@ func TestGocraftWorkerManager(t *testing.T) {
 		MaxIdle:   5,
 		Wait:      true,
 		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", "localhost:6379")
+			return redis.Dial("tcp", redisAddress)
 		},
 	}
 	redisPool3 := &redis.Pool{
@@ -45,7 +48,7 @@ func TestGocraftWorkerManager(t *testing.T) {
 		MaxIdle:   5,
 		Wait:      true,
 		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", "localhost:6379")
+			return redis.Dial("tcp", redisAddress)
 		},
 	}
 
