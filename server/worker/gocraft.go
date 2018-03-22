@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -120,6 +121,11 @@ func (wm *GocraftWorkerManager) BusyWorkers() ([]string, error) {
 		}
 	}
 	return names, nil
+}
+
+// RunningTasks return all running tasks
+func (wm *GocraftWorkerManager) RunningTasks() ([]Task, error) {
+	return nil, errors.New("Not implemented")
 }
 
 // writeLock attempts to grab a redis lock. The error returned is safe to ignore

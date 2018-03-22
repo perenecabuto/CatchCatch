@@ -119,7 +119,7 @@ func TestGoredisWorkerManagerRunTasks(t *testing.T) {
 	manager3.Run(worker2, nil)
 	manager3.Run(worker3, nil)
 
-	runningTasks, err := manager1.BusyWorkers()
+	runningTasks, err := manager1.RunningTasks()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(runningTasks))
 
@@ -130,7 +130,7 @@ func TestGoredisWorkerManagerRunTasks(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	runningTasks, err = manager1.BusyWorkers()
+	runningTasks, err = manager1.RunningTasks()
 	assert.NoError(t, err)
 	assert.Equal(t, 9, len(runningTasks))
 
@@ -138,7 +138,7 @@ func TestGoredisWorkerManagerRunTasks(t *testing.T) {
 	manager2.Stop()
 	manager3.Stop()
 
-	runningTasks, err = manager1.BusyWorkers()
+	runningTasks, err = manager1.RunningTasks()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(runningTasks))
 }

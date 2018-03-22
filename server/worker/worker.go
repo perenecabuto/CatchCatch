@@ -16,6 +16,7 @@ type Manager interface {
 	RunUnique(w Worker, params map[string]string) error
 
 	BusyWorkers() ([]string, error)
+	RunningTasks() ([]Task, error)
 	Flush() error
 }
 

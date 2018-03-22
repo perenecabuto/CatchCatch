@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/google/uuid"
+	funk "github.com/thoas/go-funk"
 )
 
 const (
@@ -32,7 +33,9 @@ type GoredisWorkerManager struct {
 
 // NewGoredisWorkerManager create a new GoredisWorkerManager
 func NewGoredisWorkerManager(client *redis.Client) Manager {
-	return &GoredisWorkerManager{redis: client, workers: make(map[string]Worker), stop: make(chan interface{}, 1)}
+	return &GoredisWorkerManager{redis: client,
+		workers: make(map[string]Worker),
+		stop:    make(chan interface{}, 1)}
 }
 
 // Started return if worker is started
