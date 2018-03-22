@@ -101,17 +101,17 @@ func (m *GoredisWorkerManager) processTask(encoded string) {
 
 	atomic.AddInt32(&m.runningTasks, 1)
 
-	err := w.Job(task.Params)
+	err := w.Run(task.Params)
 	if err != nil {
 		log.Println("Done job redis err:", err)
 		return
 	}
 	err = m.redis.LRem(processingQueue, -1, encoded).Err()
 	if err != nil {
-		log.Printf("Job <%s> processTask - err: %s", task.WorkerID, err.Error())
+		log.Printf("Run <%s> processTask - err: %s", task.WorkerID, err.Error())
 	}
 	atomic.AddInt32(&m.runningTasks, -1)
-	log.Printf("Job <%s> done", task.WorkerID)
+	log.Printf("Run <%s> done", task.WorkerID)
 }
 
 // Stop processing worker events
@@ -160,17 +160,17 @@ func (m *GoredisWorkerManager) Add(w Worker) {
 }
 
 // Run a task the worker
-func (m *GoredisWorkerManager) Run(w Worker, params map[string]string) error {
+func (m *GoredisWorkerManager) Run(w Worker, params map[string]interface{}) error {
 	return m.run(w, params, false)
 }
 
 // RunUnique send a task the worker
 // but it will be ignored if the worker is already running a task with the same parameters
-func (m *GoredisWorkerManager) RunUnique(w Worker, params map[string]string) error {
+func (m *GoredisWorkerManager) RunUnique(w Worker, params map[string]interface{}) error {
 	return m.run(w, params, true)
 }
 
-func (m *GoredisWorkerManager) run(w Worker, params map[string]string, unique bool) error {
+func (m *GoredisWorkerManager) run(w Worker, params map[string]interface{}, unique bool) error {
 	task := &Task{ID: uuid.New().String(), WorkerID: w.ID(), Unique: unique, Params: params}
 	cmd := m.redis.Exists(task.LockName())
 	exists, err := cmd.Val() == 1, cmd.Err()

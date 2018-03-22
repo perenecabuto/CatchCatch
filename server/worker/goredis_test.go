@@ -50,8 +50,8 @@ func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
 	manager := worker.NewGoredisWorkerManager(client)
 	manager.Flush()
 
-	runChan := make(chan map[string]string)
-	worker := &mockWorker{id: "worker1", job: func(params map[string]string) error {
+	runChan := make(chan map[string]interface{})
+	worker := &mockWorker{id: "worker1", run: func(params map[string]interface{}) error {
 		runChan <- params
 		return nil
 	}}
@@ -63,7 +63,7 @@ func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
 
 	manager.Add(worker)
 
-	expected := map[string]string{
+	expected := map[string]interface{}{
 		"param1": "value1", "param2": "value2",
 	}
 	err := manager.Run(worker, expected)
@@ -166,14 +166,14 @@ func TestGoredisWorkerManagerRunUniqueTasks(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	runningTasks, err := manager1.BusyWorkers()
+	runningTasks, err := manager1.RunningTasks()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(runningTasks))
 
 	manager1.Stop()
 	manager2.Stop()
 
-	runningTasks, err = manager1.BusyWorkers()
+	runningTasks, err = manager1.RunningTasks()
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(runningTasks))
 }

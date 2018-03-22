@@ -12,8 +12,8 @@ type Manager interface {
 	Started() bool
 	Add(w Worker)
 
-	Run(w Worker, params map[string]string) error
-	RunUnique(w Worker, params map[string]string) error
+	Run(w Worker, params map[string]interface{}) error
+	RunUnique(w Worker, params map[string]interface{}) error
 
 	BusyWorkers() ([]string, error)
 	RunningTasks() ([]Task, error)
@@ -23,7 +23,7 @@ type Manager interface {
 // Worker runs tasks
 type Worker interface {
 	ID() string
-	Job(params map[string]string) error
+	Run(params map[string]interface{}) error
 }
 
 // Task represents a worker job
@@ -31,7 +31,7 @@ type Task struct {
 	ID       string
 	WorkerID string
 	Unique   bool
-	Params   map[string]string
+	Params   map[string]interface{}
 }
 
 // LockName return a unique lock name for this task
