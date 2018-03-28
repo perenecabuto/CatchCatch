@@ -126,11 +126,11 @@ func (_m *GameService) ObserveGamePlayers(ctx context.Context, gameID string, ca
 }
 
 // ObserveGamesEvents provides a mock function with given fields: ctx, callback
-func (_m *GameService) ObserveGamesEvents(ctx context.Context, callback func(game.Game, game.Event) error) error {
+func (_m *GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error {
 	ret := _m.Called(ctx, callback)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, func(game.Game, game.Event) error) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, func(*game.Game, game.Event) error) error); ok {
 		r0 = rf(ctx, callback)
 	} else {
 		r0 = ret.Error(0)

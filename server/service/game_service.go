@@ -30,7 +30,7 @@ type GameService interface {
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
 	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
-	ObserveGamesEvents(ctx context.Context, callback func(game.Game, game.Event) error) error
+	ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error
 }
 
 type GameWithCoords struct {
@@ -59,7 +59,7 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game,
 	}
 
 	game, evt := game.NewGame(gameID)
-	gameEvt := &GameEvent{Game: *game, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
+	gameEvt := &GameEvent{Game: game, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
 	serialized, err := json.Marshal(gameEvt)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
 }
 
 func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.Event) error {
-	gameEvt := &GameEvent{Game: *g, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
+	gameEvt := &GameEvent{Game: g, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
 	serialized, err := json.Marshal(gameEvt)
 	if err != nil {
 		return err
@@ -170,7 +170,7 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 	})
 }
 
-func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(game.Game, game.Event) error) error {
+func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error {
 	return gs.messages.Subscribe(GameChangeTopic, func(data []byte) error {
 		gameEvt := GameEvent{}
 		err := json.Unmarshal(data, &gameEvt)
@@ -182,7 +182,7 @@ func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback fu
 }
 
 type GameEvent struct {
-	Game       game.Game
+	Game       *game.Game
 	Event      game.Event
 	LastUpdate time.Time
 	ServerID   string

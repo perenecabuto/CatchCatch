@@ -74,7 +74,7 @@ func TestGameServiceMustGetNewGame(t *testing.T) {
 	players := make([]game.Player, 0)
 	expectedGame := game.NewGameWithParams(gameID, false, players, "")
 
-	gameEvt := GameEvent{Game: *expectedGame, Event: game.GameEventNothing}
+	gameEvt := GameEvent{Game: expectedGame, Event: game.GameEventNothing}
 	serialized, _ := json.Marshal(gameEvt)
 	repo.On("FeatureExtraData", "game", gameID).Return(string(serialized), nil)
 
@@ -97,7 +97,7 @@ func TestGameServiceMustGetGameWithPlayers(t *testing.T) {
 	}
 	expectedGame := game.NewGameWithParams(gameID, true, players, "player-3")
 
-	gameEvt := GameEvent{Game: *expectedGame, Event: game.GameEventNothing}
+	gameEvt := GameEvent{Game: expectedGame, Event: game.GameEventNothing}
 	serialized, _ := json.Marshal(gameEvt)
 	repo.On("FeatureExtraData", "game", gameID).Return(string(serialized), nil)
 
@@ -117,7 +117,7 @@ func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
 	g, e := game.NewGame(gameID)
 
 	dispatcher.On("Subscribe", GameChangeTopic, mock.MatchedBy(func(fn func(data []byte) error) bool {
-		gameEvt := GameEvent{Game: *g, Event: e, LastUpdate: time.Now(), ServerID: serverID}
+		gameEvt := GameEvent{Game: g, Event: e, LastUpdate: time.Now(), ServerID: serverID}
 		data, _ := json.Marshal(gameEvt)
 		err := fn(data)
 		return assert.NoError(t, err)
@@ -126,8 +126,8 @@ func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := service.ObserveGamesEvents(ctx, func(actualG game.Game, actualE game.Event) error {
-		assert.Equal(t, *g, actualG)
+	err := service.ObserveGamesEvents(ctx, func(actualG *game.Game, actualE game.Event) error {
+		assert.Equal(t, g, actualG)
 		assert.Equal(t, e, actualE)
 		return nil
 	})
