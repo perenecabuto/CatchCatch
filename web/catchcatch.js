@@ -72,12 +72,10 @@ function init() {
     });
 
     let controller = new AdminController(socket, source, view);
-    controller.bindDrawGroupButton("geofences", map, "Polygon");
-    controller.bindDrawGroupButton("checkpoint", map, "Point");
     document.getElementById("reset").addEventListener("click", controller.reset);
 
-    controller.bindPosition();
-
+    controller.bindDrawGroupButton("geofences", map, "Polygon");
+    controller.bindDrawGroupButton("checkpoint", map, "Point");
     controller.bindDrawFeatureButton("add-player", map, "Point", groupStyles.player.clone(),
     function (feat) {
         console.log("add feat", feat);
@@ -94,18 +92,14 @@ function init() {
         });
     });
 
-    let evtHandler = new EventHandler(controller);
+    let evtHandler = new AdminEventHandler(controller);
     socket.on('connect', evtHandler.onConnect);
-    socket.on('player:registered', evtHandler.onPlayerRegistered)
-    socket.on('player:updated', evtHandler.onPlayerUpdated)
     socket.on('disconnect', evtHandler.onDisconnected)
-
     socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
     socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
     socket.on("remote-player:destroy", evtHandler.onRemotePlayerDestroy);
-
     socket.on("admin:feature:added", evtHandler.onFeatureAdded);
-    socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint)
+    socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint);
 }
 
 
@@ -214,31 +208,15 @@ let Player = function (x, y, admin) {
 }
 
 let AdminController = function (socket, sourceLayer, view) {
-    let connectedPlayer = { id: "", x: 0, y: 0 };
-
-    this.setPlayer = function (p) {
-        connectedPlayer = p;
-    }
-
     let playerHTML = document.getElementById("player-template").innerText;
 
-    let lastPos = { coords: { latitude: 0, longitude: 0 } };
-
-    this.updatePosition = function (pos) {
-        if (pos.coords.latitude == 0 && pos.coords.longitude == 0) {
-            pos = lastPos;
-        }
-        let coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-        view.setCenter([coords.lon, coords.lat]);
-        let msg = messages.Player.encode({eventName: "player:update", id: "", lat: coords.lat, lon: coords.lon}).finish();
-        socket.emit(msg);
-        lastPos = pos;
+    this.centerByLocation = function () {
+        let updatePosition = function(pos) {
+            view.setCenter([pos.coords.longitude, pos.coords.latitude]);
+        };
+        navigator.geolocation.getCurrentPosition(updatePosition);
+        navigator.geolocation.watchPosition(updatePosition);
     };
-
-    this.bindPosition = function () {
-        navigator.geolocation.getCurrentPosition(this.updatePosition);
-        navigator.geolocation.watchPosition(this.updatePosition);
-    }
 
     this.reset = function () {
         console.log("admin:clear");
@@ -278,16 +256,9 @@ let AdminController = function (socket, sourceLayer, view) {
             playerEl.addEventListener("click", this.focusOnPlayer(player));
 
             let connectionsEl = document.getElementById("connections");
-            if (player.id === connectedPlayer.id) {
-                playerEl.getElementsByClassName("btn")[0].className += " btn-primary"
-                playerEl.getElementsByClassName("disconnect-btn")[0].style.display = "none";
-
-                connectionsEl.insertBefore(playerEl, connectionsEl.children[0]);
-            } else {
-                playerEl.getElementsByClassName("disconnect-btn")[0]
+            playerEl.getElementsByClassName("disconnect-btn")[0]
                 .addEventListener("click", () => this.disconnectPlayer(player.id));
-                connectionsEl.appendChild(playerEl);
-            }
+            connectionsEl.appendChild(playerEl);
         }
 
         let lon = Number((player.lon).toFixed(5));
@@ -394,26 +365,16 @@ let AdminController = function (socket, sourceLayer, view) {
     };
 };
 
-let EventHandler = function (controller) {
-
-    this.onConnect = function () {
+let AdminEventHandler = function (controller) {
+    this.onConnect = function (msg) {
+        console.log(msg)
         log("connected");
+        controller.centerByLocation();
+        controller.requestFeatures();
     };
     this.onDisconnected = function () {
         log("disconnected");
         controller.resetInterface();
-    };
-    this.onPlayerRegistered = function (msg) {
-        let p = messages.Player.decode(msg);
-        controller.setPlayer(p);
-        log("connected as " + p.id);
-        controller.updatePosition({ coords: { latitude: p.lat, longitude: p.lon } })
-        controller.requestFeatures();
-    };
-    this.onPlayerUpdated = function (msg) {
-        let p = messages.Player.decode(msg);
-        controller.setPlayer(p);
-        controller.updatePlayer(p);
     };
     this.onRemotePlayerUpdated = function (msg) {
         let p = messages.Player.decode(msg);
