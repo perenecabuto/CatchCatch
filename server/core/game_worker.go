@@ -16,6 +16,8 @@ import (
 var (
 	// ErrGameStoped happens when game can't change anymore
 	ErrGameStoped = errors.New("game stoped")
+
+	MinPlayersPerGame = 3
 )
 
 // GameWorker observe manage and run games
