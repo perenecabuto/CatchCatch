@@ -68,44 +68,46 @@ func main() {
 	dispatcher := messages.NewNatsDispatcher(natsConn)
 	gameService := service.NewGameService(repo, stream, dispatcher)
 	featService := service.NewGeoFeatureService(repo)
-	wsHandler := selectWsDriver(*wsdriver)
-	server := websocket.NewWSServer(wsHandler)
-
-	aWatcher := core.NewAdminWatcher(playerService, server)
-	gWatcher := core.NewGameWatcher(*serverID, gameService, server)
-	// TODO: remove this way to put services in BG use worker instead
-	startInBG(ctx,
-		gWatcher.WatchGameEvents,
-		aWatcher.WatchGeofences,
-		aWatcher.WatchPlayers,
-	)
+	wsdriver := selectWsDriver(*wsdriver)
 
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
 	workersCli.FlushAll()
 	workers := worker.NewGoredisWorkerManager(workersCli)
 
+	playersConnections := websocket.NewWSServer(wsdriver)
 	gameWorker := core.NewGameWorker(*serverID, gameService)
-	checkpointWatcher := core.NewCheckpointWatcher(server, dispatcher, playerService)
+	checkpointWatcher := core.NewCheckpointWatcher(playersConnections, dispatcher, playerService)
 
 	workers.Add(gameWorker)
 	workers.Add(checkpointWatcher)
 
 	workers.Start(ctx)
+	// TODO: verify server id on these workers
 	workers.RunUnique(gameWorker, worker.TaskParams{"serverID": serverID})
 	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
+
+	adminConnections := websocket.NewWSServer(wsdriver)
+	adminH := core.NewEventHandler(adminConnections, playerService, featService)
+	adminConnections.SetEventHandler(adminH)
+	go adminH.WatchGeofences(ctx)
+	go adminH.WatchPlayers(ctx)
+
+	playerH := core.NewPlayerHandler(playersConnections, playerService, gameService)
+	playersConnections.SetEventHandler(playerH)
+	go playerH.WatchGameEvents(ctx)
+
+	http.Handle("/admin", execfunc.RecoverWrapper(adminConnections.Listen(ctx)))
+	http.Handle("/player", execfunc.RecoverWrapper(playersConnections.Listen(ctx)))
+	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	execfunc.OnExit(func() {
 		cancel()
 		workers.Stop()
 		tile38Cli.Close()
 		workersCli.Close()
-		server.CloseAll()
+		adminConnections.CloseAll()
+		playersConnections.CloseAll()
 	})
-
-	eventH := core.NewEventHandler(server, playerService, featService)
-	server.SetEventHandler(eventH)
-	http.Handle("/ws", execfunc.RecoverWrapper(server.Listen(ctx)))
-	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Println("Serving at localhost:", strconv.Itoa(*port), "...")
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
