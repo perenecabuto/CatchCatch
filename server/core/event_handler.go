@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"log"
 
 	"github.com/golang/protobuf/proto"
@@ -33,49 +32,12 @@ func NewEventHandler(server *websocket.WSServer, players service.PlayerLocationS
 
 // OnConnection handles game and admin connection events
 func (h *EventHandler) OnConnection(c *websocket.WSConnListener) {
-	player, err := h.newPlayer(c)
-	if err != nil {
-		log.Println("error to create player", err)
-		c.Close()
-		return
-	}
-
-	log.Println("new player connected", player)
-
-	c.On("player:request-games", h.onPlayerRequestGames(player, c))
-	c.On("player:update", h.onPlayerUpdate(player, c))
-	c.OnDisconnected(func() {
-		h.onPlayerDisconnect(player)
-	})
-
+	log.Println("new admin connected", c.ID)
 	c.On("admin:disconnect", h.onDisconnectByID(c))
 	c.On("admin:feature:add", h.onAddFeature())
 	c.On("admin:feature:request-remotes", h.onPlayerRequestRemotes(c))
 	c.On("admin:feature:request-list", h.onRequestFeatures(c))
 	c.On("admin:clear", h.onClear())
-}
-
-// Player events
-
-func (h *EventHandler) onPlayerDisconnect(player *model.Player) {
-	log.Println("player:disconnect", player.ID)
-	h.players.Remove(player)
-}
-
-func (h *EventHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConnListener) func([]byte) {
-	return func(buf []byte) {
-		msg := &protobuf.Player{}
-		proto.Unmarshal(buf, msg)
-		lat, lon := float64(float32(msg.GetLat())), float64(float32(msg.GetLon()))
-		if lat == 0 || lon == 0 {
-			return
-		}
-		player.Lat, player.Lon = lat, lon
-		h.players.Set(player)
-
-		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
-			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
-	}
 }
 
 func (h *EventHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func([]byte) {
@@ -96,27 +58,6 @@ func (h *EventHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func
 		}
 	}
 }
-
-func (h *EventHandler) onPlayerRequestGames(player *model.Player, c *websocket.WSConnListener) func([]byte) {
-	return func([]byte) {
-		go func() {
-			games, err := h.geo.FeaturesAroundPoint("geofences", player.Point())
-			if err != nil {
-				log.Println("Error to request games:", err)
-				return
-			}
-			event := proto.String("game:around")
-			for _, f := range games {
-				err := c.Emit(&protobuf.Feature{EventName: event, Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
-				if err != nil {
-					log.Println("Error to emit", *event, player)
-				}
-			}
-		}()
-	}
-}
-
-// Admin events
 
 func (h *EventHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte) {
 	return func(buf []byte) {
@@ -173,15 +114,4 @@ func (h *EventHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 			c.Emit(&protobuf.Feature{EventName: &event, Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
 		}
 	}
-}
-
-// Actions
-
-func (h *EventHandler) newPlayer(c *websocket.WSConnListener) (player *model.Player, err error) {
-	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
-	if err := h.players.Set(player); err != nil {
-		return nil, errors.New("could not register: " + err.Error())
-	}
-	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
-	return player, nil
 }
