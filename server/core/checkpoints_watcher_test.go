@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -17,8 +16,6 @@ import (
 )
 
 func TestWatchCheckPointsMustNotifyPlayersNearToCheckPoinstsTheDistToIt(t *testing.T) {
-	gomega.RegisterTestingT(t)
-
 	wss := websocket.NewWSServer(&mocks.WSDriver{})
 	playerService := new(mocks.PlayerLocationService)
 	watcher := NewCheckpointWatcher(wss, nil, playerService)
