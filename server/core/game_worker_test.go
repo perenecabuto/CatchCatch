@@ -16,7 +16,6 @@ import (
 func TestNewGameWorker(t *testing.T) {
 	t.Parallel()
 
-	serverID := "test-gameworker-server-1"
 	gameID := "test-gameworker-game-1"
 	playerIDs := []string{
 		"test-gameworker-player-1",
@@ -27,15 +26,13 @@ func TestNewGameWorker(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	gameService, wait := newMockedGameService(ctx, serverID, gameID, playerIDs)
+	gameService, wait := newMockedGameService(ctx, gameID, playerIDs)
 	defer close(wait)
-	w := NewGameWorker(serverID, gameService)
+	w := NewGameWorker(gameService)
 
 	err := w.Run(ctx, nil)
 	assert.NoError(t, err)
 	<-wait
-
-	gameService.AssertCalled(t, "IsGameRunning", gameID)
 
 	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
 		return assert.Equal(t, gameID, g.ID)
@@ -44,14 +41,13 @@ func TestNewGameWorker(t *testing.T) {
 		expected := game.GameStarted
 		return assert.Equal(t, expected, evt.Name)
 	})
-	gameService.AssertCalled(t, "Update", matchGameID, serverID, matchedEvent)
+	gameService.AssertCalled(t, "Update", matchGameID, matchedEvent)
 }
 
 func TestCloseWhenFinish(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	serverID := "test-gameworker-server-1"
 	gameID := "test-gameworker-game-1"
 	playerIDs := []string{
 		"test-gameworker-player-1",
@@ -59,8 +55,8 @@ func TestCloseWhenFinish(t *testing.T) {
 		"test-gameworker-player-3",
 	}
 
-	gameService, _ := newMockedGameService(ctx, serverID, gameID, playerIDs)
-	w := NewGameWorker(serverID, gameService)
+	gameService, _ := newMockedGameService(ctx, gameID, playerIDs)
+	w := NewGameWorker(gameService)
 	w.Run(ctx, nil)
 	<-time.NewTimer(time.Second).C
 	cancel()
@@ -69,11 +65,11 @@ func TestCloseWhenFinish(t *testing.T) {
 	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
 		return assert.Equal(t, gameID, g.ID)
 	})
-	gameService.AssertCalled(t, "Update", matchGameID, serverID, mock.AnythingOfType("game.Event"))
+	gameService.AssertCalled(t, "Update", matchGameID, mock.AnythingOfType("game.Event"))
 	gameService.AssertCalled(t, "Remove", gameID)
 }
 
-func newMockedGameService(ctx context.Context, serverID, gameID string, playerIDs []string) (*mocks.GameService, chan interface{}) {
+func newMockedGameService(ctx context.Context, gameID string, playerIDs []string) (*mocks.GameService, chan interface{}) {
 	gameService := new(mocks.GameService)
 	gameService.On("Remove", gameID).Return(nil)
 
@@ -85,8 +81,7 @@ func newMockedGameService(ctx context.Context, serverID, gameID string, playerID
 	).Return(nil)
 
 	g, _ := game.NewGame(gameID)
-	gameService.On("IsGameRunning", gameID).Return(false, nil)
-	gameService.On("Create", gameID, serverID).Return(g, nil)
+	gameService.On("Create", gameID).Return(g, nil)
 	gameService.On("Remove", gameID).Return(nil)
 	gameService.On("Update", gameID, mock.Anything, mock.Anything).Return(nil)
 

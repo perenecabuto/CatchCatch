@@ -25,10 +25,9 @@ const (
 //TODO: move messages to worker
 
 type GameService interface {
-	Create(gameID, serverID string) (*game.Game, error)
-	Update(g *game.Game, serverID string, evt game.Event) error
+	Create(gameID string) (*game.Game, error)
+	Update(g *game.Game, evt game.Event) error
 	Remove(gameID string) error
-	IsGameRunning(gameID string) (bool, error)
 	GameByID(gameID string) (*game.Game, *game.Event, error)
 	GamesAround(p model.Player) ([]GameWithCoords, error)
 
@@ -52,7 +51,8 @@ func NewGameService(r repository.Repository, s repository.EventStream, m message
 	return &Tile38GameService{r, s, m}
 }
 
-func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game, error) {
+func (gs *Tile38GameService) Create(gameID string) (*game.Game, error) {
+	// TODO: tirar isso daqui, receber coordinates como parametro
 	f, err := gs.repo.FeatureByID("geofences", gameID)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game,
 	}
 
 	game, evt := game.NewGame(gameID)
-	gameEvt := &GameEvent{Game: game, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
+	gameEvt := &GameEvent{Game: game, Event: evt, LastUpdate: time.Now()}
 	serialized, err := json.Marshal(gameEvt)
 	if err != nil {
 		return nil, err
@@ -79,22 +79,8 @@ func (gs *Tile38GameService) Create(gameID string, serverID string) (*game.Game,
 	return game, nil
 }
 
-// TODO: remove this and only check if game exists
-func (gs *Tile38GameService) IsGameRunning(gameID string) (bool, error) {
-	gameEvt, err := gs.findGameEvent(gameID)
-	if err == ErrFeatureNotFound {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	lastUpdate := gameEvt.LastUpdate
-	expiration := lastUpdate.Add(20 * time.Second)
-	return time.Now().Before(expiration), nil
-}
-
-func (gs *Tile38GameService) Update(g *game.Game, serverID string, evt game.Event) error {
-	gameEvt := &GameEvent{Game: g, Event: evt, LastUpdate: time.Now(), ServerID: serverID}
+func (gs *Tile38GameService) Update(g *game.Game, evt game.Event) error {
+	gameEvt := &GameEvent{Game: g, Event: evt, LastUpdate: time.Now()}
 	serialized, err := json.Marshal(gameEvt)
 	if err != nil {
 		return err
@@ -191,5 +177,4 @@ type GameEvent struct {
 	Game       *game.Game
 	Event      game.Event
 	LastUpdate time.Time
-	ServerID   string
 }

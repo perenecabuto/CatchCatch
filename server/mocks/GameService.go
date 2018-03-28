@@ -12,13 +12,13 @@ type GameService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: gameID, serverID
-func (_m *GameService) Create(gameID string, serverID string) (*game.Game, error) {
-	ret := _m.Called(gameID, serverID)
+// Create provides a mock function with given fields: gameID
+func (_m *GameService) Create(gameID string) (*game.Game, error) {
+	ret := _m.Called(gameID)
 
 	var r0 *game.Game
-	if rf, ok := ret.Get(0).(func(string, string) *game.Game); ok {
-		r0 = rf(gameID, serverID)
+	if rf, ok := ret.Get(0).(func(string) *game.Game); ok {
+		r0 = rf(gameID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*game.Game)
@@ -26,8 +26,8 @@ func (_m *GameService) Create(gameID string, serverID string) (*game.Game, error
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(gameID, serverID)
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(gameID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -83,27 +83,6 @@ func (_m *GameService) GamesAround(p model.Player) ([]service.GameWithCoords, er
 	var r1 error
 	if rf, ok := ret.Get(1).(func(model.Player) error); ok {
 		r1 = rf(p)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// IsGameRunning provides a mock function with given fields: gameID
-func (_m *GameService) IsGameRunning(gameID string) (bool, error) {
-	ret := _m.Called(gameID)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(string) bool); ok {
-		r0 = rf(gameID)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(gameID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -167,13 +146,13 @@ func (_m *GameService) Remove(gameID string) error {
 	return r0
 }
 
-// Update provides a mock function with given fields: g, serverID, evt
-func (_m *GameService) Update(g *game.Game, serverID string, evt game.Event) error {
-	ret := _m.Called(g, serverID, evt)
+// Update provides a mock function with given fields: g, evt
+func (_m *GameService) Update(g *game.Game, evt game.Event) error {
+	ret := _m.Called(g, evt)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*game.Game, string, game.Event) error); ok {
-		r0 = rf(g, serverID, evt)
+	if rf, ok := ret.Get(0).(func(*game.Game, game.Event) error); ok {
+		r0 = rf(g, evt)
 	} else {
 		r0 = ret.Error(0)
 	}

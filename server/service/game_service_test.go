@@ -17,9 +17,8 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/mocks/repo_mocks"
 )
 
-var (
-	gameID   = "test-game-service-game1"
-	serverID = "test-game-service-server1"
+const (
+	gameID = "test-game-service-game1"
 )
 
 func TestGameServiceCreate(t *testing.T) {
@@ -37,7 +36,7 @@ func TestGameServiceCreate(t *testing.T) {
 
 	dispatcher.On("Publish", GameChangeTopic, mock.Anything).Return(nil)
 
-	service.Create(gameID, serverID)
+	service.Create(gameID)
 
 	dispatcher.AssertCalled(t, "Publish", GameChangeTopic, matchGameChangePayload(t))
 	repo.AssertCalled(t, "SetFeatureExtraData", "game", gameID, matchGameChangePayload(t))
@@ -59,7 +58,7 @@ func TestGameServiceUpdate(t *testing.T) {
 	dispatcher.On("Publish", GameChangeTopic, mock.Anything).Return(nil)
 
 	g, evt := game.NewGame(gameID)
-	service.Update(g, serverID, evt)
+	service.Update(g, evt)
 
 	dispatcher.AssertCalled(t, "Publish", GameChangeTopic, matchGameChangePayload(t))
 	repo.AssertCalled(t, "SetFeatureExtraData", "game", gameID, matchGameChangePayload(t))
@@ -117,7 +116,7 @@ func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
 	g, e := game.NewGame(gameID)
 
 	dispatcher.On("Subscribe", GameChangeTopic, mock.MatchedBy(func(fn func(data []byte) error) bool {
-		gameEvt := GameEvent{Game: g, Event: e, LastUpdate: time.Now(), ServerID: serverID}
+		gameEvt := GameEvent{Game: g, Event: e, LastUpdate: time.Now()}
 		data, _ := json.Marshal(gameEvt)
 		err := fn(data)
 		return assert.NoError(t, err)
@@ -176,7 +175,6 @@ func matchGameChangePayload(t *testing.T) interface{} {
 		json.Unmarshal([]byte(payload), &gameEvt)
 
 		return assert.Equal(t, gameEvt.Event, game.GameEventCreated) &&
-			assert.Equal(t, serverID, gameEvt.ServerID) &&
 			assertDateEqual(t, now, gameEvt.LastUpdate)
 	})
 }

@@ -22,13 +22,12 @@ var (
 
 // GameWorker observe manage and run games
 type GameWorker struct {
-	serverID string
-	service  service.GameService
+	service service.GameService
 }
 
 // NewGameWorker creates GameWorker
-func NewGameWorker(serverID string, service service.GameService) worker.Worker {
-	return &GameWorker{serverID, service}
+func NewGameWorker(service service.GameService) worker.Worker {
+	return &GameWorker{service}
 }
 
 func (gw GameWorker) ID() string {
@@ -42,11 +41,6 @@ func (gw GameWorker) ID() string {
 // TODO: start watcher if the server is the watcher and isn't running
 func (gw GameWorker) Run(ctx context.Context, _ worker.TaskParams) error {
 	return gw.service.ObservePlayersCrossGeofences(ctx, func(gameID string, _ model.Player) error {
-		if running, err := gw.service.IsGameRunning(gameID); err != nil {
-			return err
-		} else if running {
-			return nil
-		}
 		go func() {
 			err := gw.watchGamePlayers(ctx, gameID)
 			if err != nil {
@@ -59,7 +53,7 @@ func (gw GameWorker) Run(ctx context.Context, _ worker.TaskParams) error {
 
 func (gw GameWorker) watchGamePlayers(ctx context.Context, gameID string) error {
 	log.Printf("GameWatcher:create:%s", gameID)
-	g, err := gw.service.Create(gameID, gw.serverID)
+	g, err := gw.service.Create(gameID)
 	if err != nil {
 		return err
 	}
@@ -111,21 +105,21 @@ func (gw GameWorker) watchGamePlayers(ctx context.Context, gameID string) error 
 				game.GameLastPlayerDetected,
 				game.GameRunningWithoutPlayers:
 
-				gw.service.Update(g, gw.serverID, evt)
+				gw.service.Update(g, evt)
 				stop()
 			case game.GamePlayerNearToTarget:
-				gw.service.Update(g, gw.serverID, evt)
+				gw.service.Update(g, evt)
 			case game.GamePlayerAdded, game.GamePlayerRemoved:
 				// TODO: monitor game start
 				ready := !g.Started() && len(g.Players()) >= MinPlayersPerGame
 				if ready {
 					gameTimer = time.NewTimer(5 * time.Minute)
 					evt = g.Start()
-					gw.service.Update(g, gw.serverID, evt)
+					gw.service.Update(g, evt)
 				}
 			}
 		case <-gameHealthCheckTicker.C:
-			err := gw.service.Update(g, gw.serverID, game.GameEventNothing)
+			err := gw.service.Update(g, game.GameEventNothing)
 			if err != nil {
 				log.Println("GameWorker:watchGame:healthcheck:error:", err)
 			}
@@ -137,7 +131,7 @@ func (gw GameWorker) watchGamePlayers(ctx context.Context, gameID string) error 
 			evt := g.Stop()
 			// TODO store serverID in another store,
 			// maybe a env kv store like etcd
-			gw.service.Update(g, gw.serverID, evt)
+			gw.service.Update(g, evt)
 			gw.service.Remove(g.ID)
 			return nil
 		}

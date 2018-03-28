@@ -73,7 +73,7 @@ func main() {
 	workers := worker.NewGoredisWorkerManager(workersCli)
 
 	playersConnections := websocket.NewWSServer(wsdriver)
-	gameWorker := core.NewGameWorker(*serverID, gameService)
+	gameWorker := core.NewGameWorker(gameService)
 	checkpointWatcher := core.NewCheckpointWatcher(playersConnections, dispatcher, playerService)
 
 	workers.Add(gameWorker)
