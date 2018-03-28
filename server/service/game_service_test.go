@@ -134,6 +134,26 @@ func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGameServiceGamesAroundPlayer(t *testing.T) {
+	repo := &repo_mocks.Repository{}
+	service := NewGameService(repo, nil, nil)
+
+	expected := []GameWithCoords{
+		GameWithCoords{Game: game.Game{ID: "game-test-1"}, Coords: "fake-coords-1"},
+		GameWithCoords{Game: game.Game{ID: "game-test-2"}, Coords: "fake-coords-2"},
+	}
+
+	repo.On("FeaturesAround", mock.Anything, mock.Anything).Return([]*model.Feature{
+		&model.Feature{ID: expected[0].ID, Coordinates: expected[0].Coords},
+		&model.Feature{ID: expected[1].ID, Coordinates: expected[1].Coords},
+	}, nil)
+
+	player := model.Player{ID: "player-test-1", Lat: 0, Lon: 0}
+	gamesAround, err := service.GamesAround(player)
+	require.NoError(t, err)
+	assert.EqualValues(t, expected, gamesAround)
+}
+
 func assertDateEqual(t *testing.T, date1, date2 time.Time) bool {
 	return assert.Condition(t, func() bool {
 		return assert.Equal(t, date1.Day(), date2.Day()) &&

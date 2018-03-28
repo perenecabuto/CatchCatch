@@ -26,10 +26,16 @@ type GameService interface {
 	Remove(gameID string) error
 	IsGameRunning(gameID string) (bool, error)
 	GameByID(gameID string) (*game.Game, *game.Event, error)
+	GamesAround(p model.Player) ([]GameWithCoords, error)
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
 	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
 	ObserveGamesEvents(ctx context.Context, callback func(game.Game, game.Event) error) error
+}
+
+type GameWithCoords struct {
+	game.Game
+	Coords string
 }
 
 type Tile38GameService struct {
@@ -126,6 +132,24 @@ func (gs *Tile38GameService) Remove(gameID string) error {
 		return err
 	}
 	return gs.repo.RemoveFeature("game", gameID)
+}
+
+// GamesAround returns a list of games with its geo coordinates
+func (gs *Tile38GameService) GamesAround(p model.Player) ([]GameWithCoords, error) {
+	feats, err := gs.repo.FeaturesAround("geofences", p.Point())
+	if err != nil {
+		return nil, err
+	}
+
+	games := make([]GameWithCoords, len(feats))
+	for i, f := range feats {
+		games[i] = GameWithCoords{
+			Game:   game.Game{ID: f.ID},
+			Coords: f.Coordinates,
+		}
+	}
+
+	return games, nil
 }
 
 func (gs *Tile38GameService) ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error {
