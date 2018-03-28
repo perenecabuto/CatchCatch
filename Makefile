@@ -19,10 +19,12 @@ DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
 
-test: 
-test:
+test: clean-redis
 	$(SERVER_SRC) IGNORE_GOCRAFT_WORKER_TEST=1 \
 	go test -count=1 -cover -race -v ./...
+
+clean-redis:
+	@-echo FLUSHALL | nc -w1 localhost 6379
 
 test-forever:
 	$(SERVER_SRC) CompileDaemon -color -command "go test -v ./..."
@@ -36,7 +38,6 @@ gen-mocks:
 	-go get github.com/vektra/mockery/...
 	$(SERVER_SRC) mockery -all -dir service
 	$(SERVER_SRC) mockery -all -dir websocket
-	
 
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
