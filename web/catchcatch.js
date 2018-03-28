@@ -44,7 +44,7 @@ var messages = {
 }
 
 function init() {
-    let socket = new WSS(location.href.replace("http", "ws") + "ws", false);
+    let socket = new WSS(location.href.replace("http", "ws") + "admin", false);
     let source = new ol.source.Vector({ wrapX: false });
     let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
     let vector = new ol.layer.Vector({ source: source });
@@ -148,7 +148,7 @@ let Player = function (x, y, admin) {
     function connect(registeredFn, disconnectedFn) {
         registeredCallback = registeredFn;
         disconnectedCallback = disconnectedFn;
-        socket = new WSS(location.href.replace("http", "ws") + "ws");
+        socket = new WSS(location.href.replace("http", "ws") + "player");
         socket.on('player:registered', onPlayerRegistered)
         socket.on('player:updated', onPlayerUpdated)
 
