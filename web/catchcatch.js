@@ -171,7 +171,7 @@ let Player = function (x, y, admin) {
         })
         socket.on('checkpoint:detected', function (msg) {
             let detection = messages.Detection.decode(msg);
-            admin.showCircleOnMap(player.id, [detection.lon, detection.lat], detection.nearByMeters);    
+            admin.showCircleOnMap(player.id, [detection.lon, detection.lat], detection.nearByMeters);
         })
         socket.on('disconnect', onDisconnected)
     }
@@ -229,7 +229,7 @@ let AdminController = function (socket, sourceLayer, view) {
     };
 
     this.requestFeatures = function () {
-        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-remotes", group: "player"}).finish());        
+        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-remotes", group: "player"}).finish());
         socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "checkpoint"}).finish());
         socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "geofences"}).finish());
     };
