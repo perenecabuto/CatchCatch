@@ -57,8 +57,8 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	stream := repository.NewEventStream(*tile38Addr)
-	client := mustConnectTile38(*debugMode)
-	repo := repository.NewRepository(client)
+	tile38Cli := mustConnectRedis(*tile38Addr, *debugMode)
+	repo := repository.NewRepository(tile38Cli)
 	playerService := service.NewPlayerLocationService(repo, stream)
 
 	natsConn := mustConnectNats(nats.DefaultURL)
@@ -102,20 +102,17 @@ func selectWsDriver(name string) websocket.WSDriver {
 	}
 }
 
-func mustConnectTile38(debug bool) *redis.Client {
-	client := redis.NewClient(&redis.Options{Addr: *tile38Addr, PoolSize: 1000, DialTimeout: 1 * time.Second})
+func mustConnectRedis(addr string, debug bool) *redis.Client {
+	client := redis.NewClient(&redis.Options{Addr: addr, PoolSize: 1000, DialTimeout: 1 * time.Second})
 	if debug {
-		client.WrapProcess(tile38DebugWrapper)
+		client.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
+			return func(cmd redis.Cmder) error {
+				log.Printf("REDIS(%s) DEBUG: %s", addr, cmd.String())
+				return oldProcess(cmd)
+			}
+		})
 	}
-
 	return client
-}
-
-func tile38DebugWrapper(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
-	return func(cmd redis.Cmder) error {
-		log.Println("TILE38 DEBUG:", cmd.String())
-		return oldProcess(cmd)
-	}
 }
 
 func mustConnectNats(url string) *nats.Conn {
