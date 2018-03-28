@@ -98,6 +98,7 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnListener) (player *model.Pl
 	return player, nil
 }
 
+// WatchGameEvents notify player about game events
 func (h *PlayerHandler) WatchGameEvents(ctx context.Context) error {
 	return h.games.ObserveGamesEvents(ctx, func(g *game.Game, evt game.Event) error {
 		p := evt.Player
