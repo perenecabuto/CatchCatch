@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/perenecabuto/CatchCatch/server/worker"
+
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/service"
@@ -23,8 +25,12 @@ type GameWorker struct {
 }
 
 // NewGameWorker creates GameWorker
-func NewGameWorker(serverID string, service service.GameService) *GameWorker {
+func NewGameWorker(serverID string, service service.GameService) worker.Worker {
 	return &GameWorker{serverID, service}
+}
+
+func (gw GameWorker) ID() string {
+	return "GameWorker"
 }
 
 // WatchGames starts this Worker to listen to player events over games
@@ -32,7 +38,7 @@ func NewGameWorker(serverID string, service service.GameService) *GameWorker {
 // TODO: monitor game player watches
 // TODO: before starting idle game watcher verify if the server watcher is the same of this server
 // TODO: start watcher if the server is the watcher and isn't running
-func (gw GameWorker) WatchGames(ctx context.Context) error {
+func (gw GameWorker) Run(ctx context.Context, _ worker.TaskParams) error {
 	return gw.service.ObservePlayersCrossGeofences(ctx, func(gameID string, _ model.Player) error {
 		if running, err := gw.service.IsGameRunning(gameID); err != nil {
 			return err

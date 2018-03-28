@@ -31,7 +31,7 @@ func TestNewGameWorker(t *testing.T) {
 	defer close(wait)
 	w := NewGameWorker(serverID, gameService)
 
-	err := w.WatchGames(ctx)
+	err := w.Run(ctx, nil)
 	assert.NoError(t, err)
 	<-wait
 
@@ -61,7 +61,7 @@ func TestCloseWhenFinish(t *testing.T) {
 
 	gameService, _ := newMockedGameService(ctx, serverID, gameID, playerIDs)
 	w := NewGameWorker(serverID, gameService)
-	w.WatchGames(ctx)
+	w.Run(ctx, nil)
 	<-time.NewTimer(time.Second).C
 	cancel()
 	<-time.NewTimer(time.Second).C
