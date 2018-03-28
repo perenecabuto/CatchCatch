@@ -86,12 +86,12 @@ func main() {
 
 	adminConnections := websocket.NewWSServer(wsdriver)
 	adminH := core.NewAdminHandler(adminConnections, playerService, featService)
-	adminConnections.SetAdminHandler(adminH)
+	adminConnections.SetEventHandler(adminH)
 	go adminH.WatchGeofences(ctx)
 	go adminH.WatchPlayers(ctx)
 
 	playerH := core.NewPlayerHandler(playersConnections, playerService, gameService)
-	playersConnections.SetAdminHandler(playerH)
+	playersConnections.SetEventHandler(playerH)
 	go playerH.WatchGameEvents(ctx)
 
 	http.Handle("/admin", execfunc.RecoverWrapper(adminConnections.Listen(ctx)))
