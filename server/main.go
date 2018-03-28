@@ -70,13 +70,29 @@ func main() {
 	featService := service.NewGeoFeatureService(repo)
 	wsHandler := selectWsDriver(*wsdriver)
 	server := websocket.NewWSServer(wsHandler)
-	aWatcher := core.NewAdminWatcher(playerService, server)
 
+	aWatcher := core.NewAdminWatcher(playerService, server)
 	gWatcher := core.NewGameWatcher(*serverID, gameService, server)
-	gameWorker := core.NewGameWorker(*serverID, gameService)
+	// TODO: remove this way to put services in BG use worker instead
+	startInBG(ctx,
+		gWatcher.WatchGameEvents,
+		aWatcher.WatchGeofences,
+		aWatcher.WatchPlayers,
+	)
+
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
+	workersCli.FlushAll()
 	workers := worker.NewGoredisWorkerManager(workersCli)
+
+	gameWorker := core.NewGameWorker(*serverID, gameService)
+	checkpointWatcher := core.NewCheckpointWatcher(server, dispatcher, playerService)
+
 	workers.Add(gameWorker)
+	workers.Add(checkpointWatcher)
+
+	workers.Start(ctx)
+	workers.RunUnique(gameWorker, worker.TaskParams{"serverID": serverID})
+	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
 
 	execfunc.OnExit(func() {
 		cancel()
@@ -85,16 +101,6 @@ func main() {
 		workersCli.Close()
 		server.CloseAll()
 	})
-
-	workers.Start(ctx)
-
-	// TODO: remove this way to put services in BG use worker instead
-	startInBG(ctx,
-		gWatcher.WatchGameEvents,
-		aWatcher.WatchCheckpoints,
-		aWatcher.WatchGeofences,
-		aWatcher.WatchPlayers,
-	)
 
 	eventH := core.NewEventHandler(server, playerService, featService)
 	server.SetEventHandler(eventH)
