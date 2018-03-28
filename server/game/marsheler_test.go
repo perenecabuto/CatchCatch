@@ -40,8 +40,8 @@ func TestGameMarshaler(t *testing.T) {
 }
 
 func TestGameUnmarshaler(t *testing.T) {
-	deserialized := Game{}
-	err := json.Unmarshal([]byte(exampleGameJSONString), &deserialized)
+	deserialized := &Game{}
+	err := json.Unmarshal([]byte(exampleGameJSONString), deserialized)
 	assert.NoError(t, err)
-	assert.Equal(t, *exampleGame, deserialized)
+	assert.Equal(t, exampleGame, deserialized)
 }

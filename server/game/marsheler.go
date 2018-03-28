@@ -8,7 +8,7 @@ import (
 )
 
 // MarshalJSON implemente json.Marsheler
-func (g Game) MarshalJSON() ([]byte, error) {
+func (g *Game) MarshalJSON() ([]byte, error) {
 	data, _ := sjson.SetBytes([]byte{}, "id", g.ID)
 	data, _ = sjson.SetBytes(data, "started", g.started)
 	data, _ = sjson.SetBytes(data, "targetID", g.targetID)

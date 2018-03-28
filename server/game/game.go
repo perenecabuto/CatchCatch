@@ -98,11 +98,11 @@ func NewGameWithParams(gameID string, started bool, players []Player, targetID s
 }
 
 // TargetID returns the targe player id
-func (g Game) TargetID() string {
+func (g *Game) TargetID() string {
 	return g.targetID
 }
 
-func (g Game) String() string {
+func (g *Game) String() string {
 	return fmt.Sprintf("%s(%d)started=%v", g.ID, len(g.players), g.started)
 }
 
@@ -199,13 +199,13 @@ func (rank Rank) ByPlayersDistanceToTarget(players []Player) Rank {
 }
 
 // Rank returns the rank of the players in this game
-func (g Game) Rank() Rank {
+func (g *Game) Rank() Rank {
 	players := g.Players()
 	return NewGameRank(g.ID).ByPlayersDistanceToTarget(players)
 }
 
 // Started true when game started
-func (g Game) Started() bool {
+func (g *Game) Started() bool {
 	return g.started
 }
 
