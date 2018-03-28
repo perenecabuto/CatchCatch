@@ -8,6 +8,9 @@ import (
 
 const ErrFeatureNotFound = repository.ErrFeatureNotFound
 
+// TODO: tornar menos generico
+// TODO: ouvir, buscar e criar geofences
+
 type GeoFeatureService interface {
 	FeaturesAroundPoint(group string, point *geo.Point) ([]*model.Feature, error)
 	FeaturesByGroup(group string) ([]*model.Feature, error)

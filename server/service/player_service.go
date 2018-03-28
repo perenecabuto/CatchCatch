@@ -9,6 +9,9 @@ import (
 	gjson "github.com/tidwall/gjson"
 )
 
+// TODO: mudar este service para user location service ou map service
+// TODO: crud de admin (ou user com roles)
+
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
 	Set(p *model.Player) error

@@ -20,6 +20,10 @@ const (
 	GameChangeTopic = "game:update"
 )
 
+//TODO: set game status on db
+//TODO: move geofences to location service
+//TODO: move messages to worker
+
 type GameService interface {
 	Create(gameID, serverID string) (*game.Game, error)
 	Update(g *game.Game, serverID string, evt game.Event) error
@@ -134,6 +138,7 @@ func (gs *Tile38GameService) Remove(gameID string) error {
 	return gs.repo.RemoveFeature("game", gameID)
 }
 
+// TODO: buscar só games, tirar geofances daqui
 // GamesAround returns a list of games with its geo coordinates
 func (gs *Tile38GameService) GamesAround(p model.Player) ([]GameWithCoords, error) {
 	feats, err := gs.repo.FeaturesAround("geofences", p.Point())
@@ -170,6 +175,7 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 	})
 }
 
+// TODO: tirar isso daqui, por no worker ou em algum comunicador
 func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error {
 	return gs.messages.Subscribe(GameChangeTopic, func(data []byte) error {
 		gameEvt := GameEvent{}

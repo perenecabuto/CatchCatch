@@ -12,8 +12,6 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
-//TODO: set game status on db
-
 // AdminHandler handle websocket events
 type AdminHandler struct {
 	server  *websocket.WSServer
@@ -27,11 +25,11 @@ func NewAdminHandler(server *websocket.WSServer, players service.PlayerLocationS
 	return handler
 }
 
-// Event handlers
-
 // OnConnection handles game and admin connection events
 func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
 	log.Println("new admin connected", c.ID)
+
+	// TODO: chamar service pra criar admin
 	c.On("admin:disconnect", h.onDisconnectByID(c))
 	c.On("admin:feature:add", h.onAddFeature())
 	c.On("admin:feature:request-remotes", h.onPlayerRequestRemotes(c))
@@ -91,6 +89,7 @@ func (h *AdminHandler) onAddFeature() func([]byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
+		// TODO: limitar isso
 		err := h.geo.SetFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
 		if err != nil {
 			log.Println("Error to create feature:", err)
@@ -104,6 +103,9 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
+		// TODO: tornar isso só um método e mapear somente features específicas
+		// checkpoint e geofences
+		// TODO: mapear games tb
 		features, err := h.geo.FeaturesByGroup(msg.GetGroup())
 		if err != nil {
 			log.Println("Error on sendFeatures:", err)
@@ -117,6 +119,7 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 
 // WatchPlayers observe players around players and notify it's position
 func (h *AdminHandler) WatchPlayers(ctx context.Context) error {
+	// TODO: ouvir players a volta do admin
 	return h.players.ObservePlayersAround(ctx, func(playerID string, remotePlayer model.Player, exit bool) error {
 		evtName := proto.String("remote-player:updated")
 		if exit {
@@ -134,6 +137,10 @@ func (h *AdminHandler) WatchPlayers(ctx context.Context) error {
 
 // WatchGeofences watch for geofences events and notify players around
 func (h *AdminHandler) WatchGeofences(ctx context.Context) error {
+	// TODO: chamar isso de um service (Geo provavelmente)
+	// TODO: o propósito deste método na verdade é notificar em tempo real sobre set,remove de features
+	// de mapa (geofences & checkpoint)
+	// TODO: modificar para notificar sobre geofences e checkpoints
 	return h.players.ObservePlayerNearToFeature(ctx, "geofences", func(playerID string, distTo float64, f model.Feature) error {
 		err := h.server.Emit(playerID,
 			&protobuf.Feature{
