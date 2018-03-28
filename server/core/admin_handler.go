@@ -14,23 +14,23 @@ import (
 
 //TODO: set game status on db
 
-// EventHandler handle websocket events
-type EventHandler struct {
+// AdminHandler handle websocket events
+type AdminHandler struct {
 	server  *websocket.WSServer
 	players service.PlayerLocationService
 	geo     service.GeoFeatureService
 }
 
-// NewEventHandler EventHandler builder
-func NewEventHandler(server *websocket.WSServer, players service.PlayerLocationService, geo service.GeoFeatureService) *EventHandler {
-	handler := &EventHandler{server, players, geo}
+// NewAdminHandler AdminHandler builder
+func NewAdminHandler(server *websocket.WSServer, players service.PlayerLocationService, geo service.GeoFeatureService) *AdminHandler {
+	handler := &AdminHandler{server, players, geo}
 	return handler
 }
 
 // Event handlers
 
 // OnConnection handles game and admin connection events
-func (h *EventHandler) OnConnection(c *websocket.WSConnListener) {
+func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
 	log.Println("new admin connected", c.ID)
 	c.On("admin:disconnect", h.onDisconnectByID(c))
 	c.On("admin:feature:add", h.onAddFeature())
@@ -39,7 +39,7 @@ func (h *EventHandler) OnConnection(c *websocket.WSConnListener) {
 	c.On("admin:clear", h.onClear())
 }
 
-func (h *EventHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func([]byte) {
 	return func([]byte) {
 		players, err := h.players.All()
 		if err != nil {
@@ -58,7 +58,7 @@ func (h *EventHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func
 	}
 }
 
-func (h *EventHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
@@ -75,7 +75,7 @@ func (h *EventHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte
 	}
 }
 
-func (h *EventHandler) onClear() func([]byte) {
+func (h *AdminHandler) onClear() func([]byte) {
 	return func([]byte) {
 		// TODO: send this message by broaker
 		// h.games.Clear()
@@ -86,7 +86,7 @@ func (h *EventHandler) onClear() func([]byte) {
 
 // Map events
 
-func (h *EventHandler) onAddFeature() func([]byte) {
+func (h *AdminHandler) onAddFeature() func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
@@ -99,7 +99,7 @@ func (h *EventHandler) onAddFeature() func([]byte) {
 	}
 }
 
-func (h *EventHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
@@ -116,7 +116,7 @@ func (h *EventHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 }
 
 // WatchPlayers observe players around players and notify it's position
-func (h *EventHandler) WatchPlayers(ctx context.Context) error {
+func (h *AdminHandler) WatchPlayers(ctx context.Context) error {
 	return h.players.ObservePlayersAround(ctx, func(playerID string, remotePlayer model.Player, exit bool) error {
 		evtName := proto.String("remote-player:updated")
 		if exit {
@@ -133,14 +133,14 @@ func (h *EventHandler) WatchPlayers(ctx context.Context) error {
 }
 
 // WatchGeofences watch for geofences events and notify players around
-func (h *EventHandler) WatchGeofences(ctx context.Context) error {
+func (h *AdminHandler) WatchGeofences(ctx context.Context) error {
 	return h.players.ObservePlayerNearToFeature(ctx, "geofences", func(playerID string, distTo float64, f model.Feature) error {
 		err := h.server.Emit(playerID,
 			&protobuf.Feature{
 				EventName: proto.String("admin:feature:added"), Id: &f.ID,
 				Group: proto.String("geofences"), Coords: &f.Coordinates})
 		if err != nil {
-			log.Println("EventHandler:WatchGeofences:", err.Error())
+			log.Println("AdminHandler:WatchGeofences:", err.Error())
 		}
 		return nil
 	})

@@ -85,13 +85,13 @@ func main() {
 	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
 
 	adminConnections := websocket.NewWSServer(wsdriver)
-	adminH := core.NewEventHandler(adminConnections, playerService, featService)
-	adminConnections.SetEventHandler(adminH)
+	adminH := core.NewAdminHandler(adminConnections, playerService, featService)
+	adminConnections.SetAdminHandler(adminH)
 	go adminH.WatchGeofences(ctx)
 	go adminH.WatchPlayers(ctx)
 
 	playerH := core.NewPlayerHandler(playersConnections, playerService, gameService)
-	playersConnections.SetEventHandler(playerH)
+	playersConnections.SetAdminHandler(playerH)
 	go playerH.WatchGameEvents(ctx)
 
 	http.Handle("/admin", execfunc.RecoverWrapper(adminConnections.Listen(ctx)))
