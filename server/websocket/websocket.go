@@ -29,7 +29,7 @@ type WSConnection interface {
 
 // WSDriver is an interface for WS communication
 type WSDriver interface {
-	Handler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler
+	HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler
 }
 
 // WSConnListener represents a WS connection
@@ -123,7 +123,7 @@ func (c *WSConnListener) readMessage() error {
 
 // WSServer manage WS connections
 type WSServer struct {
-	handler      WSDriver
+	driver       WSDriver
 	OnConnection func(c *WSConnListener)
 
 	connections connectionGroup
@@ -133,8 +133,8 @@ type WSServer struct {
 type connectionGroup map[string]*WSConnListener
 
 // NewWSServer create a new WSServer
-func NewWSServer(handler WSDriver) *WSServer {
-	wss := &WSServer{handler: handler, OnConnection: func(c *WSConnListener) {}}
+func NewWSServer(driver WSDriver) *WSServer {
+	wss := &WSServer{driver: driver, OnConnection: func(c *WSConnListener) {}}
 	wss.connections = make(connectionGroup)
 	return wss
 }
@@ -153,7 +153,7 @@ func (wss *WSServer) SetEventHandler(h WSEventHandler) {
 
 // Listen to WS connections
 func (wss *WSServer) Listen(ctx context.Context) http.Handler {
-	return wss.handler.Handler(ctx, func(ctx context.Context, c WSConnection) {
+	return wss.driver.HTTPHandler(ctx, func(ctx context.Context, c WSConnection) {
 		conn := wss.Add(c)
 		err := execfunc.WithRecover(func() error {
 			wss.OnConnection(conn)

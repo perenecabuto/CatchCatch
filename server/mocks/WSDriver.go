@@ -11,8 +11,8 @@ type WSDriver struct {
 	mock.Mock
 }
 
-// Handler provides a mock function with given fields: ctx, onConnect
-func (_m *WSDriver) Handler(ctx context.Context, onConnect func(context.Context, websocket.WSConnection)) http.Handler {
+// HTTPHandler provides a mock function with given fields: ctx, onConnect
+func (_m *WSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, websocket.WSConnection)) http.Handler {
 	ret := _m.Called(ctx, onConnect)
 
 	var r0 http.Handler
