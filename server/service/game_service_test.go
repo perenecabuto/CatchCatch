@@ -139,8 +139,8 @@ func TestGameServiceGamesAroundPlayer(t *testing.T) {
 	service := NewGameService(repo, nil, nil)
 
 	expected := []GameWithCoords{
-		GameWithCoords{Game: game.Game{ID: "game-test-1"}, Coords: "fake-coords-1"},
-		GameWithCoords{Game: game.Game{ID: "game-test-2"}, Coords: "fake-coords-2"},
+		GameWithCoords{Game: &game.Game{ID: "game-test-1"}, Coords: "fake-coords-1"},
+		GameWithCoords{Game: &game.Game{ID: "game-test-2"}, Coords: "fake-coords-2"},
 	}
 
 	repo.On("FeaturesAround", mock.Anything, mock.Anything).Return([]*model.Feature{
