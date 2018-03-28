@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"strings"
+
+	"github.com/tidwall/sjson"
 )
 
 // Manager for workers and its tasks
@@ -39,5 +41,6 @@ type Task struct {
 
 // LockName return a unique lock name for this task
 func (t Task) LockName() string {
-	return strings.Join([]string{tasksQueue, t.WorkerID, "lock"}, ":")
+	params, _ := sjson.Set("", "params", t.Params)
+	return strings.Join([]string{tasksQueue, t.WorkerID, params, "lock"}, ":")
 }
