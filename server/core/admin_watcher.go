@@ -53,20 +53,3 @@ func (w *AdminWatcher) WatchGeofences(ctx context.Context) error {
 		return nil
 	})
 }
-
-// WatchCheckpoints ...
-func (w *AdminWatcher) WatchCheckpoints(ctx context.Context) error {
-	return w.service.ObservePlayerNearToFeature(ctx, "checkpoint", func(playerID string, distTo float64, f model.Feature) error {
-		payload := &protobuf.Detection{
-			EventName:    proto.String("checkpoint:detected"),
-			Id:           &f.ID,
-			FeatId:       &f.ID,
-			NearByFeatId: &playerID,
-			NearByMeters: &distTo,
-		}
-		if err := w.wss.Emit(playerID, payload); err != nil {
-			log.Println("AdminWatcher:WatchCheckpoints:", err.Error())
-		}
-		return nil
-	})
-}

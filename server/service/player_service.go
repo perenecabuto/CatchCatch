@@ -17,6 +17,8 @@ type PlayerLocationService interface {
 
 	ObservePlayersAround(context.Context, PlayersAroundCallback) error
 	ObservePlayerNearToFeature(context.Context, string, PlayerNearToFeatureCallback) error
+
+	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
 }
 
 type PlayerNearToFeatureCallback func(playerID string, distTo float64, f model.Feature) error
@@ -80,6 +82,17 @@ func (s *Tile38PlayerLocationService) ObservePlayerNearToFeature(ctx context.Con
 		if d.Intersects == repository.Inside {
 			playerID := d.NearByFeatID
 			f := model.Feature{ID: d.FeatID, Group: group, Coordinates: d.Coordinates}
+			return callback(playerID, d.NearByMeters, f)
+		}
+		return nil
+	})
+}
+
+func (s *Tile38PlayerLocationService) ObservePlayerNearToCheckpoint(ctx context.Context, callback PlayerNearToFeatureCallback) error {
+	return s.stream.StreamNearByEvents(ctx, "player", "checkpoint", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
+		if d.Intersects == repository.Inside {
+			playerID := d.FeatID
+			f := model.Feature{ID: d.FeatID, Group: "checkpoint", Coordinates: d.Coordinates}
 			return callback(playerID, d.NearByMeters, f)
 		}
 		return nil
