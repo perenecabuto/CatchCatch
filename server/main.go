@@ -22,6 +22,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/service/messages"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
+	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
 var (
@@ -33,6 +34,8 @@ var (
 	zconfEnabled   = flag.Bool("zconf", false, "start zeroconf server")
 	debugMode      = flag.Bool("debug", false, "debug")
 	wsdriver       = flag.String("wsdriver", "xnet", "options: xnet, gobwas")
+
+	workerRedisAddr = flag.String("workers-redis-addr", "localhost:6379", "distributed workers' redis address")
 
 	influxdbAddr = flag.String("influxdb-addr", "http://localhost:8086", "influxdb address")
 	influxdbDB   = flag.String("influxdb-db", "catchcatch", "influxdb database name")
@@ -68,16 +71,25 @@ func main() {
 	wsHandler := selectWsDriver(*wsdriver)
 	server := websocket.NewWSServer(wsHandler)
 	aWatcher := core.NewAdminWatcher(playerService, server)
+
 	gWatcher := core.NewGameWatcher(*serverID, gameService, server)
-	worker := core.NewGameWorker(*serverID, gameService)
+	gameWorker := core.NewGameWorker(*serverID, gameService)
+	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
+	workers := worker.NewGoredisWorkerManager(workersCli)
+	workers.Add(gameWorker)
+
 	execfunc.OnExit(func() {
 		cancel()
-		client.Close()
+		workers.Stop()
+		tile38Cli.Close()
+		workersCli.Close()
 		server.CloseAll()
 	})
 
+	workers.Start(ctx)
+
+	// TODO: remove this way to put services in BG use worker instead
 	startInBG(ctx,
-		worker.WatchGames,
 		gWatcher.WatchGameEvents,
 		aWatcher.WatchCheckpoints,
 		aWatcher.WatchGeofences,
