@@ -34,7 +34,7 @@ type GameService interface {
 }
 
 type GameWithCoords struct {
-	game.Game
+	*game.Game
 	Coords string
 }
 
@@ -144,7 +144,7 @@ func (gs *Tile38GameService) GamesAround(p model.Player) ([]GameWithCoords, erro
 	games := make([]GameWithCoords, len(feats))
 	for i, f := range feats {
 		games[i] = GameWithCoords{
-			Game:   game.Game{ID: f.ID},
+			Game:   &game.Game{ID: f.ID},
 			Coords: f.Coordinates,
 		}
 	}
