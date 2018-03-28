@@ -5,8 +5,6 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"reflect"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -141,16 +139,4 @@ func mustConnectNats(url string) *nats.Conn {
 		log.Panic("Nat connection:", err)
 	}
 	return conn
-}
-
-func startInBG(ctx context.Context, funcs ...func(context.Context) error) {
-	for _, fn := range funcs {
-		go func(ctx context.Context, fn func(context.Context) error) {
-			err := fn(ctx)
-			if err != nil {
-				fnname := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
-				log.Fatalf("Background Task<%s> error: %s", fnname, err)
-			}
-		}(ctx, fn)
-	}
 }
