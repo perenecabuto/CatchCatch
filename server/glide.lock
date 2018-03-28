@@ -1,5 +1,5 @@
 hash: 503a43d11a9e9d5a68186fed6e84d0cef2a88176202fba7734160af24368b49b
-updated: 2018-03-22T08:33:41.573645703-03:00
+updated: 2018-03-28T03:26:48.93818664-03:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
@@ -64,7 +64,7 @@ imports:
 - name: github.com/miekg/dns
   version: 5364553f1ee9cddc7ac8b62dce148309c386695b
 - name: github.com/nats-io/go-nats
-  version: d66cb54e6b7bdd93f0b28afc8450d84c780dfb68
+  version: 062418ea1c2181f52dc0f954f6204370519a868b
   subpackages:
   - encoders/builtin
   - util
