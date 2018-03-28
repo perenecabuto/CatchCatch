@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"log"
 
 	"github.com/golang/protobuf/proto"
@@ -11,8 +12,6 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
-//TODO: separate player events and admin events
-//TODO: separate player and admin routes
 //TODO: set game status on db
 
 // EventHandler handle websocket events
@@ -114,4 +113,35 @@ func (h *EventHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 			c.Emit(&protobuf.Feature{EventName: &event, Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
 		}
 	}
+}
+
+// WatchPlayers observe players around players and notify it's position
+func (h *EventHandler) WatchPlayers(ctx context.Context) error {
+	return h.players.ObservePlayersAround(ctx, func(playerID string, remotePlayer model.Player, exit bool) error {
+		evtName := proto.String("remote-player:updated")
+		if exit {
+			h.server.Close(remotePlayer.ID)
+			evtName = proto.String("remote-player:destroy")
+		}
+		err := h.server.Broadcast(&protobuf.Player{EventName: evtName,
+			Id: &remotePlayer.ID, Lon: &remotePlayer.Lon, Lat: &remotePlayer.Lat})
+		if err != websocket.ErrWSConnectionNotFound && err != nil {
+			log.Println("remote-player:updated error", err.Error())
+		}
+		return nil
+	})
+}
+
+// WatchGeofences watch for geofences events and notify players around
+func (h *EventHandler) WatchGeofences(ctx context.Context) error {
+	return h.players.ObservePlayerNearToFeature(ctx, "geofences", func(playerID string, distTo float64, f model.Feature) error {
+		err := h.server.Emit(playerID,
+			&protobuf.Feature{
+				EventName: proto.String("admin:feature:added"), Id: &f.ID,
+				Group: proto.String("geofences"), Coords: &f.Coordinates})
+		if err != nil {
+			log.Println("EventHandler:WatchGeofences:", err.Error())
+		}
+		return nil
+	})
 }
