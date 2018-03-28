@@ -161,7 +161,7 @@ func listenTo(addr string, q query) (net.Conn, error) {
 		return nil, err
 	}
 
-	log.Println("REDIS DEBUG:", q)
+	log.Println("EventStream: REDIS DEBUG:", q)
 	if _, err = fmt.Fprintf(conn, q.cmd()); err != nil {
 		return nil, err
 	}
