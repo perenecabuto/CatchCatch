@@ -117,10 +117,9 @@ func (gs *Tile38GameService) Remove(gameID string) error {
 	return gs.repo.RemoveFeature("game", gameID)
 }
 
-// TODO: buscar só games, tirar geofances daqui
 // GamesAround returns a list of games with its geo coordinates
 func (gs *Tile38GameService) GamesAround(p model.Player) ([]GameWithCoords, error) {
-	feats, err := gs.repo.FeaturesAround("geofences", p.Point())
+	feats, err := gs.repo.FeaturesAround("game", p.Point())
 	if err != nil {
 		return nil, err
 	}
