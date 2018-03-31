@@ -180,7 +180,7 @@ func (m *GoredisWorkerManager) run(w Worker, params TaskParams, unique bool) err
 		return err
 	}
 	if exists {
-		log.Printf("Skiping worker<%s> is locked:", task.LockName())
+		// log.Printf("Skiping worker<%s> is locked:", task.LockName())
 		return nil
 	}
 
