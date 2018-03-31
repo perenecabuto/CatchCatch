@@ -18,6 +18,8 @@ type PlayerLocationService interface {
 	Remove(p *model.Player) error
 	All() (model.PlayerList, error)
 
+	GeofenceByID(id string) (*model.Feature, error)
+
 	ObservePlayersAround(context.Context, PlayersAroundCallback) error
 	ObservePlayerNearToFeature(context.Context, string, PlayerNearToFeatureCallback) error
 
@@ -71,6 +73,10 @@ func (s *Tile38PlayerLocationService) All() (model.PlayerList, error) {
 		list[i] = &model.Player{ID: f.ID, Lat: coords[1].Float(), Lon: coords[0].Float()}
 	}
 	return list, nil
+}
+
+func (s *Tile38PlayerLocationService) GeofenceByID(id string) (*model.Feature, error) {
+	return s.repo.FeatureByID("geofences", id)
 }
 
 func (s *Tile38PlayerLocationService) ObservePlayersAround(ctx context.Context, callback PlayersAroundCallback) error {

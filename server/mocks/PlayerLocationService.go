@@ -34,6 +34,29 @@ func (_m *PlayerLocationService) All() (model.PlayerList, error) {
 	return r0, r1
 }
 
+// GeofenceByID provides a mock function with given fields: id
+func (_m *PlayerLocationService) GeofenceByID(id string) (*model.Feature, error) {
+	ret := _m.Called(id)
+
+	var r0 *model.Feature
+	if rf, ok := ret.Get(0).(func(string) *model.Feature); ok {
+		r0 = rf(id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Feature)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ObservePlayerNearToCheckpoint provides a mock function with given fields: _a0, _a1
 func (_m *PlayerLocationService) ObservePlayerNearToCheckpoint(_a0 context.Context, _a1 service.PlayerNearToFeatureCallback) error {
 	ret := _m.Called(_a0, _a1)
