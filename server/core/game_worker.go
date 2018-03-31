@@ -62,8 +62,6 @@ func (gw GameWorker) watchGamePlayers(ctx context.Context, gameID string) error 
 	defer stop()
 	gameTimer := time.NewTimer(time.Hour)
 	defer gameTimer.Stop()
-	gameHealthCheckTicker := time.NewTicker(30 * time.Second)
-	defer gameHealthCheckTicker.Stop()
 	evtChan := make(chan game.Event, 1)
 	defer close(evtChan)
 
@@ -117,11 +115,6 @@ func (gw GameWorker) watchGamePlayers(ctx context.Context, gameID string) error 
 					evt = g.Start()
 					gw.service.Update(g, evt)
 				}
-			}
-		case <-gameHealthCheckTicker.C:
-			err := gw.service.Update(g, game.GameEventNothing)
-			if err != nil {
-				log.Println("GameWorker:watchGame:healthcheck:error:", err)
 			}
 		case <-gameTimer.C:
 			log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
