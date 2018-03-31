@@ -34,24 +34,15 @@ func (gw GameWorker) ID() string {
 	return "GameWorker"
 }
 
-// WatchGames starts this Worker to listen to player events over games
+// Run starts this Worker to listen to player events over games
 // TODO: monitor game watches
 // TODO: monitor game player watches
-// TODO: before starting idle game watcher verify if the server watcher is the same of this server
-// TODO: start watcher if the server is the watcher and isn't running
-func (gw GameWorker) Run(ctx context.Context, _ worker.TaskParams) error {
-	return gw.service.ObservePlayersCrossGeofences(ctx, func(gameID string, _ model.Player) error {
-		go func() {
-			err := gw.watchGamePlayers(ctx, gameID)
-			if err != nil {
-				log.Println("Worker:WatchGames:error:", err)
-			}
-		}()
-		return nil
-	})
-}
+func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
+	gameID, ok := params["gameID"].(string)
+	if !ok {
+		return errors.New("gameID can't be empty")
+	}
 
-func (gw GameWorker) watchGamePlayers(ctx context.Context, gameID string) error {
 	log.Printf("GameWatcher:create:%s", gameID)
 	g, err := gw.service.Create(gameID)
 	if err != nil {

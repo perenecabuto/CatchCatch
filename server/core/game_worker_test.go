@@ -87,14 +87,6 @@ func newMockedGameService(ctx context.Context, gameID string, playerIDs []string
 
 	wait := make(chan interface{})
 
-	gameService.On("ObservePlayersCrossGeofences",
-		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
-			go fn(gameID, model.Player{})
-			go func() { wait <- new(interface{}) }()
-			return true
-		}),
-	).Return(nil)
-
 	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
 		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
 			go func() {
