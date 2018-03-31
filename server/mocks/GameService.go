@@ -12,13 +12,13 @@ type GameService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: gameID
-func (_m *GameService) Create(gameID string) (*game.Game, error) {
-	ret := _m.Called(gameID)
+// Create provides a mock function with given fields: gameID, coordinates
+func (_m *GameService) Create(gameID string, coordinates string) (*game.Game, error) {
+	ret := _m.Called(gameID, coordinates)
 
 	var r0 *game.Game
-	if rf, ok := ret.Get(0).(func(string) *game.Game); ok {
-		r0 = rf(gameID)
+	if rf, ok := ret.Get(0).(func(string, string) *game.Game); ok {
+		r0 = rf(gameID, coordinates)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*game.Game)
@@ -26,8 +26,8 @@ func (_m *GameService) Create(gameID string) (*game.Game, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(gameID)
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(gameID, coordinates)
 	} else {
 		r1 = ret.Error(1)
 	}

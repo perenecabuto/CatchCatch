@@ -21,11 +21,10 @@ const (
 )
 
 //TODO: set game status on db
-//TODO: move geofences to location service
 //TODO: move messages to worker
 
 type GameService interface {
-	Create(gameID string) (*game.Game, error)
+	Create(gameID, coordinates string) (*game.Game, error)
 	Update(g *game.Game, evt game.Event) error
 	Remove(gameID string) error
 	GameByID(gameID string) (*game.Game, *game.Event, error)
@@ -50,13 +49,8 @@ func NewGameService(r repository.Repository, s repository.EventStream, m message
 	return &Tile38GameService{r, s, m}
 }
 
-func (gs *Tile38GameService) Create(gameID string) (*game.Game, error) {
-	// TODO: tirar isso daqui, receber coordinates como parametro
-	f, err := gs.repo.FeatureByID("geofences", gameID)
-	if err != nil {
-		return nil, err
-	}
-	_, err = gs.repo.SetFeature("game", gameID, f.Coordinates)
+func (gs *Tile38GameService) Create(gameID, coordinates string) (*game.Game, error) {
+	_, err := gs.repo.SetFeature("game", gameID, coordinates)
 	if err != nil {
 		return nil, err
 	}

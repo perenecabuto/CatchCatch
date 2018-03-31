@@ -5,8 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/perenecabuto/CatchCatch/server/worker"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/mocks"
@@ -30,10 +33,12 @@ func TestNewGameWorker(t *testing.T) {
 	defer close(wait)
 	w := NewGameWorker(gameService)
 
-	err := w.Run(ctx, nil)
-	assert.NoError(t, err)
-	<-wait
+	go func() {
+		err := w.Run(ctx, worker.TaskParams{"gameID": gameID, "coordinates": ""})
+		require.NoError(t, err)
+	}()
 
+	<-wait
 	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
 		return assert.Equal(t, gameID, g.ID)
 	})
@@ -56,8 +61,13 @@ func TestCloseWhenFinish(t *testing.T) {
 	}
 
 	gameService, _ := newMockedGameService(ctx, gameID, playerIDs)
-	w := NewGameWorker(gameService)
-	w.Run(ctx, nil)
+
+	go func() {
+		w := NewGameWorker(gameService)
+		err := w.Run(ctx, worker.TaskParams{"gameID": gameID, "coordinates": ""})
+		require.NoError(t, err)
+	}()
+
 	<-time.NewTimer(time.Second).C
 	cancel()
 	<-time.NewTimer(time.Second).C
@@ -81,9 +91,9 @@ func newMockedGameService(ctx context.Context, gameID string, playerIDs []string
 	).Return(nil)
 
 	g, _ := game.NewGame(gameID)
-	gameService.On("Create", gameID).Return(g, nil)
+	gameService.On("Create", gameID, mock.Anything).Return(g, nil)
 	gameService.On("Remove", gameID).Return(nil)
-	gameService.On("Update", gameID, mock.Anything, mock.Anything).Return(nil)
+	gameService.On("Update", gameID, mock.Anything).Return(nil)
 
 	wait := make(chan interface{})
 
@@ -103,7 +113,7 @@ func newMockedGameService(ctx context.Context, gameID string, playerIDs []string
 		}),
 	).Return(nil)
 
-	gameService.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	gameService.On("Update", mock.Anything, mock.Anything).Return(nil)
 
 	return gameService, wait
 }

@@ -42,9 +42,14 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	if !ok {
 		return errors.New("gameID can't be empty")
 	}
+	coordinates, ok := params["coordinates"].(string)
+	if !ok {
+		return errors.New("game coordinates can't be empty")
+	}
+	// gw.service.Remove(gameID)
 
 	log.Printf("GameWatcher:create:%s", gameID)
-	g, err := gw.service.Create(gameID)
+	g, err := gw.service.Create(gameID, coordinates)
 	if err != nil {
 		return err
 	}

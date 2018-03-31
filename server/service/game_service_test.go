@@ -36,7 +36,7 @@ func TestGameServiceCreate(t *testing.T) {
 
 	dispatcher.On("Publish", GameChangeTopic, mock.Anything).Return(nil)
 
-	service.Create(gameID)
+	service.Create(gameID, "")
 
 	dispatcher.AssertCalled(t, "Publish", GameChangeTopic, matchGameChangePayload(t))
 	repo.AssertCalled(t, "SetFeatureExtraData", "game", gameID, matchGameChangePayload(t))
