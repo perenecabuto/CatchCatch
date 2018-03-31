@@ -32,7 +32,6 @@ type GameService interface {
 	GamesAround(p model.Player) ([]GameWithCoords, error)
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
-	ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error
 	ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error
 }
 
@@ -141,17 +140,6 @@ func (gs *Tile38GameService) GamesAround(p model.Player) ([]GameWithCoords, erro
 	}
 
 	return games, nil
-}
-
-func (gs *Tile38GameService) ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error {
-	return gs.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 0, func(d *repository.Detection) error {
-		gameID := d.NearByFeatID
-		if gameID == "" {
-			return nil
-		}
-		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
-		return callback(gameID, p)
-	})
 }
 
 func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error {

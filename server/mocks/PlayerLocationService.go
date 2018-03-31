@@ -76,6 +76,20 @@ func (_m *PlayerLocationService) ObservePlayersAround(_a0 context.Context, _a1 s
 	return r0
 }
 
+// ObservePlayersInsideGeofence provides a mock function with given fields: ctx, callback
+func (_m *PlayerLocationService) ObservePlayersInsideGeofence(ctx context.Context, callback func(string, model.Player) error) error {
+	ret := _m.Called(ctx, callback)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, func(string, model.Player) error) error); ok {
+		r0 = rf(ctx, callback)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Remove provides a mock function with given fields: p
 func (_m *PlayerLocationService) Remove(p *model.Player) error {
 	ret := _m.Called(p)

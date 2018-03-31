@@ -118,20 +118,6 @@ func (_m *GameService) ObserveGamesEvents(ctx context.Context, callback func(*ga
 	return r0
 }
 
-// ObservePlayersCrossGeofences provides a mock function with given fields: ctx, callback
-func (_m *GameService) ObservePlayersCrossGeofences(ctx context.Context, callback func(string, model.Player) error) error {
-	ret := _m.Called(ctx, callback)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, func(string, model.Player) error) error); ok {
-		r0 = rf(ctx, callback)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // Remove provides a mock function with given fields: gameID
 func (_m *GameService) Remove(gameID string) error {
 	ret := _m.Called(gameID)

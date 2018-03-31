@@ -21,6 +21,7 @@ type PlayerLocationService interface {
 	ObservePlayersAround(context.Context, PlayersAroundCallback) error
 	ObservePlayerNearToFeature(context.Context, string, PlayerNearToFeatureCallback) error
 
+	ObservePlayersInsideGeofence(ctx context.Context, callback func(string, model.Player) error) error
 	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
 }
 
@@ -99,5 +100,16 @@ func (s *Tile38PlayerLocationService) ObservePlayerNearToCheckpoint(ctx context.
 			return callback(playerID, d.NearByMeters, f)
 		}
 		return nil
+	})
+}
+
+func (s *Tile38PlayerLocationService) ObservePlayersInsideGeofence(ctx context.Context, callback func(string, model.Player) error) error {
+	return s.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 1, func(d *repository.Detection) error {
+		gameID := d.NearByFeatID
+		if gameID == "" {
+			return nil
+		}
+		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
+		return callback(gameID, p)
 	})
 }
