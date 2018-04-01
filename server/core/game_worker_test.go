@@ -12,8 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
-	"github.com/perenecabuto/CatchCatch/server/mocks"
 	"github.com/perenecabuto/CatchCatch/server/model"
+
+	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
 )
 
 func TestNewGameWorker(t *testing.T) {
@@ -79,8 +80,8 @@ func TestCloseWhenFinish(t *testing.T) {
 	gameService.AssertCalled(t, "Remove", gameID)
 }
 
-func newMockedGameService(ctx context.Context, gameID string, playerIDs []string) (*mocks.GameService, chan interface{}) {
-	gameService := new(mocks.GameService)
+func newMockedGameService(ctx context.Context, gameID string, playerIDs []string) (*smocks.GameService, chan interface{}) {
+	gameService := new(smocks.GameService)
 	gameService.On("Remove", gameID).Return(nil)
 
 	gameService.On("ObservePlayersCrossGeofences",

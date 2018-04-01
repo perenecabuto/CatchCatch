@@ -1,4 +1,4 @@
-package service
+package service_test
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
+	"github.com/perenecabuto/CatchCatch/server/service"
 
-	"github.com/perenecabuto/CatchCatch/server/mocks/messages_mocks"
-	"github.com/perenecabuto/CatchCatch/server/mocks/repo_mocks"
+	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
 )
 
 const (
@@ -22,10 +22,10 @@ const (
 )
 
 func TestGameServiceCreate(t *testing.T) {
-	repo := &repo_mocks.Repository{}
-	stream := &repo_mocks.EventStream{}
-	dispatcher := &messages_mocks.Dispatcher{}
-	service := NewGameService(repo, stream, dispatcher)
+	repo := &smocks.Repository{}
+	stream := &smocks.EventStream{}
+	dispatcher := &smocks.Dispatcher{}
+	gService := service.NewGameService(repo, stream, dispatcher)
 
 	gameFeat := &model.Feature{ID: gameID, Coordinates: ""}
 	repo.On("FeatureByID", "geofences", gameID).Return(gameFeat, nil)
@@ -34,19 +34,19 @@ func TestGameServiceCreate(t *testing.T) {
 	repo.On("SetFeatureExtraData", "game", gameID, mock.Anything).
 		Return(nil)
 
-	dispatcher.On("Publish", GameChangeTopic, mock.Anything).Return(nil)
+	dispatcher.On("Publish", service.GameChangeTopic, mock.Anything).Return(nil)
 
-	service.Create(gameID, "")
+	gService.Create(gameID, "")
 
-	dispatcher.AssertCalled(t, "Publish", GameChangeTopic, matchGameChangePayload(t))
+	dispatcher.AssertCalled(t, "Publish", service.GameChangeTopic, matchGameChangePayload(t))
 	repo.AssertCalled(t, "SetFeatureExtraData", "game", gameID, matchGameChangePayload(t))
 }
 
 func TestGameServiceUpdate(t *testing.T) {
-	repo := &repo_mocks.Repository{}
-	stream := &repo_mocks.EventStream{}
-	dispatcher := &messages_mocks.Dispatcher{}
-	service := NewGameService(repo, stream, dispatcher)
+	repo := &smocks.Repository{}
+	stream := &smocks.EventStream{}
+	dispatcher := &smocks.Dispatcher{}
+	gService := service.NewGameService(repo, stream, dispatcher)
 
 	gameFeat := &model.Feature{ID: gameID, Coordinates: ""}
 	repo.On("FeatureByID", "geofences", gameID).Return(gameFeat, nil)
@@ -55,39 +55,39 @@ func TestGameServiceUpdate(t *testing.T) {
 	repo.On("SetFeatureExtraData", "game", gameID, mock.Anything).
 		Return(nil)
 
-	dispatcher.On("Publish", GameChangeTopic, mock.Anything).Return(nil)
+	dispatcher.On("Publish", service.GameChangeTopic, mock.Anything).Return(nil)
 
 	g, evt := game.NewGame(gameID)
-	service.Update(g, evt)
+	gService.Update(g, evt)
 
-	dispatcher.AssertCalled(t, "Publish", GameChangeTopic, matchGameChangePayload(t))
+	dispatcher.AssertCalled(t, "Publish", service.GameChangeTopic, matchGameChangePayload(t))
 	repo.AssertCalled(t, "SetFeatureExtraData", "game", gameID, matchGameChangePayload(t))
 }
 
 func TestGameServiceMustGetNewGame(t *testing.T) {
-	repo := &repo_mocks.Repository{}
-	stream := &repo_mocks.EventStream{}
-	dispatcher := &messages_mocks.Dispatcher{}
-	service := NewGameService(repo, stream, dispatcher)
+	repo := &smocks.Repository{}
+	stream := &smocks.EventStream{}
+	dispatcher := &smocks.Dispatcher{}
+	gService := service.NewGameService(repo, stream, dispatcher)
 
 	players := make([]game.Player, 0)
 	expectedGame := game.NewGameWithParams(gameID, false, players, "")
 
-	gameEvt := GameEvent{Game: expectedGame, Event: game.GameEventNothing}
+	gameEvt := service.GameEvent{Game: expectedGame, Event: game.GameEventNothing}
 	serialized, _ := json.Marshal(gameEvt)
 	repo.On("FeatureExtraData", "game", gameID).Return(string(serialized), nil)
 
-	game, evt, err := service.GameByID(gameID)
+	game, evt, err := gService.GameByID(gameID)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedGame, game)
 	assert.NotNil(t, evt)
 }
 
 func TestGameServiceMustGetGameWithPlayers(t *testing.T) {
-	repo := &repo_mocks.Repository{}
-	stream := &repo_mocks.EventStream{}
-	dispatcher := &messages_mocks.Dispatcher{}
-	service := NewGameService(repo, stream, dispatcher)
+	repo := &smocks.Repository{}
+	stream := &smocks.EventStream{}
+	dispatcher := &smocks.Dispatcher{}
+	gService := service.NewGameService(repo, stream, dispatcher)
 
 	players := []game.Player{
 		game.Player{Player: model.Player{ID: "player-1"}, Role: game.GameRoleHunter},
@@ -96,11 +96,11 @@ func TestGameServiceMustGetGameWithPlayers(t *testing.T) {
 	}
 	expectedGame := game.NewGameWithParams(gameID, true, players, "player-3")
 
-	gameEvt := GameEvent{Game: expectedGame, Event: game.GameEventNothing}
+	gameEvt := service.GameEvent{Game: expectedGame, Event: game.GameEventNothing}
 	serialized, _ := json.Marshal(gameEvt)
 	repo.On("FeatureExtraData", "game", gameID).Return(string(serialized), nil)
 
-	game, evt, err := service.GameByID(gameID)
+	game, evt, err := gService.GameByID(gameID)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedGame, game)
@@ -108,15 +108,15 @@ func TestGameServiceMustGetGameWithPlayers(t *testing.T) {
 }
 
 func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
-	repo := &repo_mocks.Repository{}
-	stream := &repo_mocks.EventStream{}
-	dispatcher := &messages_mocks.Dispatcher{}
-	service := NewGameService(repo, stream, dispatcher)
+	repo := &smocks.Repository{}
+	stream := &smocks.EventStream{}
+	dispatcher := &smocks.Dispatcher{}
+	gService := service.NewGameService(repo, stream, dispatcher)
 
 	g, e := game.NewGame(gameID)
 
-	dispatcher.On("Subscribe", GameChangeTopic, mock.MatchedBy(func(fn func(data []byte) error) bool {
-		gameEvt := GameEvent{Game: g, Event: e, LastUpdate: time.Now()}
+	dispatcher.On("Subscribe", service.GameChangeTopic, mock.MatchedBy(func(fn func(data []byte) error) bool {
+		gameEvt := service.GameEvent{Game: g, Event: e, LastUpdate: time.Now()}
 		data, _ := json.Marshal(gameEvt)
 		err := fn(data)
 		return assert.NoError(t, err)
@@ -125,7 +125,7 @@ func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := service.ObserveGamesEvents(ctx, func(actualG *game.Game, actualE game.Event) error {
+	err := gService.ObserveGamesEvents(ctx, func(actualG *game.Game, actualE game.Event) error {
 		assert.Equal(t, g, actualG)
 		assert.Equal(t, e, actualE)
 		return nil
@@ -134,12 +134,12 @@ func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
 }
 
 func TestGameServiceGamesAroundPlayer(t *testing.T) {
-	repo := &repo_mocks.Repository{}
-	service := NewGameService(repo, nil, nil)
+	repo := &smocks.Repository{}
+	gService := service.NewGameService(repo, nil, nil)
 
-	expected := []GameWithCoords{
-		GameWithCoords{Game: &game.Game{ID: "game-test-1"}, Coords: "fake-coords-1"},
-		GameWithCoords{Game: &game.Game{ID: "game-test-2"}, Coords: "fake-coords-2"},
+	expected := []service.GameWithCoords{
+		service.GameWithCoords{Game: &game.Game{ID: "game-test-1"}, Coords: "fake-coords-1"},
+		service.GameWithCoords{Game: &game.Game{ID: "game-test-2"}, Coords: "fake-coords-2"},
 	}
 
 	repo.On("FeaturesAround", mock.Anything, mock.Anything).Return([]*model.Feature{
@@ -148,7 +148,7 @@ func TestGameServiceGamesAroundPlayer(t *testing.T) {
 	}, nil)
 
 	player := model.Player{ID: "player-test-1", Lat: 0, Lon: 0}
-	gamesAround, err := service.GamesAround(player)
+	gamesAround, err := gService.GamesAround(player)
 	require.NoError(t, err)
 	assert.EqualValues(t, expected, gamesAround)
 }
@@ -171,7 +171,7 @@ func matchGameChangePayload(t *testing.T) interface{} {
 		case []byte:
 			payload = string(data.([]byte))
 		}
-		gameEvt := GameEvent{}
+		gameEvt := service.GameEvent{}
 		json.Unmarshal([]byte(payload), &gameEvt)
 
 		return assert.Equal(t, gameEvt.Event, game.GameEventCreated) &&

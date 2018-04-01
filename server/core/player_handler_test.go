@@ -9,15 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
-	"github.com/perenecabuto/CatchCatch/server/mocks"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
+
+	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
+	wsmocks "github.com/perenecabuto/CatchCatch/server/websocket/mocks"
 )
 
 func TestGameWatcher(t *testing.T) {
-	wsDriver := new(mocks.WSDriver)
+	wsDriver := new(wsmocks.WSDriver)
 	wss := websocket.NewWSServer(wsDriver)
-	c := &mocks.WSConnection{}
+	c := new(wsmocks.WSConnection)
 
 	c.On("Send", mock.MatchedBy(func(payload []byte) bool {
 		msg := &protobuf.GameInfo{}
@@ -29,7 +31,7 @@ func TestGameWatcher(t *testing.T) {
 	cListener := wss.Add(c)
 	playerID := cListener.ID
 
-	gameService := new(mocks.GameService)
+	gameService := new(smocks.GameService)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

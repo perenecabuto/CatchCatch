@@ -8,19 +8,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/perenecabuto/CatchCatch/server/mocks"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
+
+	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
+	wsmocks "github.com/perenecabuto/CatchCatch/server/websocket/mocks"
 )
 
 func TestWatchCheckPointsMustNotifyPlayersNearToCheckPoinstsTheDistToIt(t *testing.T) {
-	wss := websocket.NewWSServer(&mocks.WSDriver{})
-	playerService := new(mocks.PlayerLocationService)
+	wss := websocket.NewWSServer(&wsmocks.WSDriver{})
+	playerService := new(smocks.PlayerLocationService)
 	watcher := NewCheckpointWatcher(wss, nil, playerService)
 
-	c := &mocks.WSConnection{}
+	c := &wsmocks.WSConnection{}
 	c.On("Send", mock.Anything).Return(nil)
 
 	cListener := wss.Add(c)
