@@ -104,6 +104,10 @@ func (s *Tile38PlayerLocationService) SetGeofence(id, coordinates string) error 
 	return err
 }
 
+func (s *Tile38PlayerLocationService) SetCheckpoint(id, coordinates string) error {
+	_, err := s.repo.SetFeature("checkpoint", id, coordinates)
+	return err
+}
 
 func (s *Tile38PlayerLocationService) ObserveFeaturesEventsNearToAdmin(ctx context.Context, callback AdminNearToFeatureCallback) error {
 	group := "admin"
