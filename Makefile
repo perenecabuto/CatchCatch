@@ -47,11 +47,17 @@ build:
 docker-compose: build
 	docker-compose up --build
 
-run: run-tile38 run-nats
+run: run-tile38 run-nats run-redis
 	$(SERVER_SRC) CompileDaemon -color -command "./$(BINARY) -zconf"
 
 run-debug:
 	$(SERVER_SRC) CompileDaemon -color -command "./$(BINARY) -zconf -debug"
+
+run-redis:
+	@-docker rm -f redis-local
+	@docker run --restart unless-stopped -p 6379:6379 \
+		--name redis-local \
+		-d redis:alpine
 
 run-nats:
 	@-docker rm -f nats-local
