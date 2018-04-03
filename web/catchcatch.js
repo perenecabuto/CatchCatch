@@ -97,7 +97,7 @@ function init() {
     socket.on('disconnect', evtHandler.onDisconnected)
     socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
     socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
-    socket.on("remote-player:destroy", evtHandler.onRemotePlayerDestroy);
+    socket.on("admin:players:disconnected", evtHandler.onRemotePlayerDestroy);
     socket.on("admin:feature:added", evtHandler.onFeatureAdded);
     socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint);
 }
@@ -224,14 +224,14 @@ let AdminController = function (socket, sourceLayer, view) {
     };
 
     this.disconnectPlayer = function (playerId) {
-        console.log("admin:disconnect", playerId);
-        socket.emit(messages.Simple.encode({eventName: 'admin:disconnect', id: playerId}).finish());
+        console.log("admin:players:disconnect", playerId);
+        socket.emit(messages.Simple.encode({eventName: 'admin:players:disconnect', id: playerId}).finish());
     };
 
     this.requestFeatures = function () {
-        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-remotes", group: "player"}).finish());
-        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "checkpoint"}).finish());
-        socket.emit(messages.Feature.encode({eventName: "admin:feature:request-list", group: "geofences"}).finish());
+        socket.emit(messages.Feature.encode({eventName: "admin:players:request", group: "player"}).finish());
+        socket.emit(messages.Feature.encode({eventName: "admin:feature:request", group: "checkpoint"}).finish());
+        socket.emit(messages.Feature.encode({eventName: "admin:feature:request", group: "geofences"}).finish());
     };
 
     this.removePlayer = function (player) {

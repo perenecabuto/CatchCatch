@@ -38,13 +38,14 @@ func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
 		log.Println("[AdminHandler] [admin] disconnected", c.ID)
 	})
 
+	c.On("admin:players:disconnect", h.onDisconnectPlayer(c))
+	c.On("admin:players:request", h.onRequestPlayers(c))
+	c.On("admin:feature:request", h.onRequestFeatures(c))
 	c.On("admin:feature:add", h.onAddFeature())
-	c.On("admin:feature:request-remotes", h.onPlayerRequestRemotes(c))
-	c.On("admin:feature:request-list", h.onRequestFeatures(c))
 	c.On("admin:clear", h.onClear())
 }
 
-func (h *AdminHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onRequestPlayers(so *websocket.WSConnListener) func([]byte) {
 	return func([]byte) {
 		players, err := h.players.All()
 		if err != nil {
@@ -63,20 +64,22 @@ func (h *AdminHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func
 	}
 }
 
-func (h *AdminHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onDisconnectPlayer(c *websocket.WSConnListener) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
 		playerID := msg.GetId()
-		log.Println("[AdminHandler] admin:disconnect", playerID)
-		err := h.players.Remove(playerID)
+		log.Println("[AdminHandler] admin:players:disconnect", playerID)
+		err := h.server.Close(playerID)
+		if err != nil {
+			log.Println("[AdminHandler] admin:players:disconnect error", playerID)
+		}
+		err = h.players.Remove(playerID)
 		if err == service.ErrFeatureNotFound {
 			// Notify remote-player removal to ghost players on admin
-			c.Emit(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
-				Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
-			log.Println("[AdminHandler] admin:disconnect:force", playerID)
+			log.Println("[AdminHandler] admin:players:disconnect:force", playerID)
+			c.Emit(&protobuf.Player{EventName: proto.String("admin:players:disconnected"), Id: &playerID})
 		}
-		h.server.Remove(msg.GetId())
 	}
 }
 
