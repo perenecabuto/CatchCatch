@@ -82,14 +82,13 @@ func (h *AdminHandler) onDisconnectPlayer(c *websocket.WSConnListener) func([]by
 		log.Println("[AdminHandler] admin:players:disconnect", playerID)
 		err := h.server.Close(playerID)
 		if err != nil {
-			log.Println("[AdminHandler] admin:players:disconnect error", playerID)
+			log.Println("[AdminHandler] admin:players:disconnect: no connected player - ", playerID)
 		}
 		err = h.players.Remove(playerID)
 		if err == service.ErrFeatureNotFound {
-			// Notify remote-player removal to ghost players on admin
-			log.Println("[AdminHandler] admin:players:disconnect:force", playerID)
-			c.Emit(&protobuf.Player{EventName: proto.String("admin:players:disconnected"), Id: &playerID})
+			log.Println("[AdminHandler] admin:players:disconnect: player not found - ", playerID)
 		}
+		h.server.Broadcast(&protobuf.Simple{EventName: proto.String("admin:players:disconnected"), Id: &playerID})
 	}
 }
 
