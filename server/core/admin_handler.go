@@ -116,8 +116,7 @@ func (h *AdminHandler) onAddFeature() func([]byte) {
 			err = h.players.SetCheckpoint(msg.GetId(), msg.GetCoords())
 		}
 		if err != nil {
-			log.Println("[AdminHandler] Error to create feature:", err)
-			return
+			log.Println("[AdminHandler] Error to add feature:", err)
 		}
 	}
 }
@@ -163,7 +162,7 @@ func (h *AdminHandler) WatchFeatureEvents(ctx context.Context) error {
 				EventName: proto.String("admin:feature:" + action), Id: &featID,
 				Group: &group, Coords: &coords})
 			if err != nil {
-				log.Fatal("[AdminHandler] Error to create feature:", err)
+				log.Println("[AdminHandler] WatchFeatureEvents error:", err)
 			}
 		}
 	}
