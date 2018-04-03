@@ -65,7 +65,6 @@ func main() {
 	natsConn := mustConnectNats(nats.DefaultURL)
 	dispatcher := messages.NewNatsDispatcher(natsConn)
 	gameService := service.NewGameService(repo, stream, dispatcher)
-	featService := service.NewGeoFeatureService(repo)
 	wsdriver := selectWsDriver(*wsdriver)
 
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
@@ -87,10 +86,9 @@ func main() {
 	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
 
 	adminConnections := websocket.NewWSServer(wsdriver)
-	adminH := core.NewAdminHandler(adminConnections, playerService, featService)
+	adminH := core.NewAdminHandler(adminConnections, playerService, dispatcher)
 	adminConnections.SetEventHandler(adminH)
-	go adminH.WatchGeofences(ctx)
-	go adminH.WatchPlayers(ctx)
+	go adminH.WatchFeatureEvents(ctx)
 
 	playerH := core.NewPlayerHandler(playersConnections, playerService, gameService)
 	playersConnections.SetEventHandler(playerH)

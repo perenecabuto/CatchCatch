@@ -5,23 +5,24 @@ import (
 	"log"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/tidwall/gjson"
 
-	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/service/messages"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
 // AdminHandler handle websocket events
 type AdminHandler struct {
-	server  *websocket.WSServer
-	players service.PlayerLocationService
-	geo     service.GeoFeatureService
+	server   *websocket.WSServer
+	players  service.PlayerLocationService
+	messages messages.Dispatcher
 }
 
 // NewAdminHandler AdminHandler builder
-func NewAdminHandler(server *websocket.WSServer, players service.PlayerLocationService, geo service.GeoFeatureService) *AdminHandler {
-	handler := &AdminHandler{server, players, geo}
+func NewAdminHandler(s *websocket.WSServer, p service.PlayerLocationService, m messages.Dispatcher) *AdminHandler {
+	handler := &AdminHandler{s, p, m}
 	return handler
 }
 
@@ -83,7 +84,7 @@ func (h *AdminHandler) onClear() func([]byte) {
 	return func([]byte) {
 		// TODO: send this message by broaker
 		// h.games.Clear()
-		h.geo.Clear()
+		h.players.Clear()
 		h.server.CloseAll()
 	}
 }
@@ -95,8 +96,13 @@ func (h *AdminHandler) onAddFeature() func([]byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
-		// TODO: limitar isso
-		err := h.geo.SetFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
+		var err error
+		switch msg.GetGroup() {
+		case "geofences":
+			err = h.players.SetGeofence(msg.GetId(), msg.GetCoords())
+		case "checkpoint":
+			err = h.players.SetCheckpoint(msg.GetId(), msg.GetCoords())
+		}
 		if err != nil {
 			log.Println("[AdminHandler] Error to create feature:", err)
 			return
@@ -109,10 +115,7 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
 
-		// TODO: tornar isso só um método e mapear somente features específicas
-		// checkpoint e geofences
-		// TODO: mapear games tb
-		features, err := h.geo.FeaturesByGroup(msg.GetGroup())
+		features, err := h.players.Features()
 		if err != nil {
 			log.Println("[AdminHandler] Error on sendFeatures:", err)
 		}
@@ -123,38 +126,34 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 	}
 }
 
-// WatchPlayers observe players around players and notify it's position
-func (h *AdminHandler) WatchPlayers(ctx context.Context) error {
-	// TODO: ouvir players a volta do admin
-	return h.players.ObservePlayersAround(ctx, func(playerID string, remotePlayer model.Player, exit bool) error {
-		evtName := proto.String("remote-player:updated")
-		if exit {
-			h.server.Close(remotePlayer.ID)
-			evtName = proto.String("remote-player:destroy")
-		}
-		err := h.server.Broadcast(&protobuf.Player{EventName: evtName,
-			Id: &remotePlayer.ID, Lon: &remotePlayer.Lon, Lat: &remotePlayer.Lat})
-		if err != websocket.ErrWSConnectionNotFound && err != nil {
-			log.Println("remote-player:updated error", err.Error())
-		}
+func (h *AdminHandler) WatchFeatureEvents(ctx context.Context) error {
+	stream := make(chan []byte)
+	err := h.messages.Subscribe(ctx, FeaturesMessageTopic, func(data []byte) error {
+		stream <- data
 		return nil
 	})
-}
+	if err != nil {
+		return err
+	}
 
-// WatchGeofences watch for geofences events and notify players around
-func (h *AdminHandler) WatchGeofences(ctx context.Context) error {
-	// TODO: chamar isso de um service (Geo provavelmente)
-	// TODO: o propósito deste método na verdade é notificar em tempo real sobre set,remove de features
-	// de mapa (geofences & checkpoint)
-	// TODO: modificar para notificar sobre geofences e checkpoints
-	return h.players.ObservePlayerNearToFeature(ctx, "geofences", func(playerID string, distTo float64, f model.Feature) error {
-		err := h.server.Emit(playerID,
-			&protobuf.Feature{
-				EventName: proto.String("admin:feature:added"), Id: &f.ID,
-				Group: proto.String("geofences"), Coords: &f.Coordinates})
-		if err != nil {
-			log.Println("AdminHandler:WatchGeofences:", err.Error())
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case data := <-stream:
+			adminID, featID, group, coords, action :=
+				gjson.GetBytes(data, "id").String(),
+				gjson.GetBytes(data, "featID").String(),
+				gjson.GetBytes(data, "group").String(),
+				gjson.GetBytes(data, "coordinates").String(),
+				gjson.GetBytes(data, "action").String()
+			err := h.server.Emit(adminID, &protobuf.Feature{
+				EventName: proto.String("admin:feature:" + action), Id: &featID,
+				Group: &group, Coords: &coords})
+			if err != nil {
+				log.Fatal("[AdminHandler] Error to create feature:", err)
+			}
 		}
-		return nil
-	})
+	}
+
 }
