@@ -1,12 +1,16 @@
 package messages
 
-import nats "github.com/nats-io/go-nats"
+import (
+	"context"
+
+	nats "github.com/nats-io/go-nats"
+)
 
 type OnMessage func(msg []byte) error
 
 type Dispatcher interface {
 	Publish(topic string, message []byte) error
-	Subscribe(topic string, callback OnMessage) error
+	Subscribe(ctx context.Context, topic string, callback OnMessage) error
 }
 
 type Nats struct {
@@ -21,9 +25,13 @@ func (d Nats) Publish(topic string, message []byte) error {
 	return d.conn.Publish(topic, message)
 }
 
-func (d Nats) Subscribe(topic string, callback OnMessage) error {
-	_, err := d.conn.Subscribe(topic, func(msg *nats.Msg) {
+func (d Nats) Subscribe(ctx context.Context, topic string, callback OnMessage) error {
+	sub, err := d.conn.Subscribe(topic, func(msg *nats.Msg) {
 		callback(msg.Data)
 	})
+	go func() {
+		<-ctx.Done()
+		sub.Unsubscribe()
+	}()
 	return err
 }

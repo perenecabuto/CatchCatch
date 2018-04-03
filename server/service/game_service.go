@@ -144,7 +144,7 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 
 // TODO: tirar isso daqui, por no worker ou em algum comunicador
 func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error {
-	return gs.messages.Subscribe(GameChangeTopic, func(data []byte) error {
+	return gs.messages.Subscribe(ctx, GameChangeTopic, func(data []byte) error {
 		gameEvt := GameEvent{}
 		err := json.Unmarshal(data, &gameEvt)
 		if err != nil {
