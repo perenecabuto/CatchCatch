@@ -85,13 +85,13 @@ func (_m *PlayerLocationService) ObservePlayerNearToFeature(_a0 context.Context,
 	return r0
 }
 
-// ObservePlayersAround provides a mock function with given fields: _a0, _a1
-func (_m *PlayerLocationService) ObservePlayersAround(_a0 context.Context, _a1 service.PlayersAroundCallback) error {
-	ret := _m.Called(_a0, _a1)
+// Remove provides a mock function with given fields: playerID
+func (_m *PlayerLocationService) Remove(playerID string) error {
+	ret := _m.Called(playerID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, service.PlayersAroundCallback) error); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(playerID)
 	} else {
 		r0 = ret.Error(0)
 	}

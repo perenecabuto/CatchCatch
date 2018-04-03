@@ -16,7 +16,7 @@ import (
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
 	Set(p *model.Player) error
-	Remove(p *model.Player) error
+	Remove(playerID string) error
 	All() (model.PlayerList, error)
 
 	GeofenceByID(id string) (*model.Feature, error)
@@ -55,8 +55,8 @@ func (s *Tile38PlayerLocationService) Set(p *model.Player) error {
 }
 
 // Remove player
-func (s *Tile38PlayerLocationService) Remove(p *model.Player) error {
-	return s.repo.RemoveFeature("player", p.ID)
+func (s *Tile38PlayerLocationService) Remove(playerID string) error {
+	return s.repo.RemoveFeature("player", playerID)
 }
 
 // All return all registered players

@@ -60,11 +60,9 @@ func (h *AdminHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte
 	return func(buf []byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
-		log.Println("admin:disconnect", msg.GetId())
-		player := &model.Player{ID: msg.GetId()}
-		err := h.players.Remove(player)
 		playerID := msg.GetId()
 		log.Println("[AdminHandler] admin:disconnect", playerID)
+		err := h.players.Remove(playerID)
 		if err == service.ErrFeatureNotFound {
 			// Notify remote-player removal to ghost players on admin
 			c.Emit(&protobuf.Player{EventName: proto.String("remote-player:destroy"),

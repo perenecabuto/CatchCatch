@@ -51,7 +51,7 @@ func (h *PlayerHandler) OnConnection(c *websocket.WSConnListener) {
 
 func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) {
 	log.Println("player:disconnect", player.ID)
-	h.players.Remove(player)
+	h.players.Remove(player.ID)
 }
 
 func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConnListener) func([]byte) {
