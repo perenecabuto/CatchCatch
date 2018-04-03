@@ -10,6 +10,8 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
 )
 
+var ErrFeatureNotFound = repository.ErrFeatureNotFound
+
 // TODO: mudar este service para user location service ou map service
 
 // PlayerLocationService manage players and features
@@ -22,12 +24,17 @@ type PlayerLocationService interface {
 	RemoveAdmin(id string) error
 
 	GeofenceByID(id string) (*model.Feature, error)
+	Features() ([]*model.Feature, error)
 
 	ObservePlayersAround(context.Context, PlayersAroundCallback) error
 	ObservePlayerNearToFeature(context.Context, string, PlayerNearToFeatureCallback) error
+	SetGeofence(id, coordinates string) error
+	SetCheckpoint(id, coordinates string) error
 
 	ObservePlayersInsideGeofence(ctx context.Context, callback func(string, model.Player) error) error
 	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
+
+	Clear() error
 }
 
 type PlayerNearToFeatureCallback func(playerID string, distTo float64, f model.Feature) error
@@ -92,12 +99,9 @@ func (s *Tile38PlayerLocationService) GeofenceByID(id string) (*model.Feature, e
 	return s.repo.FeatureByID("geofences", id)
 }
 
-func (s *Tile38PlayerLocationService) ObservePlayersAround(ctx context.Context, callback PlayersAroundCallback) error {
-	return s.stream.StreamNearByEvents(ctx, "player", "player", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
-		playerID := d.NearByFeatID
-		movingPlayer := model.Player{ID: d.FeatID, Lon: d.Lon, Lat: d.Lat}
-		return callback(playerID, movingPlayer, d.Intersects == repository.Exit)
-	})
+func (s *Tile38PlayerLocationService) SetGeofence(id, coordinates string) error {
+	_, err := s.repo.SetFeature("geofences", id, coordinates)
+	return err
 }
 
 func (s *Tile38PlayerLocationService) ObservePlayerNearToFeature(ctx context.Context, group string, callback PlayerNearToFeatureCallback) error {
@@ -131,4 +135,26 @@ func (s *Tile38PlayerLocationService) ObservePlayersInsideGeofence(ctx context.C
 		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		return callback(gameID, p)
 	})
+}
+
+func (s *Tile38PlayerLocationService) Features() ([]*model.Feature, error) {
+	featureType := []string{"geofences", "checkpoint", "player"}
+	features := []*model.Feature{}
+	for _, ft := range featureType {
+		featsByType, err := s.repo.Features(ft)
+		if err != nil {
+			return nil, err
+		}
+		features = append(features, featsByType...)
+	}
+	return features, nil
+}
+
+func (s *Tile38PlayerLocationService) SetFeature(group, id, geojson string) error {
+	_, err := s.repo.SetFeature(group, id, geojson)
+	return err
+}
+
+func (s *Tile38PlayerLocationService) Clear() error {
+	return s.repo.Clear()
 }
