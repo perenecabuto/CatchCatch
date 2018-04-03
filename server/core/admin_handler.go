@@ -27,7 +27,7 @@ func NewAdminHandler(server *websocket.WSServer, players service.PlayerLocationS
 
 // OnConnection handles game and admin connection events
 func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
-	log.Println("new admin connected", c.ID)
+	log.Println("[AdminHandler] [admin] connected", c.ID)
 
 	// TODO: chamar service pra criar admin
 	c.On("admin:disconnect", h.onDisconnectByID(c))
@@ -41,7 +41,7 @@ func (h *AdminHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func
 	return func([]byte) {
 		players, err := h.players.All()
 		if err != nil {
-			log.Println("player:request-remotes event error: " + err.Error())
+			log.Println("[AdminHandler] player:request-remotes event error: " + err.Error())
 		}
 		event := "remote-player:new"
 		for _, p := range players {
@@ -50,7 +50,7 @@ func (h *AdminHandler) onPlayerRequestRemotes(so *websocket.WSConnListener) func
 			}
 			err := so.Emit(&protobuf.Player{EventName: &event, Id: &p.ID, Lon: &p.Lon, Lat: &p.Lat})
 			if err != nil {
-				log.Println("player:request-remotes event error: " + err.Error())
+				log.Println("[AdminHandler] player:request-remotes event error: " + err.Error())
 			}
 		}
 	}
@@ -63,11 +63,13 @@ func (h *AdminHandler) onDisconnectByID(c *websocket.WSConnListener) func([]byte
 		log.Println("admin:disconnect", msg.GetId())
 		player := &model.Player{ID: msg.GetId()}
 		err := h.players.Remove(player)
+		playerID := msg.GetId()
+		log.Println("[AdminHandler] admin:disconnect", playerID)
 		if err == service.ErrFeatureNotFound {
 			// Notify remote-player removal to ghost players on admin
-			log.Println("admin:disconnect:force", msg.GetId())
 			c.Emit(&protobuf.Player{EventName: proto.String("remote-player:destroy"),
 				Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
+			log.Println("[AdminHandler] admin:disconnect:force", playerID)
 		}
 		h.server.Remove(msg.GetId())
 	}
@@ -92,7 +94,7 @@ func (h *AdminHandler) onAddFeature() func([]byte) {
 		// TODO: limitar isso
 		err := h.geo.SetFeature(msg.GetGroup(), msg.GetId(), msg.GetCoords())
 		if err != nil {
-			log.Println("Error to create feature:", err)
+			log.Println("[AdminHandler] Error to create feature:", err)
 			return
 		}
 	}
@@ -108,7 +110,7 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 		// TODO: mapear games tb
 		features, err := h.geo.FeaturesByGroup(msg.GetGroup())
 		if err != nil {
-			log.Println("Error on sendFeatures:", err)
+			log.Println("[AdminHandler] Error on sendFeatures:", err)
 		}
 		event := "admin:feature:added"
 		for _, f := range features {
