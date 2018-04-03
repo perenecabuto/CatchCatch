@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	gjson "github.com/tidwall/gjson"
+
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
-	gjson "github.com/tidwall/gjson"
 )
 
 // TODO: mudar este service para user location service ou map service
