@@ -73,16 +73,16 @@ func main() {
 
 	playersConnections := websocket.NewWSServer(wsdriver)
 	gameWorker := core.NewGameWorker(gameService)
-	GeofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
+	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
 	checkpointWatcher := core.NewCheckpointWatcher(playersConnections, dispatcher, playerService)
 
 	workers.Add(gameWorker)
-	workers.Add(GeofenceEventsWorker)
+	workers.Add(geofenceEventsWorker)
 	workers.Add(checkpointWatcher)
 
 	workers.Start(ctx)
 	// TODO: verify server id on these workers
-	workers.RunUnique(GeofenceEventsWorker, worker.TaskParams{"serverID": serverID})
+	workers.RunUnique(geofenceEventsWorker, worker.TaskParams{"serverID": serverID})
 	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
 
 	adminConnections := websocket.NewWSServer(wsdriver)
