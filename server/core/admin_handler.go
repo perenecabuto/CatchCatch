@@ -38,11 +38,21 @@ func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
 		log.Println("[AdminHandler] [admin] disconnected", c.ID)
 	})
 
+	c.On("admin:position:update", h.onUpdatePosition(c))
 	c.On("admin:players:disconnect", h.onDisconnectPlayer(c))
 	c.On("admin:players:request", h.onRequestPlayers(c))
 	c.On("admin:feature:request", h.onRequestFeatures(c))
 	c.On("admin:feature:add", h.onAddFeature())
 	c.On("admin:clear", h.onClear())
+}
+
+func (h *AdminHandler) onUpdatePosition(so *websocket.WSConnListener) func([]byte) {
+	return func(buf []byte) {
+		msg := &protobuf.Player{}
+		proto.Unmarshal(buf, msg)
+		log.Println("admin position", msg)
+		h.players.SetAdmin(so.ID, msg.GetLat(), msg.GetLon())
+	}
 }
 
 func (h *AdminHandler) onRequestPlayers(so *websocket.WSConnListener) func([]byte) {

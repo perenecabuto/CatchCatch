@@ -212,7 +212,12 @@ let AdminController = function (socket, sourceLayer, view) {
 
     this.centerByLocation = function () {
         let updatePosition = function(pos) {
-            view.setCenter([pos.coords.longitude, pos.coords.latitude]);
+            let lon = pos.coords.longitude;
+            let lat = pos.coords.latitude;
+            view.setCenter([lon, lat]);
+            socket.emit(
+                messages.Player.encode({eventName: 'admin:position:update', lat: lat, lon: lon, id: 0}).finish()
+            );
         };
         navigator.geolocation.getCurrentPosition(updatePosition);
         navigator.geolocation.watchPosition(updatePosition);
