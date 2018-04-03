@@ -95,10 +95,9 @@ function init() {
     let evtHandler = new AdminEventHandler(controller);
     socket.on('connect', evtHandler.onConnect);
     socket.on('disconnect', evtHandler.onDisconnected)
-    socket.on('remote-player:updated', evtHandler.onRemotePlayerUpdated)
-    socket.on('remote-player:new', evtHandler.onRemotePlayerNew);
     socket.on("admin:players:disconnected", evtHandler.onRemotePlayerDestroy);
     socket.on("admin:feature:added", evtHandler.onFeatureAdded);
+    socket.on("admin:feature:inside", evtHandler.onFeatureAdded);
     socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint);
 }
 
@@ -381,21 +380,21 @@ let AdminEventHandler = function (controller) {
         log("disconnected");
         controller.resetInterface();
     };
-    this.onRemotePlayerUpdated = function (msg) {
-        let p = messages.Player.decode(msg);
-        controller.updatePlayer(p);
-    };
-    this.onRemotePlayerNew = function (msg) {
-        let p = messages.Player.decode(msg);
-        controller.updatePlayer(p)
-    };
     this.onRemotePlayerDestroy = function (msg) {
-        let p = messages.Player.decode(msg);
+        let p = messages.Simple.decode(msg);
         controller.removePlayer(p);
     };
     this.onFeatureAdded = function (msg) {
         let feat = messages.Feature.decode(msg);
         let geojson = new ol.format.GeoJSON().readFeature(feat.coords);
+
+        if (feat.group == "player") {
+            let lonlat = geojson.getGeometry().getCoordinates()
+            let p = {id: feat.id, lon: lonlat[0], lat: lonlat[1]};
+            controller.updatePlayer(p);
+            return;
+        }
+
         controller.addFeature(feat.id, feat.group, geojson);
     };
 
