@@ -27,11 +27,10 @@ type PlayerLocationService interface {
 	GeofenceByID(id string) (*model.Feature, error)
 	Features() ([]*model.Feature, error)
 
-	ObservePlayersAround(context.Context, PlayersAroundCallback) error
-	ObservePlayerNearToFeature(context.Context, string, PlayerNearToFeatureCallback) error
 	SetGeofence(id, coordinates string) error
 	SetCheckpoint(id, coordinates string) error
 
+	ObserveFeaturesEventsNearToAdmin(ctx context.Context, cb AdminNearToFeatureCallback) error
 	ObservePlayersInsideGeofence(ctx context.Context, cb func(string, model.Player) error) error
 	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
 
@@ -39,7 +38,7 @@ type PlayerLocationService interface {
 }
 
 type PlayerNearToFeatureCallback func(playerID string, distTo float64, f model.Feature) error
-type PlayersAroundCallback func(playerID string, movingPlayer model.Player, exit bool) error
+type AdminNearToFeatureCallback func(adminID string, f model.Feature, action string) error
 
 // Tile38PlayerLocationService manages player locations
 type Tile38PlayerLocationService struct {
@@ -105,15 +104,38 @@ func (s *Tile38PlayerLocationService) SetGeofence(id, coordinates string) error 
 	return err
 }
 
-func (s *Tile38PlayerLocationService) ObservePlayerNearToFeature(ctx context.Context, group string, callback PlayerNearToFeatureCallback) error {
-	return s.stream.StreamNearByEvents(ctx, group, "player", "*", DefaultGeoEventRange, func(d *repository.Detection) error {
-		if d.Intersects == repository.Inside {
-			playerID := d.NearByFeatID
-			f := model.Feature{ID: d.FeatID, Group: group, Coordinates: d.Coordinates}
-			return callback(playerID, d.NearByMeters, f)
+
+func (s *Tile38PlayerLocationService) ObserveFeaturesEventsNearToAdmin(ctx context.Context, callback AdminNearToFeatureCallback) error {
+	group := "admin"
+	featureType := []string{"geofences", "checkpoint", "player"}
+	errchan := make(chan error)
+
+	myctx, cancel := context.WithCancel(ctx)
+
+	var wg sync.WaitGroup
+	wg.Add(len(featureType))
+	for _, _ft := range featureType {
+		go func(_ft string) {
+			wg.Done()
+			errchan <- s.stream.StreamNearByEvents(myctx, _ft, group, "*", DefaultGeoEventRange, func(d *repository.Detection) error {
+				observerFeadID := d.NearByFeatID
+				observedFeat := model.Feature{ID: d.FeatID, Group: _ft, Coordinates: d.Coordinates}
+				return callback(observerFeadID, observedFeat, string(d.Intersects))
+			})
+		}(_ft)
+	}
+	wg.Wait()
+
+	for {
+		select {
+		case err := <-errchan:
+			cancel()
+			return err
+		case <-myctx.Done():
+			cancel()
+			return nil
 		}
-		return nil
-	})
+	}
 }
 
 func (s *Tile38PlayerLocationService) ObservePlayerNearToCheckpoint(ctx context.Context, callback PlayerNearToFeatureCallback) error {
