@@ -87,7 +87,7 @@ func (s *Tile38PlayerLocationService) All() (model.PlayerList, error) {
 
 func (s *Tile38PlayerLocationService) SetAdmin(id string, lat, lon float64) error {
 	_, err := s.repo.SetFeature("admin", id,
-		fmt.Sprintf(`{"type": "Point", "coordinates": [%f, %f]}`, lat, lon))
+		fmt.Sprintf(`{"type": "Point", "coordinates": [%f, %f]}`, lon, lat))
 	return err
 }
 
