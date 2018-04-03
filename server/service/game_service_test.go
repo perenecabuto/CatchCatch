@@ -114,16 +114,15 @@ func TestGameServiceMustObserveGameChangeEvents(t *testing.T) {
 	gService := service.NewGameService(repo, stream, dispatcher)
 
 	g, e := game.NewGame(gameID)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	dispatcher.On("Subscribe", service.GameChangeTopic, mock.MatchedBy(func(fn func(data []byte) error) bool {
+	dispatcher.On("Subscribe", ctx, service.GameChangeTopic, mock.MatchedBy(func(fn func(data []byte) error) bool {
 		gameEvt := service.GameEvent{Game: g, Event: e, LastUpdate: time.Now()}
 		data, _ := json.Marshal(gameEvt)
 		err := fn(data)
 		return assert.NoError(t, err)
 	})).Return(nil)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	err := gService.ObserveGamesEvents(ctx, func(actualG *game.Game, actualE game.Event) error {
 		assert.Equal(t, g, actualG)
