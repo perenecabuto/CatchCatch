@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	gjson "github.com/tidwall/gjson"
 
@@ -31,7 +32,7 @@ type PlayerLocationService interface {
 	SetGeofence(id, coordinates string) error
 	SetCheckpoint(id, coordinates string) error
 
-	ObservePlayersInsideGeofence(ctx context.Context, callback func(string, model.Player) error) error
+	ObservePlayersInsideGeofence(ctx context.Context, cb func(string, model.Player) error) error
 	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
 
 	Clear() error
