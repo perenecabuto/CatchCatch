@@ -11,13 +11,15 @@ import (
 )
 
 // TODO: mudar este service para user location service ou map service
-// TODO: crud de admin (ou user com roles)
 
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
 	Set(p *model.Player) error
 	Remove(playerID string) error
 	All() (model.PlayerList, error)
+
+	SetAdmin(id string, lat, lon float64) error
+	RemoveAdmin(id string) error
 
 	GeofenceByID(id string) (*model.Feature, error)
 
@@ -74,6 +76,16 @@ func (s *Tile38PlayerLocationService) All() (model.PlayerList, error) {
 		list[i] = &model.Player{ID: f.ID, Lat: coords[1].Float(), Lon: coords[0].Float()}
 	}
 	return list, nil
+}
+
+func (s *Tile38PlayerLocationService) SetAdmin(id string, lat, lon float64) error {
+	_, err := s.repo.SetFeature("admin", id,
+		fmt.Sprintf(`{"type": "Point", "coordinates": [%f, %f]}`, lat, lon))
+	return err
+}
+
+func (s *Tile38PlayerLocationService) RemoveAdmin(id string) error {
+	return s.repo.RemoveFeature("admin", id)
 }
 
 func (s *Tile38PlayerLocationService) GeofenceByID(id string) (*model.Feature, error) {

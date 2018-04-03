@@ -29,8 +29,14 @@ func NewAdminHandler(server *websocket.WSServer, players service.PlayerLocationS
 func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
 	log.Println("[AdminHandler] [admin] connected", c.ID)
 
-	// TODO: chamar service pra criar admin
-	c.On("admin:disconnect", h.onDisconnectByID(c))
+	lat, lon := 0.0, 0.0
+	h.players.SetAdmin(c.ID, lat, lon)
+
+	c.OnDisconnected(func() {
+		h.players.RemoveAdmin(c.ID)
+		log.Println("[AdminHandler] [admin] disconnected", c.ID)
+	})
+
 	c.On("admin:feature:add", h.onAddFeature())
 	c.On("admin:feature:request-remotes", h.onPlayerRequestRemotes(c))
 	c.On("admin:feature:request-list", h.onRequestFeatures(c))
