@@ -372,8 +372,8 @@ let AdminController = function (socket, sourceLayer, view) {
 
 let AdminEventHandler = function (controller) {
     this.onConnect = function (msg) {
-        console.log(msg)
-        log("connected");
+        let data = messages.Simple.decode(msg);
+        log("connected as " + data.id);
         controller.centerByLocation();
         controller.requestFeatures();
     };
@@ -421,10 +421,6 @@ function WSS(address, reconnect) {
         ws.close();
     }
 
-    function onOpen(event) {
-        triggerEvent('connect')
-    }
-
     function onMessage(event) {
         let payload = new Uint8Array(event.data);
         try {
@@ -449,7 +445,6 @@ function WSS(address, reconnect) {
     function init() {
         ws = new WebSocket(address);
         ws.binaryType = 'arraybuffer';
-        ws.onopen = onOpen;
         ws.onmessage = onMessage;
         ws.onclose = onClose;
         ws.onerror = onError;

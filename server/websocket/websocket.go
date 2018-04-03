@@ -156,6 +156,7 @@ func (wss *WSServer) Listen(ctx context.Context) http.Handler {
 	return wss.driver.HTTPHandler(ctx, func(ctx context.Context, c WSConnection) {
 		conn := wss.Add(c)
 		err := execfunc.WithRecover(func() error {
+			conn.Emit(&protobuf.Simple{EventName: proto.String("connect"), Id: &conn.ID})
 			wss.OnConnection(conn)
 			defer wss.Remove(conn.ID)
 			return conn.listen(ctx)
