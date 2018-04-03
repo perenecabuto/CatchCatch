@@ -2,7 +2,6 @@ package service_test
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"testing"
 
@@ -43,22 +42,21 @@ func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 
 	actualFeatures := map[string]model.Feature{}
 	var mu sync.RWMutex
+	var wg sync.WaitGroup
+	wg.Add(len(example))
 	err := pls.ObserveFeaturesEventsNearToAdmin(ctx, func(actualID string, f model.Feature, action string) error {
 		assert.Equal(t, adminID, actualID)
 		mu.Lock()
 		actualFeatures[f.ID] = f
 		mu.Unlock()
+		wg.Done()
 		return nil
 	})
 	require.NoError(t, err)
 
-	// FIXME: this lock is necessary to test with race condition
-	mu.Lock()
-	exampleJSON, _ := json.Marshal(example)
-	actualJSON, _ := json.Marshal(actualFeatures)
-	mu.Unlock()
+	wg.Wait()
 
-	assert.Equal(t, string(exampleJSON), string(actualJSON))
+	assert.EqualValues(t, example, actualFeatures)
 }
 
 type mockStream struct {
