@@ -12,7 +12,8 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
-type EventsNearToAdminWatcher interface {
+// FeatureEventNearToAdmin notifies the AdminHandler of feature events
+type FeatureEventNearToAdmin interface {
 	OnFeatureEventNearToAdmin(
 		context.Context,
 		func(adminID string, feat model.Feature, action string) error,
@@ -22,17 +23,18 @@ type EventsNearToAdminWatcher interface {
 // AdminHandler handle websocket events
 type AdminHandler struct {
 	players service.PlayerLocationService
-	watcher EventsNearToAdminWatcher
+	watcher FeatureEventNearToAdmin
 
 	wss *websocket.WSServer
 }
 
 // NewAdminHandler AdminHandler builder
-func NewAdminHandler(p service.PlayerLocationService, w EventsNearToAdminWatcher) *AdminHandler {
+func NewAdminHandler(p service.PlayerLocationService, w FeatureEventNearToAdmin) *AdminHandler {
 	handler := &AdminHandler{players: p, watcher: w}
 	return handler
 }
 
+// OnStart observe feature events for admins
 func (h *AdminHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
 	h.wss = wss
 
