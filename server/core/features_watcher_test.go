@@ -20,7 +20,7 @@ func TestFeaturesWatcherNotifiesFeaturesEventsToAdmin(t *testing.T) {
 	p := new(smocks.PlayerLocationService)
 	w := core.NewFeaturesEventsWatcher(m, p)
 
-	example := &core.EventsNearToAdminPayload{
+	example := &core.FeatureEventsNearToAdminPayload{
 		AdminID: "test-admin-id",
 		Feature: model.Feature{ID: "test-geofence-id", Group: "geofence", Coordinates: "[-1, -2]"},
 		Action:  "added",
@@ -37,7 +37,7 @@ func TestFeaturesWatcherNotifiesFeaturesEventsToAdmin(t *testing.T) {
 	require.NoError(t, err)
 
 	m.AssertCalled(t, "Publish", mock.AnythingOfType("string"), mock.MatchedBy(func(data []byte) bool {
-		actual := &core.EventsNearToAdminPayload{}
+		actual := &core.FeatureEventsNearToAdminPayload{}
 		json.Unmarshal(data, actual)
 		return assert.EqualValues(t, example, actual)
 	}))
@@ -50,7 +50,7 @@ func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 
 	ctx, finish := context.WithCancel(context.Background())
 
-	example := &core.EventsNearToAdminPayload{
+	example := &core.FeatureEventsNearToAdminPayload{
 		AdminID: "test-admin-id",
 		Feature: model.Feature{ID: "test-geofence-id", Group: "geofence", Coordinates: "[-1, -2]"},
 		Action:  "added",
@@ -62,7 +62,7 @@ func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 		return true
 	})).Return(nil)
 
-	actual := &core.EventsNearToAdminPayload{}
+	actual := &core.FeatureEventsNearToAdminPayload{}
 	err := w.OnFeatureEventNearToAdmin(ctx, func(adminID string, feat model.Feature, action string) error {
 		actual.AdminID = adminID
 		actual.Feature = feat
