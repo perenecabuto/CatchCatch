@@ -13,7 +13,7 @@ import (
 )
 
 type EventsNearToAdminWatcher interface {
-	ObserveFeaturesEventsNearToAdmin(
+	OnFeatureEventNearToAdmin(
 		context.Context,
 		func(adminID string, feat model.Feature, action string) error,
 	) error
@@ -35,6 +35,17 @@ func NewAdminHandler(p service.PlayerLocationService, w EventsNearToAdminWatcher
 
 func (h *AdminHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
 	h.wss = wss
+
+	return h.watcher.OnFeatureEventNearToAdmin(ctx,
+		func(adminID string, feat model.Feature, action string) error {
+			err := wss.Emit(adminID, &protobuf.Feature{
+				EventName: proto.String("admin:feature:" + action), Id: &feat.ID,
+				Group: &feat.Group, Coords: &feat.Coordinates})
+			if err != nil {
+				log.Println("[AdminHandler] WatchFeatureEvents error:", err)
+			}
+			return nil
+		})
 }
 
 // OnConnection handles game and admin connection events

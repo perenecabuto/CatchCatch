@@ -43,33 +43,18 @@ func (w *FeaturesEventsWatcher) Run(ctx context.Context, _ worker.TaskParams) er
 	})
 }
 
-func (w *FeaturesEventsWatcher) ObserveFeaturesEventsNearToAdmin(ctx context.Context, cb func(adminID string, feat model.Feature, action string) error) error {
-	stream := make(chan []byte)
-	err := w.messages.Subscribe(ctx, featuresMessageTopic, func(data []byte) error {
-		stream <- data
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case data := <-stream:
-			payload := &EventsNearToAdminPayload{}
-			err := json.Unmarshal(data, payload)
-			if err != nil {
-				log.Println("[FeaturesEventsWatcher] ObserveFeaturesEventsNearToAdmin:", err)
-				continue
-			}
-			err = cb(payload.AdminID, payload.Feature, payload.Action)
-			if err != nil {
-				log.Println("[AdminHandler] WatchFeatureEvents:exiting:callback error:", err)
-				return err
-			}
+func (w *FeaturesEventsWatcher) OnFeatureEventNearToAdmin(ctx context.Context, cb func(adminID string, feat model.Feature, action string) error) error {
+	return w.messages.Subscribe(ctx, featuresMessageTopic, func(data []byte) error {
+		payload := &EventsNearToAdminPayload{}
+		err := json.Unmarshal(data, payload)
+		if err != nil {
+			log.Println("[FeaturesEventsWatcher] ObserveFeaturesEventsNearToAdmin unmarshal error:", err)
 			return nil
 		}
-	}
+		err = cb(payload.AdminID, payload.Feature, payload.Action)
+		if err != nil {
+			log.Println("[AdminHandler] WatchFeatureEvents:exiting:callback error:", err)
+		}
+		return nil
+	})
 }

@@ -11,8 +11,8 @@ type EventsNearToAdminWatcher struct {
 	mock.Mock
 }
 
-// ObserveFeaturesEventsNearToAdmin provides a mock function with given fields: _a0, _a1
-func (_m *EventsNearToAdminWatcher) ObserveFeaturesEventsNearToAdmin(_a0 context.Context, _a1 func(string, model.Feature, string) error) error {
+// OnFeatureEventNearToAdmin provides a mock function with given fields: _a0, _a1
+func (_m *EventsNearToAdminWatcher) OnFeatureEventNearToAdmin(_a0 context.Context, _a1 func(string, model.Feature, string) error) error {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 error
