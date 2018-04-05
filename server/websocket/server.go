@@ -26,24 +26,24 @@ type WSDriver interface {
 // WSServer manage WS connections
 type WSServer struct {
 	driver       WSDriver
-	OnConnection func(c *WSConnListener)
+	OnConnection func(c *WSConnectionHandler)
 
 	connections connectionGroup
 	sync.RWMutex
 }
 
-type connectionGroup map[string]*WSConnListener
+type connectionGroup map[string]*WSConnectionHandler
 
 // NewWSServer create a new WSServer
 func NewWSServer(driver WSDriver) *WSServer {
-	wss := &WSServer{driver: driver, OnConnection: func(c *WSConnListener) {}}
+	wss := &WSServer{driver: driver, OnConnection: func(c *WSConnectionHandler) {}}
 	wss.connections = make(connectionGroup)
 	return wss
 }
 
-// WSEventHandler is responsible to handle WSConnListener events
+// WSEventHandler is responsible to handle WSConnectionHandler events
 type WSEventHandler interface {
-	OnConnection(c *WSConnListener)
+	OnConnection(c *WSConnectionHandler)
 }
 
 // SetEventHandler set the event handler to new connections
@@ -70,7 +70,7 @@ func (wss *WSServer) Listen(ctx context.Context) http.Handler {
 }
 
 // Get Conn by session id
-func (wss *WSServer) Get(id string) *WSConnListener {
+func (wss *WSServer) Get(id string) *WSConnectionHandler {
 	wss.RLock()
 	c := wss.connections[id]
 	wss.RUnlock()
@@ -78,8 +78,8 @@ func (wss *WSServer) Get(id string) *WSConnListener {
 }
 
 // Add Conn for session id
-func (wss *WSServer) Add(c WSConnection) *WSConnListener {
-	conn := NewWSConnListener(c)
+func (wss *WSServer) Add(c WSConnection) *WSConnectionHandler {
+	conn := NewWSConnectionHandler(c)
 	wss.Lock()
 	wss.connections[conn.ID] = conn
 	wss.Unlock()

@@ -19,8 +19,8 @@ type WSConnection interface {
 	Close() error
 }
 
-// WSConnListener represents a WS connection
-type WSConnListener struct {
+// WSConnectionHandler represents a WS connection
+type WSConnectionHandler struct {
 	WSConnection
 
 	ID             string
@@ -31,16 +31,16 @@ type WSConnListener struct {
 	buffer []byte
 }
 
-// NewWSConnListener creates a new WSConnListener
-func NewWSConnListener(c WSConnection) *WSConnListener {
+// NewWSConnectionHandler creates a new WSConnectionHandler
+func NewWSConnectionHandler(c WSConnection) *WSConnectionHandler {
 	id := uuid.NewV4().String()
-	return &WSConnListener{c, id, make(map[string]WSEventCallback), func() {}, func() {}, make([]byte, 512)}
+	return &WSConnectionHandler{c, id, make(map[string]WSEventCallback), func() {}, func() {}, make([]byte, 512)}
 }
 
 // WSEventCallback is called when a event happens
 type WSEventCallback func([]byte)
 
-func (c *WSConnListener) listen(ctx context.Context) error {
+func (c *WSConnectionHandler) listen(ctx context.Context) error {
 	ctx, c.stop = context.WithCancel(ctx)
 	for {
 		select {
@@ -55,12 +55,12 @@ func (c *WSConnListener) listen(ctx context.Context) error {
 }
 
 // On this connection event trigger callback with its message
-func (c *WSConnListener) On(event string, callback WSEventCallback) {
+func (c *WSConnectionHandler) On(event string, callback WSEventCallback) {
 	c.eventCallbacks[event] = callback
 }
 
 // OnDisconnected register event callback to closed connections
-func (c *WSConnListener) OnDisconnected(fn func()) {
+func (c *WSConnectionHandler) OnDisconnected(fn func()) {
 	if fn != nil {
 		c.onDisconnected = fn
 	}
@@ -73,7 +73,7 @@ type Message interface {
 }
 
 // Emit send payload on eventX to socket id
-func (c *WSConnListener) Emit(message Message) error {
+func (c *WSConnectionHandler) Emit(message Message) error {
 	payload, err := proto.Marshal(message)
 	if err != nil {
 		return err
@@ -83,13 +83,13 @@ func (c *WSConnListener) Emit(message Message) error {
 }
 
 // Close WS connection and stop listening
-func (c *WSConnListener) Close() {
+func (c *WSConnectionHandler) Close() {
 	c.stop()
 	c.WSConnection.Close()
 	go c.onDisconnected()
 }
 
-func (c *WSConnListener) readMessage() error {
+func (c *WSConnectionHandler) readMessage() error {
 	length, err := c.Read(&c.buffer)
 	if err != nil {
 		return err

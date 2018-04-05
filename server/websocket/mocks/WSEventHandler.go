@@ -10,6 +10,6 @@ type WSEventHandler struct {
 }
 
 // OnConnection provides a mock function with given fields: c
-func (_m *WSEventHandler) OnConnection(c *websocket.WSConnListener) {
+func (_m *WSEventHandler) OnConnection(c *websocket.WSConnectionHandler) {
 	_m.Called(c)
 }

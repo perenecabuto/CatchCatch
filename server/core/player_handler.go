@@ -33,7 +33,7 @@ func NewPlayerHandler(s *websocket.WSServer,
 // Event handlers
 
 // OnConnection handles game and admin connection events
-func (h *PlayerHandler) OnConnection(c *websocket.WSConnListener) {
+func (h *PlayerHandler) OnConnection(c *websocket.WSConnectionHandler) {
 	player, err := h.newPlayer(c)
 	if err != nil {
 		log.Println("error to create player", err)
@@ -54,7 +54,7 @@ func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) {
 	h.players.Remove(player.ID)
 }
 
-func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConnListener) func([]byte) {
+func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConnectionHandler) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
@@ -70,7 +70,7 @@ func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConn
 	}
 }
 
-func (h *PlayerHandler) onPlayerRequestGames(player *model.Player, c *websocket.WSConnListener) func([]byte) {
+func (h *PlayerHandler) onPlayerRequestGames(player *model.Player, c *websocket.WSConnectionHandler) func([]byte) {
 	return func([]byte) {
 		go func() {
 			games, err := h.games.GamesAround(*player)
@@ -89,7 +89,7 @@ func (h *PlayerHandler) onPlayerRequestGames(player *model.Player, c *websocket.
 	}
 }
 
-func (h *PlayerHandler) newPlayer(c *websocket.WSConnListener) (player *model.Player, err error) {
+func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *model.Player, err error) {
 	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
 	if err := h.players.Set(player); err != nil {
 		return nil, errors.New("could not register: " + err.Error())

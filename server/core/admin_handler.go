@@ -33,7 +33,7 @@ func NewAdminHandler(s *websocket.WSServer, p service.PlayerLocationService, w E
 }
 
 // OnConnection handles game and admin connection events
-func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
+func (h *AdminHandler) OnConnection(c *websocket.WSConnectionHandler) {
 	log.Println("[AdminHandler] [admin] connected", c.ID)
 
 	lat, lon := 0.0, 0.0
@@ -52,7 +52,7 @@ func (h *AdminHandler) OnConnection(c *websocket.WSConnListener) {
 	c.On("admin:clear", h.onClear())
 }
 
-func (h *AdminHandler) onUpdatePosition(so *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onUpdatePosition(so *websocket.WSConnectionHandler) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
@@ -61,7 +61,7 @@ func (h *AdminHandler) onUpdatePosition(so *websocket.WSConnListener) func([]byt
 	}
 }
 
-func (h *AdminHandler) onRequestPlayers(so *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onRequestPlayers(so *websocket.WSConnectionHandler) func([]byte) {
 	return func([]byte) {
 		players, err := h.players.All()
 		if err != nil {
@@ -80,7 +80,7 @@ func (h *AdminHandler) onRequestPlayers(so *websocket.WSConnListener) func([]byt
 	}
 }
 
-func (h *AdminHandler) onDisconnectPlayer(c *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onDisconnectPlayer(c *websocket.WSConnectionHandler) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Simple{}
 		proto.Unmarshal(buf, msg)
@@ -125,7 +125,7 @@ func (h *AdminHandler) onAddFeature() func([]byte) {
 	}
 }
 
-func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byte) {
+func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnectionHandler) func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Feature{}
 		proto.Unmarshal(buf, msg)
