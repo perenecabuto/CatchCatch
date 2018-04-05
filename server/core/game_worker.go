@@ -16,9 +16,9 @@ import (
 var (
 	// ErrGameStoped happens when game can't change anymore
 	ErrGameStoped = errors.New("game stoped")
-
-	MinPlayersPerGame = 3
 )
+
+const minPlayersPerGame = 3
 
 // GameWorker observe manage and run games
 type GameWorker struct {
@@ -30,6 +30,7 @@ func NewGameWorker(service service.GameService) *GameWorker {
 	return &GameWorker{service}
 }
 
+// ID implementation of worker.Worker.ID()
 func (gw GameWorker) ID() string {
 	return "GameWorker"
 }
@@ -105,7 +106,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				gw.service.Update(g, evt)
 			case game.GamePlayerAdded, game.GamePlayerRemoved:
 				// TODO: monitor game start
-				ready := !g.Started() && len(g.Players()) >= MinPlayersPerGame
+				ready := !g.Started() && len(g.Players()) >= minPlayersPerGame
 				if ready {
 					gameTimer = time.NewTimer(5 * time.Minute)
 					evt = g.Start()
