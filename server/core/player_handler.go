@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
@@ -16,15 +15,13 @@ import (
 
 // PlayerHandler handle websocket events
 type PlayerHandler struct {
-	server  *websocket.WSServer
 	players service.PlayerLocationService
-	games   service.GameService
+	games   *GameWorker
 }
 
 // NewPlayerHandler PlayerHandler builder
-func NewPlayerHandler(s *websocket.WSServer,
-	p service.PlayerLocationService, g service.GameService) *PlayerHandler {
-	handler := &PlayerHandler{s, p, g}
+func NewPlayerHandler(p service.PlayerLocationService, g *GameWorker) *PlayerHandler {
+	handler := &PlayerHandler{p, g}
 	return handler
 }
 
@@ -76,54 +73,4 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 	}
 	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	return player, nil
-}
-
-// WatchGameEvents notify player about game events
-func (h *PlayerHandler) WatchGameEvents(ctx context.Context) error {
-	return h.games.ObserveGamesEvents(ctx, func(g *game.Game, evt game.Event) error {
-		p := evt.Player
-		switch evt.Name {
-		case game.GameStarted:
-			for _, p := range g.Players() {
-				h.server.Emit(p.ID, &protobuf.GameInfo{
-					EventName: proto.String("game:started"),
-					Id:        &g.ID, Game: &g.ID,
-					Role: proto.String(string(p.Role))})
-			}
-
-		case game.GamePlayerNearToTarget:
-			h.server.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &p.DistToTarget})
-
-		case game.GamePlayerLoose:
-			h.server.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
-
-		case game.GameTargetLoose:
-			h.server.Emit(g.TargetID(), &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
-			h.server.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:reached"),
-				Dist: &p.DistToTarget})
-			h.sendGameRank(g)
-
-		case game.GameTargetWin:
-			h.server.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:target:win")})
-			h.sendGameRank(g)
-
-		case game.GameFinished:
-			h.sendGameRank(g)
-		}
-
-		return nil
-	})
-}
-
-func (h *PlayerHandler) sendGameRank(g *game.Game) {
-	rank := g.Rank()
-	playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
-	for i, pr := range rank.PlayerRank {
-		playersRank[i] = &protobuf.PlayerRank{Player: &pr.Player, Points: proto.Int32(int32(pr.Points))}
-	}
-	h.server.EmitTo(rank.PlayerIDs, &protobuf.GameRank{
-		EventName: proto.String("game:finish"),
-		Id:        &rank.Game,
-		Game:      &rank.Game, PlayersRank: playersRank,
-	})
 }
