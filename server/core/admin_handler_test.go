@@ -7,14 +7,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/tidwall/sjson"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
+	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 
+	wmocks "github.com/perenecabuto/CatchCatch/server/core/mocks"
 	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
 	wsmocks "github.com/perenecabuto/CatchCatch/server/websocket/mocks"
 )
@@ -22,8 +21,8 @@ import (
 func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
 	ws := websocket.NewWSServer(nil)
 	p := new(smocks.PlayerLocationService)
-	m := new(smocks.Dispatcher)
-	h := core.NewAdminHandler(ws, p, m)
+	w := new(wmocks.EventsNearToAdminWatcher)
+	h := core.NewAdminHandler(ws, p, w)
 
 	ctx, finish := context.WithCancel(context.Background())
 
@@ -31,7 +30,7 @@ func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
 	adminID := ws.Add(adminConn).ID
 	adminConn.On("Send", mock.Anything).Return(nil)
 
-	action := "set"
+	action := "added"
 	example := &protobuf.Feature{
 		Id:        proto.String("test-geofence-1"),
 		Group:     proto.String("geofences"),
@@ -39,21 +38,15 @@ func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
 		EventName: proto.String("admin:feature:" + action),
 	}
 
-	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
-		go func() {
-			payload, _ := sjson.SetBytes([]byte{}, "id", adminID)
-			payload, _ = sjson.SetBytes(payload, "featID", example.GetId())
-			payload, _ = sjson.SetBytes(payload, "group", example.GetGroup())
-			payload, _ = sjson.SetBytes(payload, "coordinates", example.GetCoords())
-			payload, _ = sjson.SetBytes(payload, "action", action)
-			cb(payload)
+	w.On("ObserveFeaturesEventsNearToAdmin", ctx,
+		mock.MatchedBy(func(cb func(string, model.Feature, string) error) bool {
+			f := model.Feature{ID: example.GetId(), Coordinates: example.GetCoords(), Group: example.GetGroup()}
+			cb(adminID, f, action)
 			finish()
-		}()
-		return true
-	})).Return(nil)
+			return true
+		})).Return(nil)
 
-	err := h.WatchFeatureEvents(ctx)
-	require.NoError(t, err)
+	h.WatchFeatureEvents(ctx)
 
 	adminConn.AssertCalled(t, "Send", mock.MatchedBy(func(data []byte) bool {
 		actual := &protobuf.Feature{}

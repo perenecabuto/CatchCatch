@@ -2,13 +2,13 @@ package core_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/tidwall/gjson"
 
 	core "github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/model"
@@ -20,21 +20,14 @@ func TestFeaturesWatcherNotifiesFeaturesEventsToAdmin(t *testing.T) {
 	p := new(smocks.PlayerLocationService)
 	w := core.NewFeaturesEventsWatcher(m, p)
 
-	example := map[string]string{
-		"id":          "test-admin-id",
-		"featID":      "test-geofence-id",
-		"coordinates": "[-1, -2]",
-		"group":       "geofences",
-		"action":      "set",
+	example := &core.EventsNearToAdminPayload{
+		AdminID: "test-admin-id",
+		Feature: model.Feature{ID: "test-geofence-id", Group: "geofence", Coordinates: "[-1, -2]"},
+		Action:  "added",
 	}
 	p.On("ObserveFeaturesEventsNearToAdmin", mock.Anything,
 		mock.MatchedBy(func(cb func(id string, f model.Feature, action string) error) bool {
-			f := model.Feature{
-				ID:          example["featID"],
-				Group:       example["group"],
-				Coordinates: example["coordinates"],
-			}
-			cb(example["id"], f, example["action"])
+			cb(example.AdminID, example.Feature, example.Action)
 			return true
 		})).Return(nil)
 
@@ -43,14 +36,42 @@ func TestFeaturesWatcherNotifiesFeaturesEventsToAdmin(t *testing.T) {
 	err := w.Run(context.Background(), nil)
 	require.NoError(t, err)
 
-	m.AssertCalled(t, "Publish", core.FeaturesMessageTopic, mock.MatchedBy(func(data []byte) bool {
-		actual := map[string]string{
-			"id":          gjson.GetBytes(data, "id").String(),
-			"featID":      gjson.GetBytes(data, "featID").String(),
-			"coordinates": gjson.GetBytes(data, "coordinates").String(),
-			"group":       gjson.GetBytes(data, "group").String(),
-			"action":      gjson.GetBytes(data, "action").String(),
-		}
+	m.AssertCalled(t, "Publish", mock.AnythingOfType("string"), mock.MatchedBy(func(data []byte) bool {
+		actual := &core.EventsNearToAdminPayload{}
+		json.Unmarshal(data, actual)
 		return assert.EqualValues(t, example, actual)
 	}))
+}
+
+func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
+	p := new(smocks.PlayerLocationService)
+	m := new(smocks.Dispatcher)
+	w := core.NewFeaturesEventsWatcher(m, p)
+
+	ctx, finish := context.WithCancel(context.Background())
+
+	example := &core.EventsNearToAdminPayload{
+		AdminID: "test-admin-id",
+		Feature: model.Feature{ID: "test-geofence-id", Group: "geofence", Coordinates: "[-1, -2]"},
+		Action:  "added",
+	}
+
+	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
+		go func() {
+			data, _ := json.Marshal(example)
+			cb(data)
+			finish()
+		}()
+		return true
+	})).Return(nil)
+
+	actual := &core.EventsNearToAdminPayload{}
+	err := w.ObserveFeaturesEventsNearToAdmin(ctx, func(adminID string, feat model.Feature, action string) error {
+		actual.AdminID = adminID
+		actual.Feature = feat
+		actual.Action = action
+		return nil
+	})
+	require.NoError(t, err)
+	assert.EqualValues(t, example, actual)
 }

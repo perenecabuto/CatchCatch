@@ -5,24 +5,30 @@ import (
 	"log"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/tidwall/gjson"
 
+	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
-	"github.com/perenecabuto/CatchCatch/server/service/messages"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
+type EventsNearToAdminWatcher interface {
+	ObserveFeaturesEventsNearToAdmin(
+		context.Context,
+		func(adminID string, feat model.Feature, action string) error,
+	) error
+}
+
 // AdminHandler handle websocket events
 type AdminHandler struct {
-	server   *websocket.WSServer
-	players  service.PlayerLocationService
-	messages messages.Dispatcher
+	server  *websocket.WSServer
+	players service.PlayerLocationService
+	watcher EventsNearToAdminWatcher
 }
 
 // NewAdminHandler AdminHandler builder
-func NewAdminHandler(s *websocket.WSServer, p service.PlayerLocationService, m messages.Dispatcher) *AdminHandler {
-	handler := &AdminHandler{s, p, m}
+func NewAdminHandler(s *websocket.WSServer, p service.PlayerLocationService, w EventsNearToAdminWatcher) *AdminHandler {
+	handler := &AdminHandler{s, p, w}
 	return handler
 }
 
@@ -101,8 +107,6 @@ func (h *AdminHandler) onClear() func([]byte) {
 	}
 }
 
-// Map events
-
 func (h *AdminHandler) onAddFeature() func([]byte) {
 	return func(buf []byte) {
 		msg := &protobuf.Feature{}
@@ -138,33 +142,14 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnListener) func([]byt
 }
 
 func (h *AdminHandler) WatchFeatureEvents(ctx context.Context) error {
-	stream := make(chan []byte)
-	err := h.messages.Subscribe(ctx, FeaturesMessageTopic, func(data []byte) error {
-		stream <- data
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case data := <-stream:
-			adminID, featID, group, coords, action :=
-				gjson.GetBytes(data, "id").String(),
-				gjson.GetBytes(data, "featID").String(),
-				gjson.GetBytes(data, "group").String(),
-				gjson.GetBytes(data, "coordinates").String(),
-				gjson.GetBytes(data, "action").String()
+	return h.watcher.ObserveFeaturesEventsNearToAdmin(ctx,
+		func(adminID string, feat model.Feature, action string) error {
 			err := h.server.Emit(adminID, &protobuf.Feature{
-				EventName: proto.String("admin:feature:" + action), Id: &featID,
-				Group: &group, Coords: &coords})
+				EventName: proto.String("admin:feature:" + action), Id: &feat.ID,
+				Group: &feat.Group, Coords: &feat.Coordinates})
 			if err != nil {
 				log.Println("[AdminHandler] WatchFeatureEvents error:", err)
 			}
-		}
-	}
-
+			return nil
+		})
 }

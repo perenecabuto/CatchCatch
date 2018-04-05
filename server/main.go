@@ -89,7 +89,7 @@ func main() {
 	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID})
 
 	adminConnections := websocket.NewWSServer(wsdriver)
-	adminH := core.NewAdminHandler(adminConnections, playerService, dispatcher)
+	adminH := core.NewAdminHandler(adminConnections, playerService, featuresWatcher)
 	adminConnections.SetEventHandler(adminH)
 	go adminH.WatchFeatureEvents(ctx)
 
