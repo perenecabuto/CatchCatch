@@ -14,8 +14,6 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
-//TODO: set game status on db
-
 // PlayerHandler handle websocket events
 type PlayerHandler struct {
 	server  *websocket.WSServer
