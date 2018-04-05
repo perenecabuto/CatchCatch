@@ -41,8 +41,14 @@ func (h *AdminHandler) OnStart(ctx context.Context, wss *websocket.WSServer) err
 	return h.watcher.OnFeatureEventNearToAdmin(ctx,
 		func(adminID string, feat model.Feature, action string) error {
 			err := wss.Emit(adminID, &protobuf.Feature{
-				EventName: proto.String("admin:feature:" + action), Id: &feat.ID,
-				Group: &feat.Group, Coords: &feat.Coordinates})
+				EventName: proto.String("admin:feature:" + action),
+				Group:     &feat.Group, Id: &feat.ID, Coords: &feat.Coordinates})
+			if err != websocket.ErrWSConnectionNotFound {
+				// TODO: add servers broadcast ping
+				// if no server responds with user found
+				// remote this admin
+				return nil
+			}
 			if err != nil {
 				log.Println("[AdminHandler] WatchFeatureEvents error:", err)
 			}
