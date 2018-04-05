@@ -25,6 +25,7 @@ func NewPlayerHandler(p service.PlayerLocationService, g *GameWorker) *PlayerHan
 	return handler
 }
 
+// OnStart add listeners for game events, games around players
 func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
 	return nil
 }
