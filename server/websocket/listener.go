@@ -31,6 +31,7 @@ type WSConnListener struct {
 	buffer []byte
 }
 
+// NewWSConnListener creates a new WSConnListener
 func NewWSConnListener(c WSConnection) *WSConnListener {
 	id := uuid.NewV4().String()
 	return &WSConnListener{c, id, make(map[string]WSEventCallback), func() {}, func() {}, make([]byte, 512)}

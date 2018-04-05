@@ -20,7 +20,7 @@ func NewGobwasWSDriver() WSDriver {
 	return new(GobwasWSDriver)
 }
 
-// Handler implements WSDriver.Handler
+// HTTPHandler implements WSDriver.Handler
 func (d GobwasWSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, _, _, err := ws.UpgradeHTTP(r, w, nil)
@@ -70,7 +70,7 @@ func NewXNetWSDriver() WSDriver {
 	return &XNetWSDriver{}
 }
 
-// Handler implements WSDriver.Handler
+// HTTPHandler implements WSDriver.Handler
 func (d XNetWSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
 	return websocket.Server{
 		Handler: func(c *websocket.Conn) {
