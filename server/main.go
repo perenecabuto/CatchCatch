@@ -71,10 +71,9 @@ func main() {
 	workersCli.FlushAll()
 	workers := worker.NewGoredisWorkerManager(workersCli)
 
-	playersConnections := websocket.NewWSServer(wsdriver)
 	gameWorker := core.NewGameWorker(gameService)
 	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
-	checkpointWatcher := core.NewCheckpointWatcher(playersConnections, dispatcher, playerService)
+	checkpointWatcher := core.NewCheckpointWatcher(dispatcher, playerService)
 	featuresWatcher := core.NewFeaturesEventsWatcher(dispatcher, playerService)
 
 	workers.Add(gameWorker)
@@ -88,14 +87,10 @@ func main() {
 	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
 	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID})
 
-	adminConnections := websocket.NewWSServer(wsdriver)
-	adminH := core.NewAdminHandler(adminConnections, playerService, featuresWatcher)
-	adminConnections.SetEventHandler(adminH)
-	go adminH.WatchFeatureEvents(ctx)
-
-	playerH := core.NewPlayerHandler(playersConnections, playerService, gameService)
-	playersConnections.SetEventHandler(playerH)
-	go playerH.WatchGameEvents(ctx)
+	playerH := core.NewPlayerHandler(playerService, gameWorker)
+	playersConnections := websocket.NewWSServer(wsdriver, playerH)
+	adminH := core.NewAdminHandler(playerService, featuresWatcher)
+	adminConnections := websocket.NewWSServer(wsdriver, adminH)
 
 	http.Handle("/admin", execfunc.RecoverWrapper(adminConnections.Listen(ctx)))
 	http.Handle("/player", execfunc.RecoverWrapper(playersConnections.Listen(ctx)))
