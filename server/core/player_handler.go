@@ -41,9 +41,7 @@ func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnect
 		log.Println("error to create player", err)
 		return err
 	}
-
 	log.Println("new player connected", player)
-	c.On("player:request-games", h.onPlayerRequestGames(player, c))
 	c.On("player:update", h.onPlayerUpdate(player, c))
 	c.OnDisconnected(func() {
 		h.onPlayerDisconnect(player)
@@ -70,25 +68,6 @@ func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConn
 
 		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
 			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
-	}
-}
-
-func (h *PlayerHandler) onPlayerRequestGames(player *model.Player, c *websocket.WSConnectionHandler) func([]byte) {
-	return func([]byte) {
-		go func() {
-			games, err := h.games.GamesAround(*player)
-			if err != nil {
-				log.Println("Error to request games:", err)
-				return
-			}
-			event := proto.String("game:around")
-			for _, g := range games {
-				err := c.Emit(&protobuf.Feature{EventName: event, Id: &g.ID, Group: proto.String("game"), Coords: &g.Coords})
-				if err != nil {
-					log.Println("Error to emit", *event, player)
-				}
-			}
-		}()
 	}
 }
 
