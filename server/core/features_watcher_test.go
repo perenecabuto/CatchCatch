@@ -57,21 +57,21 @@ func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 	}
 
 	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
-		go func() {
-			data, _ := json.Marshal(example)
-			cb(data)
-			finish()
-		}()
+		data, _ := json.Marshal(example)
+		cb(data)
 		return true
 	})).Return(nil)
 
 	actual := &core.EventsNearToAdminPayload{}
-	err := w.ObserveFeaturesEventsNearToAdmin(ctx, func(adminID string, feat model.Feature, action string) error {
+	err := w.OnFeatureEventNearToAdmin(ctx, func(adminID string, feat model.Feature, action string) error {
 		actual.AdminID = adminID
 		actual.Feature = feat
 		actual.Action = action
+		finish()
 		return nil
 	})
 	require.NoError(t, err)
+
+	<-ctx.Done()
 	assert.EqualValues(t, example, actual)
 }
