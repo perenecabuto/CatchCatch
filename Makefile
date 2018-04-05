@@ -47,7 +47,7 @@ build:
 docker-compose: build
 	docker-compose up --build
 
-run: run-tile38 run-nats run-redis
+run: run-tile38 run-nats run-redis run-influxdb
 	$(SERVER_SRC) CompileDaemon -color -command "./$(BINARY) -zconf"
 
 run-debug:
