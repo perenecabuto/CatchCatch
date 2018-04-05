@@ -26,7 +26,7 @@ type GameWorker struct {
 }
 
 // NewGameWorker creates GameWorker
-func NewGameWorker(service service.GameService) worker.Worker {
+func NewGameWorker(service service.GameService) *GameWorker {
 	return &GameWorker{service}
 }
 
