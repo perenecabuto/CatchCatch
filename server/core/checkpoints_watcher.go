@@ -13,6 +13,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
+// CheckpointWatcher is responsible to watch players near to checkpoints
 type CheckpointWatcher struct {
 	messages messages.Dispatcher
 	service  service.PlayerLocationService
@@ -23,11 +24,12 @@ func NewCheckpointWatcher(m messages.Dispatcher, s service.PlayerLocationService
 	return &CheckpointWatcher{m, s}
 }
 
+// ID implementation of worker.Worker.ID()
 func (w *CheckpointWatcher) ID() string {
 	return "CheckpointWatcher"
 }
 
-// Run watches checkpoints events
+// Run listen to players near to checkpoints
 func (w *CheckpointWatcher) Run(ctx context.Context, _ worker.TaskParams) error {
 	return w.service.ObservePlayerNearToCheckpoint(ctx, func(playerID string, distTo float64, f model.Feature) error {
 		lonlat := gjson.Get(f.Coordinates, "coordinates").Array()
@@ -49,6 +51,7 @@ func (w *CheckpointWatcher) Run(ctx context.Context, _ worker.TaskParams) error 
 	})
 }
 
+// OnCheckpointNearToPlayer notify about players near to checkpoints
 func (w *CheckpointWatcher) OnCheckpointNearToPlayer(ctx context.Context, cb func(*protobuf.Detection) error) error {
 	return w.messages.Subscribe(ctx, "checkpoint:detected", func(data []byte) error {
 		payload := &protobuf.Detection{}
