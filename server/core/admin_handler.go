@@ -21,19 +21,24 @@ type EventsNearToAdminWatcher interface {
 
 // AdminHandler handle websocket events
 type AdminHandler struct {
-	server  *websocket.WSServer
 	players service.PlayerLocationService
 	watcher EventsNearToAdminWatcher
+
+	wss *websocket.WSServer
 }
 
 // NewAdminHandler AdminHandler builder
-func NewAdminHandler(s *websocket.WSServer, p service.PlayerLocationService, w EventsNearToAdminWatcher) *AdminHandler {
-	handler := &AdminHandler{s, p, w}
+func NewAdminHandler(p service.PlayerLocationService, w EventsNearToAdminWatcher) *AdminHandler {
+	handler := &AdminHandler{players: p, watcher: w}
 	return handler
 }
 
+func (h *AdminHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
+	h.wss = wss
+}
+
 // OnConnection handles game and admin connection events
-func (h *AdminHandler) OnConnection(c *websocket.WSConnectionHandler) {
+func (h *AdminHandler) OnConnection(ctx context.Context, c *websocket.WSConnectionHandler) error {
 	log.Println("[AdminHandler] [admin] connected", c.ID)
 
 	lat, lon := 0.0, 0.0
@@ -50,6 +55,8 @@ func (h *AdminHandler) OnConnection(c *websocket.WSConnectionHandler) {
 	c.On("admin:feature:request", h.onRequestFeatures(c))
 	c.On("admin:feature:add", h.onAddFeature())
 	c.On("admin:clear", h.onClear())
+
+	return nil
 }
 
 func (h *AdminHandler) onUpdatePosition(so *websocket.WSConnectionHandler) func([]byte) {
@@ -86,15 +93,11 @@ func (h *AdminHandler) onDisconnectPlayer(c *websocket.WSConnectionHandler) func
 		proto.Unmarshal(buf, msg)
 		playerID := msg.GetId()
 		log.Println("[AdminHandler] admin:players:disconnect", playerID)
-		err := h.server.Close(playerID)
-		if err != nil {
-			log.Println("[AdminHandler] admin:players:disconnect: no connected player - ", playerID)
-		}
-		err = h.players.Remove(playerID)
+		err := h.players.Remove(playerID)
 		if err == service.ErrFeatureNotFound {
 			log.Println("[AdminHandler] admin:players:disconnect: player not found - ", playerID)
 		}
-		h.server.Broadcast(&protobuf.Simple{EventName: proto.String("admin:players:disconnected"), Id: &playerID})
+		h.wss.Broadcast(&protobuf.Simple{EventName: proto.String("admin:players:disconnected"), Id: &playerID})
 	}
 }
 
@@ -103,7 +106,7 @@ func (h *AdminHandler) onClear() func([]byte) {
 		// TODO: send this message by broaker
 		// h.games.Clear()
 		h.players.Clear()
-		h.server.CloseAll()
+		h.wss.CloseAll()
 	}
 }
 
@@ -139,17 +142,4 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnectionHandler) func(
 			c.Emit(&protobuf.Feature{EventName: &event, Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
 		}
 	}
-}
-
-func (h *AdminHandler) WatchFeatureEvents(ctx context.Context) error {
-	return h.watcher.ObserveFeaturesEventsNearToAdmin(ctx,
-		func(adminID string, feat model.Feature, action string) error {
-			err := h.server.Emit(adminID, &protobuf.Feature{
-				EventName: proto.String("admin:feature:" + action), Id: &feat.ID,
-				Group: &feat.Group, Coords: &feat.Coordinates})
-			if err != nil {
-				log.Println("[AdminHandler] WatchFeatureEvents error:", err)
-			}
-			return nil
-		})
 }
