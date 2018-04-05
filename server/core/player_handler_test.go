@@ -17,7 +17,6 @@ import (
 )
 
 func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
-	t.Skip()
 	wsDriver := new(wsmocks.WSDriver)
 	c := new(wsmocks.WSConnection)
 
@@ -28,10 +27,11 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 		return true
 	})).Return(nil)
 
-	playerID := "player-test-1"
-
 	gameService := new(smocks.GameService)
 	gameWorker := NewGameWorker(gameService)
+	playerH := NewPlayerHandler(nil, gameWorker)
+	wss := websocket.NewWSServer(wsDriver, playerH)
+	playerID := wss.Add(c).ID
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -50,9 +50,6 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 
 	m := new(smocks.Dispatcher)
 	m.On("Subscribe").Return(nil)
-
-	playerH := NewPlayerHandler(nil, gameWorker)
-	wss := websocket.NewWSServer(wsDriver, playerH)
 
 	err := playerH.OnStart(ctx, wss)
 	require.NoError(t, err)

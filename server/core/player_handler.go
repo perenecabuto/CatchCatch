@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
@@ -27,6 +28,10 @@ func NewPlayerHandler(p service.PlayerLocationService, g *GameWorker) *PlayerHan
 
 // OnStart add listeners for game events, games around players
 func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
+	err := h.onGameEvents(ctx, wss)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -74,4 +79,53 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 	}
 	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	return player, nil
+}
+
+func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServer) error {
+	return h.games.OnGameEvent(ctx, func(g *game.Game, evt game.Event) error {
+		p := evt.Player
+
+		switch evt.Name {
+		case game.GameCreated:
+		case game.GamePlayerAdded:
+		case game.GamePlayerRemoved:
+		case game.GameStarted:
+			for _, p := range g.Players() {
+				wss.Emit(p.ID, &protobuf.GameInfo{
+					EventName: proto.String("game:started"),
+					Id:        &g.ID, Game: &g.ID,
+					Role: proto.String(string(p.Role))})
+			}
+
+		case game.GamePlayerNearToTarget:
+			wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &p.DistToTarget})
+
+		case game.GamePlayerLoose:
+			wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
+
+		case game.GameTargetLoose:
+			wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
+
+		case game.GameTargetWin:
+			wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:target:win")})
+
+		case game.GameRunningWithoutPlayers:
+
+		case game.GameLastPlayerDetected:
+
+		case game.GameFinished:
+			rank := g.Rank()
+			playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
+			for i, pr := range rank.PlayerRank {
+				playersRank[i] = &protobuf.PlayerRank{Player: &pr.Player, Points: proto.Int32(int32(pr.Points))}
+			}
+			wss.Emit(p.ID, &protobuf.GameRank{
+				EventName: proto.String("game:finish"),
+				Id:        &rank.Game,
+				Game:      &rank.Game, PlayersRank: playersRank,
+			})
+		}
+
+		return nil
+	})
 }

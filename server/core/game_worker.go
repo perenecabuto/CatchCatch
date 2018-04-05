@@ -35,6 +35,13 @@ func (gw GameWorker) ID() string {
 	return "GameWorker"
 }
 
+func (gw *GameWorker) OnGameEvent(ctx context.Context, cb func(g *game.Game, evt game.Event) error) error {
+	return gw.service.ObserveGamesEvents(ctx, func(g *game.Game, e game.Event) error {
+		cb(g, e)
+		return nil
+	})
+}
+
 // Run starts this Worker to listen to player events over games
 // TODO: monitor game watches
 // TODO: monitor game player watches
