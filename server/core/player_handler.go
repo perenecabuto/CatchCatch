@@ -30,15 +30,16 @@ func NewPlayerHandler(s *websocket.WSServer,
 	return handler
 }
 
-// Event handlers
+func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
+	return nil
+}
 
 // OnConnection handles game and admin connection events
-func (h *PlayerHandler) OnConnection(c *websocket.WSConnectionHandler) {
+func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnectionHandler) error {
 	player, err := h.newPlayer(c)
 	if err != nil {
 		log.Println("error to create player", err)
-		c.Close()
-		return
+		return err
 	}
 
 	log.Println("new player connected", player)
@@ -47,6 +48,8 @@ func (h *PlayerHandler) OnConnection(c *websocket.WSConnectionHandler) {
 	c.OnDisconnected(func() {
 		h.onPlayerDisconnect(player)
 	})
+
+	return nil
 }
 
 func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) {
