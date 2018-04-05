@@ -3,13 +3,11 @@ package websocket
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
 
 	"github.com/golang/protobuf/proto"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/perenecabuto/CatchCatch/server/execfunc"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
@@ -20,105 +18,9 @@ var (
 	ErrWSConnectionNotFound = errors.New("connection not found")
 )
 
-// WSConnection is an interface for WS communication
-type WSConnection interface {
-	Read(*[]byte) (int, error)
-	Send(payload []byte) error
-	Close() error
-}
-
 // WSDriver is an interface for WS communication
 type WSDriver interface {
 	HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler
-}
-
-// WSConnListener represents a WS connection
-type WSConnListener struct {
-	WSConnection
-
-	ID             string
-	eventCallbacks map[string]evtCallback
-	onDisconnected func()
-	stop           context.CancelFunc
-
-	buffer []byte
-}
-
-type evtCallback func([]byte)
-
-func (c *WSConnListener) listen(ctx context.Context) error {
-	ctx, c.stop = context.WithCancel(ctx)
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			if err := c.readMessage(); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-// On this connection event trigger callback with its message
-func (c *WSConnListener) On(event string, callback evtCallback) {
-	c.eventCallbacks[event] = callback
-}
-
-// OnDisconnected register event callback to closed connections
-func (c *WSConnListener) OnDisconnected(fn func()) {
-	if fn != nil {
-		c.onDisconnected = fn
-	}
-}
-
-// Message represent protobuf message with event name
-type Message interface {
-	proto.Message
-	GetEventName() string
-}
-
-// Emit send payload on eventX to socket id
-func (c *WSConnListener) Emit(message Message) error {
-	payload, err := proto.Marshal(message)
-	if err != nil {
-		return err
-	}
-
-	return c.Send(payload)
-}
-
-// Close WS connection and stop listening
-func (c *WSConnListener) Close() {
-	c.stop()
-	c.WSConnection.Close()
-	go c.onDisconnected()
-}
-
-func (c *WSConnListener) readMessage() error {
-	length, err := c.Read(&c.buffer)
-	if err != nil {
-		return err
-	}
-	if length == 0 {
-		return nil
-	}
-	msg := &protobuf.Simple{}
-	if err := proto.Unmarshal(c.buffer[:length], msg); err != nil {
-		return fmt.Errorf("readMessage(unmarshall): %s %s", err.Error(), c.buffer[:length])
-	}
-	if len(msg.String()) == 0 {
-		log.Println("message error:", msg)
-		return fmt.Errorf("Invalid payload: %s", c.buffer)
-	}
-	cb, exists := c.eventCallbacks[msg.GetEventName()]
-	if !exists {
-		return fmt.Errorf("No callback found for: %v", msg)
-	}
-	return execfunc.WithRecover(func() error {
-		cb(c.buffer)
-		return nil
-	})
 }
 
 // WSServer manage WS connections
@@ -177,8 +79,7 @@ func (wss *WSServer) Get(id string) *WSConnListener {
 
 // Add Conn for session id
 func (wss *WSServer) Add(c WSConnection) *WSConnListener {
-	id := uuid.NewV4().String()
-	conn := &WSConnListener{c, id, make(map[string]evtCallback), func() {}, func() {}, make([]byte, 512)}
+	conn := NewWSConnListener(c)
 	wss.Lock()
 	wss.connections[conn.ID] = conn
 	wss.Unlock()
