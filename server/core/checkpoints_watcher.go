@@ -2,10 +2,8 @@ package core
 
 import (
 	"context"
-	"log"
 
 	"github.com/perenecabuto/CatchCatch/server/service/messages"
-	"github.com/perenecabuto/CatchCatch/server/websocket"
 	"github.com/tidwall/gjson"
 
 	"github.com/golang/protobuf/proto"
@@ -15,23 +13,22 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
-type checkpointsWatcher struct {
-	wss      *websocket.WSServer
+type CheckpointWatcher struct {
 	messages messages.Dispatcher
 	service  service.PlayerLocationService
 }
 
 // NewCheckpointWatcher creates a worker to watch checkpoints events
-func NewCheckpointWatcher(wss *websocket.WSServer, m messages.Dispatcher, s service.PlayerLocationService) worker.Worker {
-	return &checkpointsWatcher{wss, m, s}
+func NewCheckpointWatcher(m messages.Dispatcher, s service.PlayerLocationService) *CheckpointWatcher {
+	return &CheckpointWatcher{m, s}
 }
 
-func (w *checkpointsWatcher) ID() string {
-	return "checkpointsWatcher"
+func (w *CheckpointWatcher) ID() string {
+	return "CheckpointWatcher"
 }
 
 // Run watches checkpoints events
-func (w *checkpointsWatcher) Run(ctx context.Context, _ worker.TaskParams) error {
+func (w *CheckpointWatcher) Run(ctx context.Context, _ worker.TaskParams) error {
 	return w.service.ObservePlayerNearToCheckpoint(ctx, func(playerID string, distTo float64, f model.Feature) error {
 		lonlat := gjson.Get(f.Coordinates, "coordinates").Array()
 		payload := &protobuf.Detection{
@@ -43,16 +40,26 @@ func (w *checkpointsWatcher) Run(ctx context.Context, _ worker.TaskParams) error
 			Lon:          proto.Float64(lonlat[0].Float()),
 			Lat:          proto.Float64(lonlat[1].Float()),
 		}
-		// data, _ := proto.Marshal(payload)
-		// err := w.messages.Publish("checkpoint:detected", data)
-		// if err != nil {
-		// 	return err
-		// }
-		// TODO: remove this shit from HERE
-		// it's a handler resposibility
-		if err := w.wss.Emit(playerID, payload); err != nil {
-			log.Println("AdminWatcher:WatchCheckpoints:", playerID, err.Error())
+		data, _ := proto.Marshal(payload)
+		err := w.messages.Publish("checkpoint:detected", data)
+		if err != nil {
+			return err
 		}
+		return nil
+	})
+}
+
+func (w *CheckpointWatcher) OnCheckpointNearToPlayer(ctx context.Context, cb func(*protobuf.Detection) error) error {
+	return w.messages.Subscribe(ctx, "checkpoint:detected", func(data []byte) error {
+		payload := &protobuf.Detection{}
+		err := proto.Unmarshal(data, payload)
+		if err != nil {
+			return err
+		}
+		if err != nil {
+			return err
+		}
+		cb(payload)
 		return nil
 	})
 }
