@@ -2,6 +2,7 @@ package messages
 
 import (
 	"context"
+	"log"
 
 	nats "github.com/nats-io/go-nats"
 )
@@ -27,7 +28,10 @@ func (d Nats) Publish(topic string, message []byte) error {
 
 func (d Nats) Subscribe(ctx context.Context, topic string, callback OnMessage) error {
 	sub, err := d.conn.Subscribe(topic, func(msg *nats.Msg) {
-		callback(msg.Data)
+		err := callback(msg.Data)
+		if err != nil {
+			log.Println("[NatsDispatcher] callback error:", err)
+		}
 	})
 	go func() {
 		<-ctx.Done()
