@@ -19,16 +19,16 @@ import (
 )
 
 func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
-	ws := websocket.NewWSServer(nil)
 	p := new(smocks.PlayerLocationService)
 	w := new(wmocks.EventsNearToAdminWatcher)
-	h := core.NewAdminHandler(ws, p, w)
-
+	h := core.NewAdminHandler(p, w)
 	ctx, finish := context.WithCancel(context.Background())
+	defer finish()
 
 	adminConn := new(wsmocks.WSConnection)
-	adminID := ws.Add(adminConn).ID
 	adminConn.On("Send", mock.Anything).Return(nil)
+	wss := websocket.NewWSServer(nil, h)
+	adminID := wss.Add(adminConn).ID
 
 	action := "added"
 	example := &protobuf.Feature{
@@ -38,15 +38,14 @@ func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
 		EventName: proto.String("admin:feature:" + action),
 	}
 
-	w.On("ObserveFeaturesEventsNearToAdmin", ctx,
+	w.On("OnFeatureEventNearToAdmin", ctx,
 		mock.MatchedBy(func(cb func(string, model.Feature, string) error) bool {
 			f := model.Feature{ID: example.GetId(), Coordinates: example.GetCoords(), Group: example.GetGroup()}
 			cb(adminID, f, action)
-			finish()
 			return true
 		})).Return(nil)
 
-	h.WatchFeatureEvents(ctx)
+	h.OnStart(ctx, wss)
 
 	adminConn.AssertCalled(t, "Send", mock.MatchedBy(func(data []byte) bool {
 		actual := &protobuf.Feature{}
