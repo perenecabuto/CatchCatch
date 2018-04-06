@@ -2,15 +2,17 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"time"
-
-	"github.com/perenecabuto/CatchCatch/server/worker"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/service/messages"
+	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
 var (
@@ -18,16 +20,20 @@ var (
 	ErrGameStoped = errors.New("game stoped")
 )
 
-const minPlayersPerGame = 3
+const (
+	minPlayersPerGame = 3
+	gameChangeTopic   = "game:update"
+)
 
 // GameWorker observe manage and run games
 type GameWorker struct {
-	service service.GameService
+	service  service.GameService
+	messages messages.Dispatcher
 }
 
 // NewGameWorker creates GameWorker
-func NewGameWorker(service service.GameService) *GameWorker {
-	return &GameWorker{service}
+func NewGameWorker(s service.GameService, m messages.Dispatcher) *GameWorker {
+	return &GameWorker{s, m}
 }
 
 // ID implementation of worker.Worker.ID()
@@ -35,10 +41,16 @@ func (gw GameWorker) ID() string {
 	return "GameWorker"
 }
 
-func (gw *GameWorker) OnGameEvent(ctx context.Context, cb func(g *game.Game, evt game.Event) error) error {
-	return gw.service.ObserveGamesEvents(ctx, func(g *game.Game, e game.Event) error {
-		cb(g, e)
-		return nil
+// OnGameEvent notifies games events
+func (gw *GameWorker) OnGameEvent(ctx context.Context, cb func(payload *GameEventPayload) error) error {
+	return gw.messages.Subscribe(ctx, gameChangeTopic, func(data []byte) error {
+		payload := &GameEventPayload{}
+		err := json.Unmarshal(data, payload)
+		// TODO: check better if it will not stop the listener
+		if err != nil {
+			return err
+		}
+		return cb(payload)
 	})
 }
 
