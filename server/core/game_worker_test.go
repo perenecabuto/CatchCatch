@@ -95,18 +95,29 @@ func TestGameWorkerStartGame(t *testing.T) {
 }
 
 func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
-	// repo := &smocks.Repository{}
-	// stream := &smocks.EventStream{}
-	// gService := service.NewGameService(repo, stream)
+	m := new(smocks.Dispatcher)
+	gs := new(smocks.GameService)
+	gw := core.NewGameWorker(gs, m)
 
-	// g := game.NewGame(gameID)
-	// ctx, finish := context.WithCancel(context.Background())
-	// defer finish()
+	ctx := context.Background()
 
-	// err := gService.ObserveGamesEvents(ctx, func(actualG *game.Game, actualE game.Event) error {
-	// 	assert.Equal(t, g, actualG)
-	// 	assert.Equal(t, e, actualE)
-	// 	return nil
-	// })
-	// require.NoError(t, err)
+	g := game.NewGame("test-game-1")
+	playerID := "test-game-player-1"
+	dist := 100.0
+	example := &core.GameEventPayload{Event: core.GameFinished, Game: g, PlayerID: playerID, DistToTarget: dist}
+
+	m.On("Subscribe", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(cb func(data []byte) error) bool {
+			data, _ := json.Marshal(example)
+			cb(data)
+			return true
+		})).Return(nil)
+
+	var actual *core.GameEventPayload
+	gw.OnGameEvent(ctx, func(p *core.GameEventPayload) error {
+		actual = p
+		return nil
+	})
+
+	assert.Equal(t, example, actual)
 }
