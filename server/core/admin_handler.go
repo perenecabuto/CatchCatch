@@ -43,7 +43,7 @@ func (h *AdminHandler) OnStart(ctx context.Context, wss *websocket.WSServer) err
 			err := wss.Emit(adminID, &protobuf.Feature{
 				EventName: proto.String("admin:feature:" + action),
 				Group:     &feat.Group, Id: &feat.ID, Coords: &feat.Coordinates})
-			if err != websocket.ErrWSConnectionNotFound {
+			if err == websocket.ErrWSConnectionNotFound {
 				// TODO: add servers broadcast ping
 				// if no server responds with user found
 				// remote this admin
