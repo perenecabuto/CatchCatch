@@ -292,5 +292,8 @@ func raffleTargetPlayer(players map[string]*Player) string {
 	for id := range players {
 		ids = append(ids, id)
 	}
+	if len(ids) == 0 {
+		return ""
+	}
 	return ids[rand.Intn(len(ids))]
 }
