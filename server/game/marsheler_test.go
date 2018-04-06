@@ -11,10 +11,10 @@ import (
 
 var (
 	players = []Player{
-		Player{Player: model.Player{ID: "hunter-1"}, Loose: false, Role: GameRoleHunter},
-		Player{Player: model.Player{ID: "hunter-2"}, Loose: true, Role: GameRoleHunter, DistToTarget: 10},
-		Player{Player: model.Player{ID: "hunter-3", Lon: 42, Lat: 31}, Loose: false, Role: GameRoleHunter},
-		Player{Player: model.Player{ID: "target-1"}, Loose: false, Role: GameRoleTarget},
+		Player{Player: model.Player{ID: "hunter-1"}, Lose: false, Role: GameRoleHunter},
+		Player{Player: model.Player{ID: "hunter-2"}, Lose: true, Role: GameRoleHunter, DistToTarget: 10},
+		Player{Player: model.Player{ID: "hunter-3", Lon: 42, Lat: 31}, Lose: false, Role: GameRoleHunter},
+		Player{Player: model.Player{ID: "target-1"}, Lose: false, Role: GameRoleTarget},
 	}
 	exampleGame = NewGameWithParams("game-test-1", true, players, "target-1")
 
@@ -24,10 +24,10 @@ var (
 			"started": true,
 			"targetID": "target-1",
 			"players": {
-				"hunter-1": {"id":"hunter-1", "Loose":false, "lon":0, "lat":0, "Role":"hunter", "DistToTarget":0}, 
-				"hunter-2": {"id":"hunter-2", "Loose":true , "lon":0, "lat":0, "Role":"hunter", "DistToTarget":10}, 
-				"hunter-3": {"id":"hunter-3", "Loose":false, "lon":42, "lat":31, "Role":"hunter", "DistToTarget":0}, 
-				"target-1": {"id":"target-1", "Loose":false, "lon":0, "lat":0, "Role":"target", "DistToTarget":0}
+				"hunter-1": {"id":"hunter-1", "Lose":false, "lon":0, "lat":0, "Role":"hunter", "DistToTarget":0},
+				"hunter-2": {"id":"hunter-2", "Lose":true , "lon":0, "lat":0, "Role":"hunter", "DistToTarget":10},
+				"hunter-3": {"id":"hunter-3", "Lose":false, "lon":42, "lat":31, "Role":"hunter", "DistToTarget":0},
+				"target-1": {"id":"target-1", "Lose":false, "lon":0, "lat":0, "Role":"target", "DistToTarget":0}
 			}
 		}
 	`)

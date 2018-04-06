@@ -23,8 +23,8 @@ const (
 	GamePlayerRemoved         EventName = "game:player:removed"
 	GameTargetWin             EventName = "game:target:win"
 	GameLastPlayerDetected    EventName = "game:player:last"
-	GamePlayerLoose           EventName = "game:player:loose"
-	GameTargetLoose           EventName = "game:target:reached"
+	GamePlayerLose            EventName = "game:player:loose"
+	GameTargetLose            EventName = "game:target:reached"
 	GamePlayerNearToTarget    EventName = "game:player:near"
 	GameRunningWithoutPlayers EventName = "game:empty"
 )
@@ -59,12 +59,12 @@ type Player struct {
 	model.Player
 	Role         Role
 	DistToTarget float64
-	Loose        bool
+	Lose         bool
 }
 
 func (gp Player) String() string {
-	return fmt.Sprintf("[ID: %s, Role: %s, DistToTarget: %f, Loose: %v]",
-		gp.ID, gp.Role, gp.DistToTarget, gp.Loose)
+	return fmt.Sprintf("[ID: %s, Role: %s, DistToTarget: %f, Lose: %v]",
+		gp.ID, gp.Role, gp.DistToTarget, gp.Lose)
 }
 
 // Game controls rounds and players
@@ -176,7 +176,7 @@ func (rank Rank) ByPlayersDistanceToTarget(players []Player) Rank {
 
 	for p, dist := range playersDistToTarget {
 		points := 0
-		if !p.Loose {
+		if !p.Lose {
 			part := float64(dist) / float64(maxDist)
 			points = int(100 * part)
 		}
@@ -232,8 +232,8 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
 		target := g.players[g.targetID]
 		p.DistToTarget = p.DistTo(target.Player)
 		if p.DistToTarget <= 20 {
-			target.Loose = true
-			return Event{Name: GameTargetLoose, Player: *p}, nil
+			target.Lose = true
+			return Event{Name: GameTargetLose, Player: *p}, nil
 		} else if p.DistToTarget <= 100 {
 			return Event{Name: GamePlayerNearToTarget, Player: *p}, nil
 		}
@@ -258,10 +258,10 @@ func (g *Game) RemovePlayer(id string) (Event, error) {
 		return Event{Name: GamePlayerRemoved, Player: *p}, nil
 	}
 
-	g.players[id].Loose = true
+	g.players[id].Lose = true
 	playersInGame := make([]*Player, 0)
 	for _, gp := range g.players {
-		if !gp.Loose {
+		if !gp.Lose {
 			playersInGame = append(playersInGame, gp)
 		}
 	}
@@ -270,10 +270,10 @@ func (g *Game) RemovePlayer(id string) (Event, error) {
 	} else if len(playersInGame) == 0 {
 		return Event{Name: GameRunningWithoutPlayers, Player: *p}, nil
 	} else if id == g.targetID {
-		return Event{Name: GameTargetLoose, Player: *p}, nil
+		return Event{Name: GameTargetLose, Player: *p}, nil
 	}
 
-	return Event{Name: GamePlayerLoose, Player: *p}, nil
+	return Event{Name: GamePlayerLose, Player: *p}, nil
 }
 
 func (g *Game) setPlayersRoles() {

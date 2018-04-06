@@ -206,7 +206,7 @@ func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, evt game.Event
 			}
 		}
 		finished = true
-	case game.GameTargetLoose:
+	case game.GameTargetLose:
 		for _, gp := range g.Players() {
 			p := &GameEventPayload{
 				Event: GamePlayerLose, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget}
