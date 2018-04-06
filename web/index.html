@@ -37,6 +37,18 @@
         background-color: #666;
         border: none;
     }
+
+    #log {
+        border: none;
+        background: transparent;
+        padding: 10px 0 0 0;
+        overflow-y: auto;
+        white-space: pre-wrap;       /* Since CSS 2.1 */
+        white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+        white-space: -pre-wrap;      /* Opera 4-6 */
+        white-space: -o-pre-wrap;    /* Opera 7 */
+        word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    }
 </style>
 
 <body class="container-fluid" style="background-color: ghostwhite">
@@ -50,7 +62,7 @@
         </div>
 
         <div class="col-xs-9" style="position: relative; min-height: 10%">
-            <pre style="border: none; background: transparent; padding: 0; position: absolute; bottom: 0" id="log"></pre>
+            <pre id="log"></pre>
         </div>
     </div>
 
