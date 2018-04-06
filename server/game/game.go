@@ -133,6 +133,14 @@ func (g *Game) Players() []Player {
 	return players
 }
 
+// TargetPlayer returns the target player when it's set
+func (g *Game) TargetPlayer() *Player {
+	g.playersLock.RLock()
+	target := g.players[g.targetID]
+	g.playersLock.RUnlock()
+	return target
+}
+
 // Info ...
 type Info struct {
 	Role string `json:"role"`

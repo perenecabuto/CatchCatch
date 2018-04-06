@@ -2,6 +2,9 @@ package game
 
 import (
 	"testing"
+
+	"github.com/perenecabuto/CatchCatch/server/model"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGameMustAddPlayers(t *testing.T) {
@@ -136,4 +139,25 @@ func TestGameRank(t *testing.T) {
 			t.Fatalf("Wrong player rank: %d expected: %d", rankByPlayer[pID], points)
 		}
 	}
+}
+
+func TestGameReturnsTheTargetPlayerWhenItIsSet(t *testing.T) {
+	targetID := "test-game-1-target"
+	targetPlayer := Player{Player: model.Player{ID: targetID}}
+	otherPlayer := Player{Player: model.Player{ID: "1234"}}
+	g := NewGameWithParams("test-game-1", false, []Player{
+		targetPlayer, otherPlayer,
+	}, targetID)
+
+	assert.Equal(t, g.TargetPlayer(), &targetPlayer)
+}
+
+func TestGameReturnsNilWhenTargetPlayerIsNotSet(t *testing.T) {
+	targetID := "test-game-1-target"
+	otherPlayer := Player{Player: model.Player{ID: "1234"}}
+	g := NewGameWithParams("test-game-1", false, []Player{
+		otherPlayer, otherPlayer,
+	}, targetID)
+
+	assert.Nil(t, g.TargetPlayer())
 }
