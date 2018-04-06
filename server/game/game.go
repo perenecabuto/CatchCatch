@@ -120,11 +120,9 @@ func (g *Game) Stop() {
 
 // Players return game players
 func (g *Game) Players() []Player {
-	g.playersLock.RLock()
-	players := make([]Player, len(g.players))
-	g.playersLock.RUnlock()
-	i := 0
 	g.playersLock.Lock()
+	players := make([]Player, len(g.players))
+	var i int
 	for _, p := range g.players {
 		players[i] = *p
 		i++
