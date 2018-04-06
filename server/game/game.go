@@ -99,7 +99,7 @@ func (g *Game) TargetID() string {
 
 func (g *Game) String() string {
 	return fmt.Sprintf("[ID: %s, Started: %v, Players: %+v]",
-		g.ID, g.started, g.players)
+		g.ID, g.started, g.Players())
 }
 
 /*
@@ -113,8 +113,8 @@ func (g *Game) Start() {
 
 // Stop the game
 func (g *Game) Stop() {
-	log.Println("game:", g.ID, ":stop!!!!!!!")
 	g.playersLock.Lock()
+	log.Println("game:", g.ID, ":stop!!!!!!!")
 	g.started = false
 	g.players = make(map[string]*Player)
 	g.playersLock.Unlock()
