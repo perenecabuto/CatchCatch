@@ -39,7 +39,7 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 		"test-gameworker-player-3": &game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
 	}
 
-	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]game.Player), func() {
+	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]*game.Player), func() {
 		finish()
 	})
 
@@ -164,10 +164,10 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	core.GameTimeOut = 2 * time.Second
 
 	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
-	examplePlayers := []game.Player{
-		game.Player{Player: model.Player{ID: "test-gameworker-player-1"}},
-		game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
-		game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
+	examplePlayers := []*game.Player{
+		&game.Player{Player: model.Player{ID: "test-gameworker-player-1"}},
+		&game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
+		&game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
 	}
 	addPlayersToGameServiceMock(gs, g.ID, examplePlayers, func() {
 		assert.Len(t, g.Players(), 3)
@@ -195,7 +195,7 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	})
 }
 
-func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []game.Player, afterAdd func()) {
+func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []*game.Player, afterAdd func()) {
 	gs.On("ObserveGamePlayers", mock.Anything, gameID,
 		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
 			for _, p := range players {
