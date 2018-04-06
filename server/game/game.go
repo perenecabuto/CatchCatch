@@ -115,7 +115,9 @@ func (g *Game) Start() {
 func (g *Game) Stop() {
 	log.Println("game:", g.ID, ":stop!!!!!!!")
 	g.started = false
+	g.playersLock.Lock()
 	g.players = make(map[string]*Player)
+	g.playersLock.Unlock()
 }
 
 // Players return game players
