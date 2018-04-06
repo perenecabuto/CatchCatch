@@ -64,14 +64,14 @@ func main() {
 
 	natsConn := mustConnectNats(nats.DefaultURL)
 	dispatcher := messages.NewNatsDispatcher(natsConn)
-	gameService := service.NewGameService(repo, stream, dispatcher)
+	gameService := service.NewGameService(repo, stream)
 	wsdriver := selectWsDriver(*wsdriver)
 
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
 	workersCli.FlushAll()
 	workers := worker.NewGoredisWorkerManager(workersCli)
 
-	gameWorker := core.NewGameWorker(gameService)
+	gameWorker := core.NewGameWorker(gameService, dispatcher)
 	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
 	checkpointWatcher := core.NewCheckpointWatcher(dispatcher, playerService)
 	featuresWatcher := core.NewFeaturesEventsWatcher(dispatcher, playerService)
