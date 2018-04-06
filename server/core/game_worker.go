@@ -25,6 +25,10 @@ const (
 	gameChangeTopic   = "game:update"
 )
 
+var (
+	GameTimeOut = 5 * time.Minute
+)
+
 // GameWatcherEvent represents game events for players
 type GameWatcherEvent string
 
@@ -144,7 +148,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			}
 			if started {
 				// TODO: monitor game start
-				gameTimer = time.NewTimer(5 * time.Minute)
+				gameTimer = time.NewTimer(GameTimeOut)
 			}
 		case <-gameTimer.C:
 			// TODO: notificar Game Timed Out
