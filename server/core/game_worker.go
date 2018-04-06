@@ -32,6 +32,10 @@ var (
 // GameWatcherEvent represents game events for players
 type GameWatcherEvent string
 
+func (e GameWatcherEvent) String() string {
+	return string(e)
+}
+
 // GameWatcherEvent options
 const (
 	GameStarted            = GameWatcherEvent("game:started")
