@@ -69,9 +69,6 @@ func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConn
 		}
 		player.Lat, player.Lon = lat, lon
 		h.players.Set(player)
-
-		c.Emit(&protobuf.Player{EventName: proto.String("player:updated"),
-			Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	}
 }
 
