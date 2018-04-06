@@ -154,10 +154,8 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
 			g.Stop()
 			gw.service.Remove(g.ID)
-
-			for _, gp := range g.Players() {
-				err := gw.publish(
-					&GameEventPayload{Event: GameFinished, PlayerID: gp.ID, Game: g.Game})
+			for _, gp := range players {
+				err := gw.publish(GameFinished, gp, g)
 				if err != nil {
 					return err
 				}
@@ -167,7 +165,8 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	}
 }
 
-func (gw *GameWorker) publish(p *GameEventPayload) error {
+func (gw *GameWorker) publish(evt GameWatcherEvent, gp game.Player, g *service.GameWithCoords) error {
+	p := &GameEventPayload{Event: evt, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget}
 	data, _ := json.Marshal(p)
 	err := gw.messages.Publish(gameChangeTopic, data)
 	if err != nil {
@@ -180,9 +179,8 @@ func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, evt game.Event
 	log.Printf("GameWorker:%s:gameevent:%-v", g.ID, evt)
 	switch evt.Name {
 	case game.GamePlayerNearToTarget:
-		gp := evt.Player
-		err = gw.publish(
-			&GameEventPayload{Event: GameStarted, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget})
+		gp := gevt.Player
+		err = gw.publish(GamePlayerNearToTarget, gp, g)
 	case game.GamePlayerAdded, game.GamePlayerRemoved:
 		ready := !g.Started() && len(g.Game.Players()) >= minPlayersPerGame
 		if ready {
@@ -190,9 +188,7 @@ func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, evt game.Event
 			g.Start()
 			go gw.service.Update(g)
 			for _, gp := range g.Players() {
-				err = gw.publish(
-					&GameEventPayload{Event: GameStarted,
-						PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget})
+				err = gw.publish(GameStarted, gp, g)
 				if err != nil {
 					return false, false, err
 				}
@@ -203,30 +199,28 @@ func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, evt game.Event
 		}
 	case game.GameTargetWin:
 		for _, gp := range g.Players() {
-			p := &GameEventPayload{
-				Event: GamePlayerLose, PlayerID: gp.ID, Game: g.Game}
 			if gp.Role == game.GameRoleTarget {
-				p.Event = GamePlayerWin
+				err = gw.publish(GamePlayerWin, gp, g)
+			} else {
+				err = gw.publish(GamePlayerLose, gp, g)
 			}
-			err = gw.publish(p)
 			if err != nil {
 				return
 			}
 		}
 		finished = true
 	case game.GameTargetLose:
-		for _, gp := range g.Players() {
-			p := &GameEventPayload{
-				Event: GamePlayerLose, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget}
-			if gp.Role != game.GameRoleTarget {
-				p.Event = GamePlayerWin
-			}
-			err := gw.publish(p)
-			if err != nil {
-				return false, false, err
-			}
-		}
 		finished = true
+		target := g.TargetPlayer()
+		if target == nil {
+			err = errors.New("[GameWorker] target not found")
+			break
+		}
+		err = gw.publish(GamePlayerLose, *target, g)
+		if err != nil {
+			break
+		}
+		err = gw.publish(GamePlayerWin, gevt.Player, g)
 	case game.GameLastPlayerDetected,
 		game.GameRunningWithoutPlayers:
 		finished = true
