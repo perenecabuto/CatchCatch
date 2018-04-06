@@ -3,9 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"time"
-
-	"github.com/perenecabuto/CatchCatch/server/service/messages"
+	"log"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
@@ -15,23 +13,16 @@ import (
 const (
 	// DefaultGeoEventRange set the watcher radar radius size
 	DefaultGeoEventRange = 5000
-
-	// GameChangeTopic is the topic used for game updates on messages.Dispatcher
-	GameChangeTopic = "game:update"
 )
 
-//TODO: set game status on db
-//TODO: move messages to worker
-
 type GameService interface {
-	Create(gameID, coordinates string) (*game.Game, error)
-	Update(g *game.Game, evt game.Event) error
+	Create(gameID, coordinates string) (*GameWithCoords, error)
+	Update(g *GameWithCoords) error
 	Remove(gameID string) error
-	GameByID(gameID string) (*game.Game, *game.Event, error)
+	GameByID(gameID string) (*GameWithCoords, error)
 	GamesAround(p model.Player) ([]GameWithCoords, error)
 
 	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit bool) error) error
-	ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error
 }
 
 type GameWithCoords struct {
@@ -40,24 +31,21 @@ type GameWithCoords struct {
 }
 
 type Tile38GameService struct {
-	repo     repository.Repository
-	stream   repository.EventStream
-	messages messages.Dispatcher
+	repo   repository.Repository
+	stream repository.EventStream
 }
 
-func NewGameService(r repository.Repository, s repository.EventStream, m messages.Dispatcher) GameService {
-	return &Tile38GameService{r, s, m}
+func NewGameService(r repository.Repository, s repository.EventStream) GameService {
+	return &Tile38GameService{r, s}
 }
 
-func (gs *Tile38GameService) Create(gameID, coordinates string) (*game.Game, error) {
+func (gs *Tile38GameService) Create(gameID, coordinates string) (*GameWithCoords, error) {
 	_, err := gs.repo.SetFeature("game", gameID, coordinates)
 	if err != nil {
 		return nil, err
 	}
-
-	game, evt := game.NewGame(gameID)
-	gameEvt := &GameEvent{Game: game, Event: evt, LastUpdate: time.Now()}
-	serialized, err := json.Marshal(gameEvt)
+	g := &GameWithCoords{Game: game.NewGame(gameID), Coords: coordinates}
+	serialized, err := json.Marshal(g.Game)
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +53,11 @@ func (gs *Tile38GameService) Create(gameID, coordinates string) (*game.Game, err
 	if err != nil {
 		return nil, err
 	}
-	err = gs.messages.Publish(GameChangeTopic, serialized)
-	if err != nil {
-		return nil, err
-	}
-	return game, nil
+	return g, nil
 }
 
-func (gs *Tile38GameService) Update(g *game.Game, evt game.Event) error {
-	gameEvt := &GameEvent{Game: g, Event: evt, LastUpdate: time.Now()}
-	serialized, err := json.Marshal(gameEvt)
+func (gs *Tile38GameService) Update(g *GameWithCoords) error {
+	serialized, err := json.Marshal(g.Game)
 	if err != nil {
 		return err
 	}
@@ -82,32 +65,29 @@ func (gs *Tile38GameService) Update(g *game.Game, evt game.Event) error {
 	if err != nil {
 		return err
 	}
-	return gs.messages.Publish(GameChangeTopic, serialized)
+	return nil
 }
 
-func (gs *Tile38GameService) findGameEvent(gameID string) (*GameEvent, error) {
+func (gs *Tile38GameService) GameByID(gameID string) (*GameWithCoords, error) {
+	f, err := gs.repo.FeatureByID("game", gameID)
+	if err != nil {
+		return nil, err
+	}
+	g, err := gs.getGame(gameID)
+	if err != nil {
+		return nil, err
+	}
+	return &GameWithCoords{Game: g, Coords: f.Coordinates}, nil
+}
+
+func (gs *Tile38GameService) getGame(gameID string) (*game.Game, error) {
 	data, err := gs.repo.FeatureExtraData("game", gameID)
 	if err != nil {
 		return nil, err
 	}
-	gameEvt := GameEvent{}
-	err = json.Unmarshal([]byte(data), &gameEvt)
-	return &gameEvt, err
-}
-
-var GameEventNotFound = repository.ErrFeatureNotFound
-
-func (gs *Tile38GameService) GameByID(gameID string) (*game.Game, *game.Event, error) {
-	gameEvt, err := gs.findGameEvent(gameID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	started := gameEvt.Game.Started()
-	players := gameEvt.Game.Players()
-	targetID := gameEvt.Game.TargetID()
-	evt := gameEvt.Event
-	return game.NewGameWithParams(gameID, started, players, targetID), &evt, nil
+	g := &game.Game{}
+	err = json.Unmarshal([]byte(data), g)
+	return g, err
 }
 
 func (gs *Tile38GameService) Remove(gameID string) error {
@@ -123,11 +103,15 @@ func (gs *Tile38GameService) GamesAround(p model.Player) ([]GameWithCoords, erro
 	if err != nil {
 		return nil, err
 	}
-
 	games := make([]GameWithCoords, len(feats))
 	for i, f := range feats {
+		g, err := gs.getGame(f.ID)
+		if err != nil {
+			log.Printf("[Tile38GameService] error to retrive game <%s> data", f.ID)
+			continue
+		}
 		games[i] = GameWithCoords{
-			Game:   &game.Game{ID: f.ID},
+			Game:   g,
 			Coords: f.Coordinates,
 		}
 	}
@@ -140,22 +124,4 @@ func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID stri
 		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		return callback(p, d.Intersects == repository.Exit)
 	})
-}
-
-// TODO: tirar isso daqui, por no worker ou em algum comunicador
-func (gs *Tile38GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error {
-	return gs.messages.Subscribe(ctx, GameChangeTopic, func(data []byte) error {
-		gameEvt := GameEvent{}
-		err := json.Unmarshal(data, &gameEvt)
-		if err != nil {
-			return err
-		}
-		return callback(gameEvt.Game, gameEvt.Event)
-	})
-}
-
-type GameEvent struct {
-	Game       *game.Game
-	Event      game.Event
-	LastUpdate time.Time
 }

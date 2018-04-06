@@ -2,7 +2,6 @@
 package mocks
 
 import context "context"
-import game "github.com/perenecabuto/CatchCatch/server/game"
 import mock "github.com/stretchr/testify/mock"
 import model "github.com/perenecabuto/CatchCatch/server/model"
 import service "github.com/perenecabuto/CatchCatch/server/service"
@@ -13,15 +12,15 @@ type GameService struct {
 }
 
 // Create provides a mock function with given fields: gameID, coordinates
-func (_m *GameService) Create(gameID string, coordinates string) (*game.Game, error) {
+func (_m *GameService) Create(gameID string, coordinates string) (*service.GameWithCoords, error) {
 	ret := _m.Called(gameID, coordinates)
 
-	var r0 *game.Game
-	if rf, ok := ret.Get(0).(func(string, string) *game.Game); ok {
+	var r0 *service.GameWithCoords
+	if rf, ok := ret.Get(0).(func(string, string) *service.GameWithCoords); ok {
 		r0 = rf(gameID, coordinates)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*game.Game)
+			r0 = ret.Get(0).(*service.GameWithCoords)
 		}
 	}
 
@@ -36,35 +35,26 @@ func (_m *GameService) Create(gameID string, coordinates string) (*game.Game, er
 }
 
 // GameByID provides a mock function with given fields: gameID
-func (_m *GameService) GameByID(gameID string) (*game.Game, *game.Event, error) {
+func (_m *GameService) GameByID(gameID string) (*service.GameWithCoords, error) {
 	ret := _m.Called(gameID)
 
-	var r0 *game.Game
-	if rf, ok := ret.Get(0).(func(string) *game.Game); ok {
+	var r0 *service.GameWithCoords
+	if rf, ok := ret.Get(0).(func(string) *service.GameWithCoords); ok {
 		r0 = rf(gameID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*game.Game)
+			r0 = ret.Get(0).(*service.GameWithCoords)
 		}
 	}
 
-	var r1 *game.Event
-	if rf, ok := ret.Get(1).(func(string) *game.Event); ok {
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
 		r1 = rf(gameID)
 	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*game.Event)
-		}
+		r1 = ret.Error(1)
 	}
 
-	var r2 error
-	if rf, ok := ret.Get(2).(func(string) error); ok {
-		r2 = rf(gameID)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+	return r0, r1
 }
 
 // GamesAround provides a mock function with given fields: p
@@ -104,20 +94,6 @@ func (_m *GameService) ObserveGamePlayers(ctx context.Context, gameID string, ca
 	return r0
 }
 
-// ObserveGamesEvents provides a mock function with given fields: ctx, callback
-func (_m *GameService) ObserveGamesEvents(ctx context.Context, callback func(*game.Game, game.Event) error) error {
-	ret := _m.Called(ctx, callback)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, func(*game.Game, game.Event) error) error); ok {
-		r0 = rf(ctx, callback)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // Remove provides a mock function with given fields: gameID
 func (_m *GameService) Remove(gameID string) error {
 	ret := _m.Called(gameID)
@@ -132,13 +108,13 @@ func (_m *GameService) Remove(gameID string) error {
 	return r0
 }
 
-// Update provides a mock function with given fields: g, evt
-func (_m *GameService) Update(g *game.Game, evt game.Event) error {
-	ret := _m.Called(g, evt)
+// Update provides a mock function with given fields: g
+func (_m *GameService) Update(g *service.GameWithCoords) error {
+	ret := _m.Called(g)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*game.Game, game.Event) error); ok {
-		r0 = rf(g, evt)
+	if rf, ok := ret.Get(0).(func(*service.GameWithCoords) error); ok {
+		r0 = rf(g)
 	} else {
 		r0 = ret.Error(0)
 	}
