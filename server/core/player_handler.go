@@ -105,13 +105,16 @@ func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServe
 			}
 
 		case GamePlayerNearToTarget:
-			wss.Emit(p.PlayerID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &p.DistToTarget})
+			wss.Emit(p.PlayerID, &protobuf.Distance{
+				EventName: proto.String(GamePlayerNearToTarget.String()), Dist: &p.DistToTarget})
 
 		case GamePlayerLose:
-			wss.Emit(p.PlayerID, &protobuf.Simple{EventName: proto.String("game:player:lose"), Id: &p.Game.ID})
+			wss.Emit(p.PlayerID, &protobuf.Simple{
+				EventName: proto.String(GamePlayerLose.String()), Id: &p.Game.ID})
 
 		case GamePlayerWin:
-			wss.Emit(p.PlayerID, &protobuf.Simple{EventName: proto.String("game:target:win")})
+			wss.Emit(p.PlayerID, &protobuf.Distance{
+				EventName: proto.String(GamePlayerWin.String()), Dist: &p.DistToTarget})
 
 		case GameFinished:
 			rank := p.Game.Rank()
