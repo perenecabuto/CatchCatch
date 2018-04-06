@@ -23,7 +23,7 @@ const (
 	GamePlayerRemoved         EventName = "game:player:removed"
 	GameTargetWin             EventName = "game:target:win"
 	GameLastPlayerDetected    EventName = "game:player:last"
-	GamePlayerLose            EventName = "game:player:loose"
+	GamePlayerLose            EventName = "game:player:lose"
 	GameTargetLose            EventName = "game:target:reached"
 	GamePlayerNearToTarget    EventName = "game:player:near"
 	GameRunningWithoutPlayers EventName = "game:empty"
