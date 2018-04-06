@@ -197,6 +197,50 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	})
 }
 
+func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
+	m := new(smocks.Dispatcher)
+	gs := new(smocks.GameService)
+	gw := core.NewGameWorker(gs, m)
+	ctx, finish := context.WithCancel(context.Background())
+
+	loser := model.Player{ID: "loser-player-1"}
+
+	examplePlayers := []game.Player{
+		game.Player{Player: loser},
+		game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
+		game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
+	}
+	g := game.NewGameWithParams("game-test-1", true, examplePlayers, "test-gameworker-player-3")
+	gwc := &service.GameWithCoords{Game: g}
+
+	gs.On("Create", mock.Anything, mock.Anything).Return(gwc, nil)
+	gs.On("Update", mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+
+	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
+			cb(loser, true)
+			finish()
+			return true
+		}),
+	).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": gwc.Coords})
+		require.NoError(t, err)
+		complete <- nil
+	}()
+
+	<-complete
+	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
+		p := &core.GameEventPayload{}
+		json.Unmarshal(data, p)
+		return p.Event == core.GamePlayerLose && p.PlayerID == loser.ID
+	})
+}
+
 func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []*game.Player, afterAdd func()) {
 	gs.On("ObserveGamePlayers", mock.Anything, gameID,
 		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {

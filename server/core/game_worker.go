@@ -207,6 +207,8 @@ func (gw *GameWorker) processGameEvent(
 				err = fmt.Errorf("GameWorker:Start:%s:error:%s - %#v", g.ID, err.Error(), gevt)
 			}
 		}
+	case game.GamePlayerLose:
+		err = gw.publish(GamePlayerLose, gevt.Player, g)
 	case game.GameTargetWin:
 		finished = true
 		for _, gp := range g.Players() {
