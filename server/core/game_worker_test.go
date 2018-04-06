@@ -190,7 +190,7 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	gs.AssertCalled(t, "Remove", g.ID)
 
 	<-complete
-	smocks.AssertPublished(t, m, gameWorkerTopic, func(data []byte) bool {
+	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
 		p := &core.GameEventPayload{}
 		json.Unmarshal(data, p)
 		return p.Event == core.GameFinished
