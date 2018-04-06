@@ -61,9 +61,9 @@ func (gw GameWorker) ID() string {
 	return "GameWorker"
 }
 
-func (gw *GameWorker) OnGameAround(ctx context.Context, cb func(p model.Player, g service.GameWithCoords) error) error {
-	return nil
-}
+// func (gw *GameWorker) OnGameAround(ctx context.Context, cb func(p model.Player, g service.GameWithCoords) error) error {
+// 	return nil
+// }
 
 // OnGameEvent notifies games events
 func (gw *GameWorker) OnGameEvent(ctx context.Context, cb func(payload *GameEventPayload) error) error {

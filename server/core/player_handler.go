@@ -31,10 +31,10 @@ func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) er
 	if err != nil {
 		return err
 	}
-	err = h.onGamesAround(ctx, wss)
-	if err != nil {
-		return err
-	}
+	// err = h.onGamesAround(ctx, wss)
+	// if err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -84,16 +84,16 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 	return player, nil
 }
 
-func (h *PlayerHandler) onGamesAround(ctx context.Context, wss *websocket.WSServer) error {
-	return h.games.OnGameAround(ctx, func(p model.Player, g service.GameWithCoords) error {
-		event := proto.String("game:around")
-		err := wss.Emit(p.ID, &protobuf.Feature{EventName: event, Id: &g.ID, Group: proto.String("game"), Coords: &g.Coords})
-		if err != nil {
-			log.Println("Error to emit", *event)
-		}
-		return nil
-	})
-}
+// func (h *PlayerHandler) onGamesAround(ctx context.Context, wss *websocket.WSServer) error {
+// return h.games.OnGameAround(ctx, func(p model.Player, g service.GameWithCoords) error {
+// 	event := proto.String("game:around")
+// 	err := wss.Emit(p.ID, &protobuf.Feature{EventName: event, Id: &g.ID, Group: proto.String("game"), Coords: &g.Coords})
+// 	if err != nil {
+// 		log.Println("Error to emit", *event)
+// 	}
+// 	return nil
+// })
+// }
 
 func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServer) error {
 	return h.games.OnGameEvent(ctx, func(p *GameEventPayload) error {
