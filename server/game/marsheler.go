@@ -19,7 +19,7 @@ func (g *Game) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implemente json.Unmarsheler
 func (g *Game) UnmarshalJSON(data []byte) error {
 	g.ID = gjson.GetBytes(data, "id").String()
-	g.started = gjson.GetBytes(data, "started").Bool()
+	g.started = int32(gjson.GetBytes(data, "started").Int())
 	g.targetID = gjson.GetBytes(data, "targetID").String()
 	pdata := gjson.GetBytes(data, "players").Map()
 	g.players = map[string]*Player{}

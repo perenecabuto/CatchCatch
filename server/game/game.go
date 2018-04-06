@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
@@ -70,7 +71,7 @@ func (gp Player) String() string {
 // Game controls rounds and players
 type Game struct {
 	ID       string
-	started  bool
+	started  int32
 	players  map[string]*Player
 	targetID string
 
@@ -79,7 +80,7 @@ type Game struct {
 
 // NewGame create a game with duration
 func NewGame(id string) *Game {
-	return &Game{ID: id, started: false, players: make(map[string]*Player)}
+	return &Game{ID: id, started: 0, players: make(map[string]*Player)}
 }
 
 // NewGameWithParams ...
@@ -89,7 +90,11 @@ func NewGameWithParams(gameID string, started bool, players []Player, targetID s
 		copy := p
 		mPlayers[p.ID] = &copy
 	}
-	return &Game{ID: gameID, started: started, players: mPlayers, targetID: targetID}
+	var s int32
+	if started {
+		s = 1
+	}
+	return &Game{ID: gameID, started: s, players: mPlayers, targetID: targetID}
 }
 
 // TargetID returns the targe player id
@@ -108,14 +113,14 @@ Start the game
 func (g *Game) Start() {
 	log.Println("game:", g.ID, ":start!!!!!!")
 	g.setPlayersRoles()
-	g.started = true
+	atomic.StoreInt32(&g.started, 1)
 }
 
 // Stop the game
 func (g *Game) Stop() {
 	g.playersLock.Lock()
 	log.Println("game:", g.ID, ":stop!!!!!!!")
-	g.started = false
+	atomic.StoreInt32(&g.started, 0)
 	g.players = make(map[string]*Player)
 	g.targetID = ""
 	g.playersLock.Unlock()
@@ -203,7 +208,7 @@ func (g *Game) Rank() Rank {
 
 // Started true when game started
 func (g *Game) Started() bool {
-	return g.started
+	return atomic.LoadInt32(&g.started) == 1
 }
 
 /*
@@ -219,7 +224,7 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
 	p, exists := g.players[id]
 	g.playersLock.RUnlock()
 
-	if !g.started {
+	if !g.Started() {
 		if !exists {
 			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
 
@@ -262,7 +267,7 @@ func (g *Game) RemovePlayer(id string) (Event, error) {
 	if !exists {
 		return GameEventNothing, ErrPlayerIsNotInTheGame
 	}
-	if !g.started {
+	if !g.Started() {
 		delete(g.players, id)
 		return Event{Name: GamePlayerRemoved, Player: *p}, nil
 	}

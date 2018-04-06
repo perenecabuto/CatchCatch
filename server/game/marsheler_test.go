@@ -21,7 +21,7 @@ var (
 	exampleGameJSONString = strings.TrimSpace(`
 		{
 			"id": "game-test-1",
-			"started": true,
+			"started": 1,
 			"targetID": "target-1",
 			"players": {
 				"hunter-1": {"id":"hunter-1", "Lose":false, "lon":0, "lat":0, "Role":"hunter", "DistToTarget":0},
