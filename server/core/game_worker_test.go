@@ -178,15 +178,19 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	gs.On("Remove", mock.Anything).Return(nil)
 	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+	complete := make(chan interface{})
 	go func() {
 		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
 		require.NoError(t, err)
+		complete <- nil
 	}()
 
-	time.Sleep(core.GameTimeOut + (time.Millisecond * 100))
+	time.Sleep(core.GameTimeOut + time.Second)
 
 	assert.False(t, g.Started())
 	gs.AssertCalled(t, "Remove", g.ID)
+
+	<-complete
 	smocks.AssertPublished(t, m, gameWorkerTopic, func(data []byte) bool {
 		p := &core.GameEventPayload{}
 		json.Unmarshal(data, p)
