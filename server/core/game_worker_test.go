@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -152,6 +153,46 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 		jsonE, _ := json.Marshal(example)
 		return assert.JSONEq(t, string(jsonE), string(data))
 	}))
+}
+
+func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
+	m := new(smocks.Dispatcher)
+	gs := new(smocks.GameService)
+	gw := core.NewGameWorker(gs, m)
+	ctx := context.Background()
+
+	core.GameTimeOut = 2 * time.Second
+
+	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
+	examplePlayers := []game.Player{
+		game.Player{Player: model.Player{ID: "test-gameworker-player-1"}},
+		game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
+		game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
+	}
+	addPlayersToGameServiceMock(gs, g.ID, examplePlayers, func() {
+		assert.Len(t, g.Players(), 3)
+	})
+
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("Update", mock.Anything).Return(nil)
+	gs.On("ObserveGamePlayers", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	go func() {
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		require.NoError(t, err)
+	}()
+
+	time.Sleep(core.GameTimeOut + (time.Millisecond * 100))
+
+	assert.False(t, g.Started())
+	gs.AssertCalled(t, "Remove", g.ID)
+	smocks.AssertPublished(t, m, gameWorkerTopic, func(data []byte) bool {
+		p := &core.GameEventPayload{}
+		json.Unmarshal(data, p)
+		return p.Event == core.GameFinished
+	})
 }
 
 func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []game.Player, afterAdd func()) {
