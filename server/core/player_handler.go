@@ -31,6 +31,10 @@ func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) er
 	if err != nil {
 		return err
 	}
+	err = h.onGamesAround(ctx, wss)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

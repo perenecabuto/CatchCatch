@@ -24,7 +24,7 @@ type GameEvents interface {
 	OnGameStarted(g *Game, p GamePlayer)
 	OnTargetWin(p GamePlayer)
 	OnGameFinish(r GameRank)
-	OnPlayerLose(g *Game, p GamePlayer)
+	OnPlayerLoose(g *Game, p GamePlayer)
 	OnTargetReached(p GamePlayer, dist float64)
 	OnPlayerNearToTarget(p GamePlayer, dist float64)
 }
@@ -199,7 +199,7 @@ func (g *Game) notifyToTheHunterTheDistanceToTheTarget(p *GamePlayer) error {
 	if dist <= 20 {
 		log.Printf("game:%s:detect=winner:%s:dist:%f\n", g.ID, p.ID, dist)
 		delete(g.players, target.ID)
-		g.events.OnPlayerLose(g, *target)
+		g.events.OnPlayerLoose(g, *target)
 		g.events.OnTargetReached(*p, dist)
 		g.stop()
 	} else if dist <= 100 {
@@ -231,7 +231,7 @@ func (g *Game) RemovePlayer(id string) {
 		g.stop()
 	} else if id == g.target.ID {
 		log.Println("game:"+g.ID+":detect=target-loose:", gamePlayer)
-		go g.events.OnPlayerLose(g, *gamePlayer)
+		go g.events.OnPlayerLoose(g, *gamePlayer)
 		g.stop()
 	} else if len(g.players) == 0 {
 		log.Println("game:"+g.ID+":detect=no-players:", gamePlayer)
@@ -239,7 +239,7 @@ func (g *Game) RemovePlayer(id string) {
 		g.stop()
 	} else {
 		log.Println("game:"+g.ID+":detect=loose:", gamePlayer)
-		go g.events.OnPlayerLose(g, *gamePlayer)
+		go g.events.OnPlayerLoose(g, *gamePlayer)
 	}
 	return
 }

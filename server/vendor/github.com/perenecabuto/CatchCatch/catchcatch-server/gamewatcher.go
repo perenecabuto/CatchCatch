@@ -199,8 +199,8 @@ func (gw *GameWatcher) OnGameFinish(rank GameRank) {
 	})
 }
 
-// OnPlayerLose implements GameEvent.OnPlayerLose
-func (gw *GameWatcher) OnPlayerLose(g *Game, p GamePlayer) {
+// OnPlayerLoose implements GameEvent.OnPlayerLoose
+func (gw *GameWatcher) OnPlayerLoose(g *Game, p GamePlayer) {
 	gw.wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
 }
 
