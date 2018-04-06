@@ -1,120 +1,112 @@
-package core
+package core_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
-	"time"
 
+	"github.com/perenecabuto/CatchCatch/server/service"
 	"github.com/perenecabuto/CatchCatch/server/worker"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 
 	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
 )
 
-func TestNewGameWorker(t *testing.T) {
-	t.Parallel()
+var (
+	gameWorkerTopic = "game:update"
+)
 
-	gameID := "test-gameworker-game-1"
-	playerIDs := []string{
-		"test-gameworker-player-1",
-		"test-gameworker-player-2",
-		"test-gameworker-player-3",
+func TestGameWorkerStartGame(t *testing.T) {
+	ctx, finish := context.WithCancel(context.Background())
+	g := &service.GameWithCoords{Game: game.NewGame("test-gameworker-game-1")}
+
+	gs := new(smocks.GameService)
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+	gs.On("Update", mock.Anything).Return(nil)
+
+	examplePlayers := map[string]*game.Player{
+		"test-gameworker-player-1": &game.Player{Player: model.Player{ID: "test-gameworker-player-1"}},
+		"test-gameworker-player-2": &game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
+		"test-gameworker-player-3": &game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	gameService, wait := newMockedGameService(ctx, gameID, playerIDs)
-	defer close(wait)
-	w := NewGameWorker(gameService)
-
-	go func() {
-		err := w.Run(ctx, worker.TaskParams{"gameID": gameID, "coordinates": ""})
-		require.NoError(t, err)
-	}()
-
-	<-wait
-	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
-		return assert.Equal(t, gameID, g.ID)
-	})
-	matchedEvent := mock.MatchedBy(func(evt game.Event) bool {
-		expected := game.GameStarted
-		return assert.Equal(t, expected, evt.Name)
-	})
-	gameService.AssertCalled(t, "Update", matchGameID, matchedEvent)
-}
-
-func TestCloseWhenFinish(t *testing.T) {
-	t.Parallel()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	gameID := "test-gameworker-game-1"
-	playerIDs := []string{
-		"test-gameworker-player-1",
-		"test-gameworker-player-2",
-		"test-gameworker-player-3",
-	}
-
-	gameService, _ := newMockedGameService(ctx, gameID, playerIDs)
-
-	go func() {
-		w := NewGameWorker(gameService)
-		err := w.Run(ctx, worker.TaskParams{"gameID": gameID, "coordinates": ""})
-		require.NoError(t, err)
-	}()
-
-	<-time.NewTimer(time.Second).C
-	cancel()
-	<-time.NewTimer(time.Second).C
-
-	matchGameID := mock.MatchedBy(func(g *game.Game) bool {
-		return assert.Equal(t, gameID, g.ID)
-	})
-	gameService.AssertCalled(t, "Update", matchGameID, mock.AnythingOfType("game.Event"))
-	gameService.AssertCalled(t, "Remove", gameID)
-}
-
-func newMockedGameService(ctx context.Context, gameID string, playerIDs []string) (*smocks.GameService, chan interface{}) {
-	gameService := new(smocks.GameService)
-	gameService.On("Remove", gameID).Return(nil)
-
-	gameService.On("ObservePlayersCrossGeofences",
-		ctx, mock.MatchedBy(func(fn func(string, model.Player) error) bool {
-			go fn(gameID, model.Player{})
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
+			for _, p := range examplePlayers {
+				cb(p.Player, false)
+			}
+			finish()
 			return true
 		}),
 	).Return(nil)
 
-	g, _ := game.NewGame(gameID)
-	gameService.On("Create", gameID, mock.Anything).Return(g, nil)
-	gameService.On("Remove", gameID).Return(nil)
-	gameService.On("Update", gameID, mock.Anything).Return(nil)
+	m := new(smocks.Dispatcher)
+	received := map[string]core.GameEventPayload{}
+	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
+		actual := core.GameEventPayload{}
+		json.Unmarshal(data, &actual)
+		received[actual.PlayerID] = actual
+		return true
+	})).Return(nil)
 
-	wait := make(chan interface{})
+	go func() {
+		w := core.NewGameWorker(gs, m)
+		err := w.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		require.NoError(t, err)
+	}()
 
-	gameService.On("ObserveGamePlayers", mock.Anything, gameID,
-		mock.MatchedBy(func(fn func(model.Player, bool) error) bool {
-			go func() {
-				<-time.NewTimer(time.Second).C
-				wait <- new(interface{})
-			}()
-			go func() {
-				for _, id := range playerIDs {
-					p, exit := model.Player{ID: id, Lon: 0, Lat: 0}, false
-					go fn(p, exit)
-				}
-			}()
-			return true
-		}),
-	).Return(nil)
+	<-ctx.Done()
 
-	gameService.On("Update", mock.Anything, mock.Anything).Return(nil)
+	var targetID string
+	for _, r := range received {
+		targetID = r.Game.TargetID()
+		for _, p := range r.Game.Players() {
+			examplePlayers[p.ID].Role = p.Role
+		}
+		break
+	}
 
-	return gameService, wait
+	exampleList := []game.Player{}
+	for _, e := range examplePlayers {
+		exampleList = append(exampleList, *e)
+	}
+	exampleGame := game.NewGameWithParams(g.ID, true, exampleList, targetID)
+	examples := map[string]core.GameEventPayload{}
+	for _, p := range exampleGame.Players() {
+		payload := core.GameEventPayload{Event: core.GameStarted,
+			Game:         exampleGame,
+			PlayerID:     p.ID,
+			DistToTarget: p.DistToTarget}
+		examples[p.ID] = payload
+	}
+
+	m.AssertCalled(t, "Publish", gameWorkerTopic, mock.MatchedBy(func([]byte) bool {
+		jsonE, _ := json.Marshal(examples)
+		jsonR, _ := json.Marshal(received)
+		return assert.JSONEq(t, string(jsonE), string(jsonR))
+	}))
+}
+
+func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
+	// repo := &smocks.Repository{}
+	// stream := &smocks.EventStream{}
+	// gService := service.NewGameService(repo, stream)
+
+	// g := game.NewGame(gameID)
+	// ctx, finish := context.WithCancel(context.Background())
+	// defer finish()
+
+	// err := gService.ObserveGamesEvents(ctx, func(actualG *game.Game, actualE game.Event) error {
+	// 	assert.Equal(t, g, actualG)
+	// 	assert.Equal(t, e, actualE)
+	// 	return nil
+	// })
+	// require.NoError(t, err)
 }

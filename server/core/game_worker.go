@@ -96,11 +96,8 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 
 	gCtx, stop := context.WithCancel(ctx)
 	defer stop()
-	gameTimer := time.NewTimer(time.Hour)
-	defer gameTimer.Stop()
-	evtChan := make(chan game.Event, 1)
-	defer close(evtChan)
 
+	evtChan := make(chan game.Event, 1)
 	go func() {
 		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, exit bool) error {
 			var evt game.Event
@@ -124,45 +121,107 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 		}
 	}()
 
+	gameTimer := time.NewTimer(time.Hour)
+	defer gameTimer.Stop()
 	for {
 		select {
 		case evt, ok := <-evtChan:
 			if !ok {
-				stop()
-				continue
+				return nil
 			}
-			log.Printf("GameWorker:%s:gameevent:%-v", g.ID, evt)
-
-			switch evt.Name {
-			case game.GameTargetWin,
-				game.GameTargetLoose,
-				game.GameLastPlayerDetected,
-				game.GameRunningWithoutPlayers:
-
-				gw.service.Update(g, evt)
+			started, finished, err :=
+				gw.processGameEvent(g, evt)
+			if finished || err != nil {
 				stop()
-			case game.GamePlayerNearToTarget:
-				gw.service.Update(g, evt)
-			case game.GamePlayerAdded, game.GamePlayerRemoved:
+				return err
+			}
+			if started {
 				// TODO: monitor game start
-				ready := !g.Started() && len(g.Players()) >= minPlayersPerGame
-				if ready {
-					gameTimer = time.NewTimer(5 * time.Minute)
-					evt = g.Start()
-					gw.service.Update(g, evt)
-				}
+				gameTimer = time.NewTimer(5 * time.Minute)
 			}
 		case <-gameTimer.C:
 			log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
 			stop()
 		case <-gCtx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
-			evt := g.Stop()
-			// TODO store serverID in another store,
-			// maybe a env kv store like etcd
-			gw.service.Update(g, evt)
+			g.Stop()
 			gw.service.Remove(g.ID)
+
+			for _, gp := range g.Players() {
+				err := gw.publish(
+					&GameEventPayload{Event: GameFinished, PlayerID: gp.ID, Game: g.Game})
+				if err != nil {
+					return err
+				}
+			}
 			return nil
 		}
 	}
+}
+
+func (gw *GameWorker) publish(p *GameEventPayload) error {
+	data, _ := json.Marshal(p)
+	err := gw.messages.Publish(gameChangeTopic, data)
+	if err != nil {
+		return fmt.Errorf("GameWorker:watchGame:%s:error:%s - %#v", p.Game.ID, err.Error(), p)
+	}
+	return nil
+}
+
+func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, evt game.Event) (started bool, finished bool, err error) {
+	log.Printf("GameWorker:%s:gameevent:%-v", g.ID, evt)
+	switch evt.Name {
+	case game.GamePlayerNearToTarget:
+		gp := evt.Player
+		err = gw.publish(
+			&GameEventPayload{Event: GameStarted, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget})
+	case game.GamePlayerAdded, game.GamePlayerRemoved:
+		ready := !g.Started() && len(g.Game.Players()) >= minPlayersPerGame
+		if ready {
+			started = true
+			g.Start()
+			go gw.service.Update(g)
+			for _, gp := range g.Players() {
+				err = gw.publish(
+					&GameEventPayload{Event: GameStarted,
+						PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget})
+				if err != nil {
+					return false, false, err
+				}
+			}
+			if err != nil {
+				err = fmt.Errorf("GameWorker:watchGame:%s:error:%s - %#v", g.ID, err.Error(), g)
+			}
+		}
+	case game.GameTargetWin:
+		for _, gp := range g.Players() {
+			p := &GameEventPayload{
+				Event: GamePlayerLose, PlayerID: gp.ID, Game: g.Game}
+			if gp.Role == game.GameRoleTarget {
+				p.Event = GamePlayerWin
+			}
+			err = gw.publish(p)
+			if err != nil {
+				return
+			}
+		}
+		finished = true
+	case game.GameTargetLoose:
+		for _, gp := range g.Players() {
+			p := &GameEventPayload{
+				Event: GamePlayerLose, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget}
+			if gp.Role != game.GameRoleTarget {
+				p.Event = GamePlayerWin
+			}
+			err := gw.publish(p)
+			if err != nil {
+				return false, false, err
+			}
+		}
+		finished = true
+	case game.GameLastPlayerDetected,
+		game.GameRunningWithoutPlayers:
+		finished = true
+	}
+	return started, finished, err
 }
