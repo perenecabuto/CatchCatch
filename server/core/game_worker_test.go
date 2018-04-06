@@ -122,7 +122,6 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	m := new(smocks.Dispatcher)
 	gs := new(smocks.GameService)
 	gw := core.NewGameWorker(gs, m)
-	gw = gw
 	ctx, cancel := context.WithCancel(context.Background())
 
 	playerID := "game-test-1-player-1"
