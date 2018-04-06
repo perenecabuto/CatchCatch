@@ -107,7 +107,6 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 
 	gCtx, stop := context.WithCancel(ctx)
 	defer stop()
-
 	evtChan := make(chan game.Event, 1)
 	go func() {
 		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, exit bool) error {
@@ -183,9 +182,11 @@ func (gw *GameWorker) publish(evt GameWatcherEvent, gp game.Player, g *service.G
 	return nil
 }
 
-func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, evt game.Event) (started bool, finished bool, err error) {
-	log.Printf("GameWorker:%s:gameevent:%-v", g.ID, evt)
-	switch evt.Name {
+func (gw *GameWorker) processGameEvent(
+	g *service.GameWithCoords, gevt game.Event) (started bool, finished bool, err error) {
+
+	log.Printf("GameWorker:%s:GameEvent:%-v", g.ID, gevt)
+	switch gevt.Name {
 	case game.GamePlayerNearToTarget:
 		gp := gevt.Player
 		err = gw.publish(GamePlayerNearToTarget, gp, g)
@@ -202,7 +203,7 @@ func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, evt game.Event
 				}
 			}
 			if err != nil {
-				err = fmt.Errorf("GameWorker:watchGame:%s:error:%s - %#v", g.ID, err.Error(), g)
+				err = fmt.Errorf("GameWorker:Start:%s:error:%s - %#v", g.ID, err.Error(), gevt)
 			}
 		}
 	case game.GameTargetWin:
