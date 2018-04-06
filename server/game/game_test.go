@@ -161,3 +161,18 @@ func TestGameReturnsNilWhenTargetPlayerIsNotSet(t *testing.T) {
 
 	assert.Nil(t, g.TargetPlayer())
 }
+
+func TestGameClenUpWhenStop(t *testing.T) {
+	targetID := "test-game-1-target"
+	targetPlayer := Player{Player: model.Player{ID: targetID}}
+	otherPlayer := Player{Player: model.Player{ID: "1234"}}
+	g := NewGameWithParams("test-game-1", true, []Player{
+		targetPlayer, otherPlayer, otherPlayer,
+	}, targetID)
+
+	g.Stop()
+
+	assert.Empty(t, g.TargetID())
+	assert.False(t, g.Started())
+	assert.Empty(t, g.Players())
+}
