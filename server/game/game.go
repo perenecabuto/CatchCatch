@@ -17,9 +17,7 @@ type EventName string
 
 // EventName options
 const (
-	GameCreated               EventName = "game:created"
 	GameStarted               EventName = "game:started"
-	GameFinished              EventName = "game:finished"
 	GameNothingHappens        EventName = "game:nothing"
 	GamePlayerAdded           EventName = "game:player:added"
 	GamePlayerRemoved         EventName = "game:player:removed"
@@ -44,8 +42,6 @@ var (
 	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
 	// GameEventNothing is the NULL event
 	GameEventNothing = Event{Name: GameNothingHappens}
-	// GameEventCreated happens after a game is created
-	GameEventCreated = Event{Name: GameCreated}
 )
 
 // Role represents Player role
@@ -82,9 +78,8 @@ type Game struct {
 }
 
 // NewGame create a game with duration
-func NewGame(id string) (*Game, Event) {
-	return &Game{ID: id, started: false, players: make(map[string]*Player)},
-		GameEventCreated
+func NewGame(id string) *Game {
+	return &Game{ID: id, started: false, players: make(map[string]*Player)}
 }
 
 // NewGameWithParams ...
@@ -109,25 +104,17 @@ func (g *Game) String() string {
 /*
 Start the game
 */
-func (g *Game) Start() Event {
-	if g.started {
-		return GameEventNothing
-	}
+func (g *Game) Start() {
 	log.Println("game:", g.ID, ":start!!!!!!")
 	g.setPlayersRoles()
 	g.started = true
-	return Event{Name: GameStarted}
 }
 
 // Stop the game
-func (g *Game) Stop() Event {
-	if !g.started {
-		return GameEventNothing
-	}
+func (g *Game) Stop() {
 	log.Println("game:", g.ID, ":stop!!!!!!!")
 	g.started = false
 	g.players = make(map[string]*Player)
-	return Event{Name: GameFinished}
 }
 
 // Players return game players
