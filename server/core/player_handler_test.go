@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -27,9 +28,10 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 		return true
 	})).Return(nil)
 
-	gameService := new(smocks.GameService)
-	gameWorker := NewGameWorker(gameService)
-	playerH := NewPlayerHandler(nil, gameWorker)
+	gs := new(smocks.GameService)
+	m := new(smocks.Dispatcher)
+	w := NewGameWorker(gs, m)
+	playerH := NewPlayerHandler(nil, w)
 	wss := websocket.NewWSServer(wsDriver, playerH)
 	playerID := wss.Add(c).ID
 
@@ -37,19 +39,17 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 	defer cancel()
 
 	gameID := "test-gamewatcher-game-1"
-	g, _ := game.NewGame(gameID)
+	g := game.NewGame(gameID)
 	g.SetPlayer(playerID, 0, 0)
 	g.Start()
-	evt := game.Event{Name: game.GameStarted}
 
-	gameService.On("ObserveGamesEvents", ctx,
-		mock.MatchedBy(func(fn func(g *game.Game, evt game.Event) error) bool {
-			fn(g, evt)
-			return true
-		})).Return(nil)
+	example := &GameEventPayload{Event: GameStarted, PlayerID: playerID, Game: g}
 
-	m := new(smocks.Dispatcher)
-	m.On("Subscribe").Return(nil)
+	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
+		data, _ := json.Marshal(example)
+		cb(data)
+		return true
+	})).Return(nil)
 
 	err := playerH.OnStart(ctx, wss)
 	require.NoError(t, err)

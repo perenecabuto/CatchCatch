@@ -25,6 +25,26 @@ const (
 	gameChangeTopic   = "game:update"
 )
 
+// GameWatcherEvent represents game events for players
+type GameWatcherEvent string
+
+// GameWatcherEvent options
+const (
+	GameStarted            = GameWatcherEvent("game:started")
+	GamePlayerNearToTarget = GameWatcherEvent("game:player:near-to-target")
+	GamePlayerLose         = GameWatcherEvent("game:player:lose")
+	GamePlayerWin          = GameWatcherEvent("game:player:win")
+	GameFinished           = GameWatcherEvent("game:finished")
+)
+
+// GameEventPayload ...
+type GameEventPayload struct {
+	PlayerID     string
+	Game         *game.Game
+	Event        GameWatcherEvent
+	DistToTarget float64
+}
+
 // GameWorker observe manage and run games
 type GameWorker struct {
 	service  service.GameService

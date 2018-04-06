@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
@@ -81,15 +80,22 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 	return player, nil
 }
 
-func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServer) error {
-	return h.games.OnGameEvent(ctx, func(g *game.Game, evt game.Event) error {
-		p := evt.Player
+func (h *PlayerHandler) onGamesAround(ctx context.Context, wss *websocket.WSServer) error {
+	return h.games.OnGameAround(ctx, func(p model.Player, g service.GameWithCoords) error {
+		event := proto.String("game:around")
+		err := wss.Emit(p.ID, &protobuf.Feature{EventName: event, Id: &g.ID, Group: proto.String("game"), Coords: &g.Coords})
+		if err != nil {
+			log.Println("Error to emit", *event)
+		}
+		return nil
+	})
+}
 
-		switch evt.Name {
-		case game.GameCreated:
-		case game.GamePlayerAdded:
-		case game.GamePlayerRemoved:
-		case game.GameStarted:
+func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServer) error {
+	return h.games.OnGameEvent(ctx, func(p *GameEventPayload) error {
+		switch p.Event {
+		case GameStarted:
+			g := p.Game
 			for _, p := range g.Players() {
 				wss.Emit(p.ID, &protobuf.GameInfo{
 					EventName: proto.String("game:started"),
@@ -97,29 +103,22 @@ func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServe
 					Role: proto.String(string(p.Role))})
 			}
 
-		case game.GamePlayerNearToTarget:
-			wss.Emit(p.ID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &p.DistToTarget})
+		case GamePlayerNearToTarget:
+			wss.Emit(p.PlayerID, &protobuf.Distance{EventName: proto.String("game:target:near"), Dist: &p.DistToTarget})
 
-		case game.GamePlayerLoose:
-			wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
+		case GamePlayerLose:
+			wss.Emit(p.PlayerID, &protobuf.Simple{EventName: proto.String("game:player:lose"), Id: &p.Game.ID})
 
-		case game.GameTargetLoose:
-			wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:loose"), Id: &g.ID})
+		case GamePlayerWin:
+			wss.Emit(p.PlayerID, &protobuf.Simple{EventName: proto.String("game:target:win")})
 
-		case game.GameTargetWin:
-			wss.Emit(p.ID, &protobuf.Simple{EventName: proto.String("game:target:win")})
-
-		case game.GameRunningWithoutPlayers:
-
-		case game.GameLastPlayerDetected:
-
-		case game.GameFinished:
-			rank := g.Rank()
+		case GameFinished:
+			rank := p.Game.Rank()
 			playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
 			for i, pr := range rank.PlayerRank {
 				playersRank[i] = &protobuf.PlayerRank{Player: &pr.Player, Points: proto.Int32(int32(pr.Points))}
 			}
-			wss.Emit(p.ID, &protobuf.GameRank{
+			wss.Emit(p.PlayerID, &protobuf.GameRank{
 				EventName: proto.String("game:finish"),
 				Id:        &rank.Game,
 				Game:      &rank.Game, PlayersRank: playersRank,
