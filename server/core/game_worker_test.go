@@ -53,8 +53,8 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 	})).Return(nil)
 
 	go func() {
-		w := core.NewGameWorker(gs, m)
-		err := w.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		gw := core.NewGameWorker(gs, m)
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
 		require.NoError(t, err)
 	}()
 
@@ -94,7 +94,6 @@ func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
 	m := new(smocks.Dispatcher)
 	gs := new(smocks.GameService)
 	gw := core.NewGameWorker(gs, m)
-
 	ctx := context.Background()
 
 	g := game.NewGame("test-game-1")
