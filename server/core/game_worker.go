@@ -86,8 +86,11 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	if !ok {
 		return errors.New("game coordinates can't be empty")
 	}
-	// gw.service.Remove(gameID)
 
+	// FIXME: avoid duplicated games
+	// gw.service.Remove(gameID)
+	// notify game id to destroy
+	// listen to game destroy and exit if this message arrives here
 	log.Printf("GameWatcher:create:%s", gameID)
 	g, err := gw.service.Create(gameID, coordinates)
 	if err != nil {
@@ -140,6 +143,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				gameTimer = time.NewTimer(5 * time.Minute)
 			}
 		case <-gameTimer.C:
+			// TODO: notificar Game Timed Out
 			log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
 			stop()
 		case <-gCtx.Done():
