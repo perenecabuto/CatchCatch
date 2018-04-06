@@ -98,7 +98,8 @@ func (g *Game) TargetID() string {
 }
 
 func (g *Game) String() string {
-	return fmt.Sprintf("%s(%d)started=%v", g.ID, len(g.players), g.started)
+	return fmt.Sprintf("[ID: %s, Started: %v, Players: %+v]",
+		g.ID, g.started, g.players)
 }
 
 /*
