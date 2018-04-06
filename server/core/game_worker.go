@@ -156,8 +156,12 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			stop()
 		case <-gCtx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
+			err := gw.service.Remove(g.ID)
+			if err != nil {
+				return err
+			}
+			players := g.Players()
 			g.Stop()
-			gw.service.Remove(g.ID)
 			for _, gp := range players {
 				err := gw.publish(GameFinished, gp, g)
 				if err != nil {

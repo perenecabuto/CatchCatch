@@ -121,3 +121,40 @@ func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
 
 	assert.Equal(t, example, actual)
 }
+
+func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
+	m := new(smocks.Dispatcher)
+	gs := new(smocks.GameService)
+	gw := core.NewGameWorker(gs, m)
+	gw = gw
+	ctx, cancel := context.WithCancel(context.Background())
+
+	playerID := "game-test-1-player-1"
+
+	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
+	g.Game.SetPlayer(playerID, 0, 0)
+	g.Start()
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("ObserveGamePlayers", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+
+	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		complete <- nil
+	}()
+	cancel()
+	<-complete
+
+	assert.False(t, g.Started())
+
+	exampleGame := game.NewGame(g.ID)
+	example := &core.GameEventPayload{Game: exampleGame, Event: core.GameFinished, PlayerID: playerID}
+	gs.AssertCalled(t, "Remove", exampleGame.ID)
+	m.AssertCalled(t, "Publish", gameWorkerTopic, mock.MatchedBy(func(data []byte) bool {
+		jsonE, _ := json.Marshal(example)
+		return assert.JSONEq(t, string(jsonE), string(data))
+	}))
+}
