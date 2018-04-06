@@ -193,8 +193,9 @@ func (gw *GameWorker) processGameEvent(
 	case game.GamePlayerAdded, game.GamePlayerRemoved:
 		ready := !g.Started() && len(g.Game.Players()) >= minPlayersPerGame
 		if ready {
-			started = true
 			g.Start()
+			started = true
+
 			go gw.service.Update(g)
 			for _, gp := range g.Players() {
 				err = gw.publish(GameStarted, gp, g)
@@ -207,6 +208,7 @@ func (gw *GameWorker) processGameEvent(
 			}
 		}
 	case game.GameTargetWin:
+		finished = true
 		for _, gp := range g.Players() {
 			if gp.Role == game.GameRoleTarget {
 				err = gw.publish(GamePlayerWin, gp, g)
@@ -214,10 +216,9 @@ func (gw *GameWorker) processGameEvent(
 				err = gw.publish(GamePlayerLose, gp, g)
 			}
 			if err != nil {
-				return
+				break
 			}
 		}
-		finished = true
 	case game.GameTargetLose:
 		finished = true
 		target := g.TargetPlayer()
