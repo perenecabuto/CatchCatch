@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/perenecabuto/CatchCatch/server/service"
-	"github.com/perenecabuto/CatchCatch/server/worker"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	funk "github.com/thoas/go-funk"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
+	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/worker"
 
 	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
 )
@@ -23,7 +23,7 @@ var (
 	gameWorkerTopic = "game:update"
 )
 
-func TestGameWorkerStartGame(t *testing.T) {
+func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())
 	g := &service.GameWithCoords{Game: game.NewGame("test-gameworker-game-1")}
 
@@ -37,15 +37,10 @@ func TestGameWorkerStartGame(t *testing.T) {
 		"test-gameworker-player-2": &game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
 		"test-gameworker-player-3": &game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
 	}
-	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
-		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
-			for _, p := range examplePlayers {
-				cb(p.Player, false)
-			}
-			finish()
-			return true
-		}),
-	).Return(nil)
+
+	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]game.Player), func() {
+		finish()
+	})
 
 	m := new(smocks.Dispatcher)
 	received := map[string]core.GameEventPayload{}
@@ -157,4 +152,16 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 		jsonE, _ := json.Marshal(example)
 		return assert.JSONEq(t, string(jsonE), string(data))
 	}))
+}
+
+func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []game.Player, afterAdd func()) {
+	gs.On("ObserveGamePlayers", mock.Anything, gameID,
+		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
+			for _, p := range players {
+				cb(p.Player, false)
+			}
+			afterAdd()
+			return true
+		}),
+	).Return(nil)
 }
