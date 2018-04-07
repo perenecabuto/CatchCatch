@@ -7,7 +7,7 @@ import (
 	_ "github.com/tevjef/go-runtime-metrics/expvar"
 
 	influxdb "github.com/influxdata/influxdb/client/v2"
-	metrics "github.com/tevjef/go-runtime-metrics"
+	rtmetrics "github.com/tevjef/go-runtime-metrics"
 )
 
 // Timeout is the default timeout for metrics
@@ -20,7 +20,13 @@ type Tags map[string]string
 type Values map[string]interface{}
 
 // Collector is a service to collect metrics
-type Collector struct {
+type Collector interface {
+	Ping() error
+	Notify(measurement string, tags Tags, values Values) error
+	RunGlobalCollector() error
+}
+
+type collector struct {
 	addr     string
 	db       string
 	username string
@@ -29,7 +35,7 @@ type Collector struct {
 }
 
 // NewCollector build the Collector
-func NewCollector(addr, db, username, password string) (*Collector, error) {
+func NewCollector(addr, db, username, password string) (Collector, error) {
 	client, err := influxdb.NewHTTPClient(influxdb.HTTPConfig{
 		Addr:     addr,
 		Username: username,
@@ -43,17 +49,17 @@ func NewCollector(addr, db, username, password string) (*Collector, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Collector{addr, db, username, password, client}, err
+	return &collector{addr, db, username, password, client}, err
 }
 
 // Ping check if the server is responsible
-func (c Collector) Ping() error {
+func (c *collector) Ping() error {
 	_, _, err := c.client.Ping(Timeout)
 	return err
 }
 
 // Notify register metrics
-func (c Collector) Notify(measurement string, tags Tags, values Values) error {
+func (c *collector) Notify(measurement string, tags Tags, values Values) error {
 	// r, err := c.client.Query(influxdb.Query{Command: "CREATE DATABASE " + c.db})
 	// log.Println("R:", r, "err:", err)
 	bp, err := influxdb.NewBatchPoints(
@@ -70,6 +76,6 @@ func (c Collector) Notify(measurement string, tags Tags, values Values) error {
 }
 
 // RunGlobalCollector collects server go metrics
-func (c Collector) RunGlobalCollector() error {
-	return metrics.RunCollector(&metrics.Config{Database: c.db, Host: strings.Replace(c.addr, "http://", "", 1)})
+func (c *collector) RunGlobalCollector() error {
+	return rtmetrics.RunCollector(&rtmetrics.Config{Database: c.db, Host: strings.Replace(c.addr, "http://", "", 1)})
 }
