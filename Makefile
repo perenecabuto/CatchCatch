@@ -75,9 +75,10 @@ run-influxdb:
 		-d influxdb -config /etc/influxdb/influxdb.conf
 
 run-grafana:
-	@-#docker rm -f grafana-local
-	@-docker run -d --name=grafana-local -p 3000:3000 -P grafana/grafana
-	@docker start grfana-local
+	@-docker rm -f grafana-local
+	@docker run --restart unless-stopped -p 3000:3000 -P \
+		--name grafana-local \
+		-d grafana/grafana
 
 run-tile38:
 	@-docker rm -f tile38-local
