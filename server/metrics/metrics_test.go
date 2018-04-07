@@ -1,12 +1,14 @@
-package metrics
+package metrics_test
 
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/perenecabuto/CatchCatch/server/metrics"
 )
 
 func TestNotify(t *testing.T) {
-	m, err := NewCollector("http://localhost:8086", "catchcatch", "", "")
+	m, err := metrics.NewCollector("http://localhost:8086", "catchcatch", "", "")
 	if err != nil {
 		t.Skip(err)
 	}
@@ -14,11 +16,11 @@ func TestNotify(t *testing.T) {
 		t.Skip(err)
 	}
 
-	tags := Tags{
+	tags := metrics.Tags{
 		"host":   "localhost",
 		"origin": "test",
 	}
-	values := Values{
+	values := metrics.Values{
 		"connected-users": rand.Float64(),
 	}
 	if err := m.Notify("random", tags, values); err != nil {
