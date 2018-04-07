@@ -39,7 +39,7 @@ func (e GameWatcherEvent) String() string {
 // GameWatcherEvent options
 const (
 	GameStarted            = GameWatcherEvent("game:started")
-	GamePlayerNearToTarget = GameWatcherEvent("game:player:near-to-target")
+	GamePlayerNearToTarget = GameWatcherEvent("game:player:near")
 	GamePlayerLose         = GameWatcherEvent("game:player:lose")
 	GamePlayerWin          = GameWatcherEvent("game:player:win")
 	GameFinished           = GameWatcherEvent("game:finished")
