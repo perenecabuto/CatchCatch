@@ -22,13 +22,7 @@ import (
 func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 	wsDriver := new(wsmocks.WSDriver)
 	c := new(wsmocks.WSConnection)
-
-	c.On("Send", mock.MatchedBy(func(payload []byte) bool {
-		msg := &protobuf.GameInfo{}
-		proto.Unmarshal(payload, msg)
-		t.Log(msg)
-		return true
-	})).Return(nil)
+	c.On("Send", mock.Anything).Return(nil)
 
 	gs := new(smocks.GameService)
 	m := new(smocks.Dispatcher)
@@ -40,7 +34,7 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	gameID := "test-gamewatcher-game-1"
+	gameID := "player-handler-game-1"
 	g := game.NewGame(gameID)
 	g.SetPlayer(playerID, 0, 0)
 	g.Start()
