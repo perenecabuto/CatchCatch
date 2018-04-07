@@ -10,8 +10,8 @@ import (
 	metrics "github.com/tevjef/go-runtime-metrics"
 )
 
-// MetricsTimeout is the default timeout for metrics
-const MetricsTimeout = time.Second
+// Timeout is the default timeout for metrics
+const Timeout = time.Second
 
 // Tags to be sent to metrics
 type Tags map[string]string
@@ -34,7 +34,7 @@ func NewCollector(addr, db, username, password string) (*Collector, error) {
 		Addr:     addr,
 		Username: username,
 		Password: password,
-		Timeout:  MetricsTimeout,
+		Timeout:  Timeout,
 	})
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func NewCollector(addr, db, username, password string) (*Collector, error) {
 
 // Ping check if the server is responsible
 func (c Collector) Ping() error {
-	_, _, err := c.client.Ping(MetricsTimeout)
+	_, _, err := c.client.Ping(Timeout)
 	return err
 }
 
