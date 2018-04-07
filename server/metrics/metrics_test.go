@@ -6,7 +6,7 @@ import (
 )
 
 func TestNotify(t *testing.T) {
-	m, err := NewMetricsCollector("http://localhost:8086", "catchcatch", "", "")
+	m, err := NewCollector("http://localhost:8086", "catchcatch", "", "")
 	if err != nil {
 		t.Skip(err)
 	}

@@ -48,7 +48,7 @@ func main() {
 		defer zcServer.Shutdown()
 	}
 
-	metrics, err := metrics.NewMetricsCollector(*influxdbAddr, *influxdbDB, *influxdbUser, *influxdbPass)
+	metrics, err := metrics.NewCollector(*influxdbAddr, *influxdbDB, *influxdbUser, *influxdbPass)
 	if err != nil {
 		log.Panic(err)
 	}

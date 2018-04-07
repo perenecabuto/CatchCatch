@@ -19,8 +19,8 @@ type Tags map[string]string
 // Values to be sent to metrics
 type Values map[string]interface{}
 
-// MetricsCollector is a service to collect metrics
-type MetricsCollector struct {
+// Collector is a service to collect metrics
+type Collector struct {
 	addr     string
 	db       string
 	username string
@@ -28,8 +28,8 @@ type MetricsCollector struct {
 	client   influxdb.Client
 }
 
-// NewMetricsCollector build the MetricsCollector
-func NewMetricsCollector(addr, db, username, password string) (*MetricsCollector, error) {
+// NewCollector build the Collector
+func NewCollector(addr, db, username, password string) (*Collector, error) {
 	client, err := influxdb.NewHTTPClient(influxdb.HTTPConfig{
 		Addr:     addr,
 		Username: username,
@@ -43,17 +43,17 @@ func NewMetricsCollector(addr, db, username, password string) (*MetricsCollector
 	if err != nil {
 		return nil, err
 	}
-	return &MetricsCollector{addr, db, username, password, client}, err
+	return &Collector{addr, db, username, password, client}, err
 }
 
 // Ping check if the server is responsible
-func (c MetricsCollector) Ping() error {
+func (c Collector) Ping() error {
 	_, _, err := c.client.Ping(MetricsTimeout)
 	return err
 }
 
 // Notify register metrics
-func (c MetricsCollector) Notify(measurement string, tags Tags, values Values) error {
+func (c Collector) Notify(measurement string, tags Tags, values Values) error {
 	// r, err := c.client.Query(influxdb.Query{Command: "CREATE DATABASE " + c.db})
 	// log.Println("R:", r, "err:", err)
 	bp, err := influxdb.NewBatchPoints(
@@ -70,6 +70,6 @@ func (c MetricsCollector) Notify(measurement string, tags Tags, values Values) e
 }
 
 // RunGlobalCollector collects server go metrics
-func (c MetricsCollector) RunGlobalCollector() error {
+func (c Collector) RunGlobalCollector() error {
 	return metrics.RunCollector(&metrics.Config{Database: c.db, Host: strings.Replace(c.addr, "http://", "", 1)})
 }
