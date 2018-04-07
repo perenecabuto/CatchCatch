@@ -76,10 +76,11 @@ func main() {
 	checkpointWatcher := core.NewCheckpointWatcher(dispatcher, playerService)
 	featuresWatcher := core.NewFeaturesEventsWatcher(dispatcher, playerService)
 
-	workers.Add(gameWorker)
-	workers.Add(geofenceEventsWorker)
-	workers.Add(checkpointWatcher)
-	workers.Add(featuresWatcher)
+	opts := worker.MetricsOptions{Host: *serverID, Origin: "initialization"}
+	workers.Add(worker.NewWorkerWithMetrics(gameWorker, metrics, opts))
+	workers.Add(worker.NewWorkerWithMetrics(geofenceEventsWorker, metrics, opts))
+	workers.Add(worker.NewWorkerWithMetrics(checkpointWatcher, metrics, opts))
+	workers.Add(worker.NewWorkerWithMetrics(featuresWatcher, metrics, opts))
 
 	workers.Start(ctx)
 	// TODO: verify server id on these workers
