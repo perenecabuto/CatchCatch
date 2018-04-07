@@ -26,6 +26,7 @@ const (
 )
 
 var (
+	// GameTimeOut default 5 min
 	GameTimeOut = 5 * time.Minute
 )
 
