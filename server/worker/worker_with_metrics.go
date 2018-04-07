@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"time"
 
@@ -10,7 +9,8 @@ import (
 )
 
 const (
-	MetricsName = "catchcatch:worker:metrics"
+	RunMetricsName   = "catchcatch.worker.run.metrics"
+	StartMetricsName = "catchcatch.worker.start.metrics"
 )
 
 type WorkerWithMetrics struct {
@@ -29,23 +29,22 @@ func NewWorkerWithMetrics(w Worker, m metrics.Collector, opt MetricsOptions) Wor
 }
 
 func (w WorkerWithMetrics) Run(ctx context.Context, params TaskParams) error {
-	start := time.Now()
-	err := w.Worker.Run(ctx, params)
-	elapsed := time.Since(start)
+	tags := metrics.Tags{"host": w.options.Host, "origin": w.options.Origin, "id": w.ID()}
+	values := metrics.Values{"params": params}
 
-	tags := metrics.Tags{
-		"host":   w.options.Host,
-		"origin": w.options.Origin,
-	}
-	data, _ := json.Marshal(params)
-	values := metrics.Values{
-		"elapsed": elapsed,
-		"err":     err.Error(),
-		"id":      w.ID(),
-		"params":  data,
-	}
-	if err := w.collector.Notify(MetricsName, tags, values); err != nil {
+	if err := w.collector.Notify(StartMetricsName, tags, values); err != nil {
 		log.Println("[WorkerWithMetrics] metrics error:", err)
 	}
-	return err
+
+	start := time.Now()
+	err := w.Worker.Run(ctx, params)
+	values["elapsed"] = int(time.Since(start) / time.Millisecond)
+	if err != nil {
+		values["error"] = err.Error()
+	}
+	log.Println("[WorkerWithMetrics]", RunMetricsName, tags, values)
+	if err := w.collector.Notify(RunMetricsName, tags, values); err != nil {
+		log.Println("[WorkerWithMetrics] metrics error:", err)
+	}
+	return nil
 }

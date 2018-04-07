@@ -2,7 +2,6 @@ package worker_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ import (
 	wmocks "github.com/perenecabuto/CatchCatch/server/worker/mocks"
 )
 
-func TestWorkerWithMetricsSendWhenTaskStarted(t *testing.T) {
+func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 	m := new(mmocks.Collector)
 	w := new(wmocks.Worker)
 	opts := worker.MetricsOptions{
@@ -43,22 +42,39 @@ func TestWorkerWithMetricsSendWhenTaskStarted(t *testing.T) {
 	w.AssertCalled(t, "Run", ctx, mock.MatchedBy(func(actual worker.TaskParams) bool {
 		return assert.Equal(t, params, actual)
 	}))
-	m.AssertCalled(t, "Notify", worker.MetricsName,
+	m.AssertCalled(t, "Notify", worker.RunMetricsName,
 		mock.MatchedBy(func(actual metrics.Tags) bool {
-			expected := metrics.Tags{"host": opts.Host, "origin": opts.Origin}
+			expected := metrics.Tags{"id": id, "host": opts.Host, "origin": opts.Origin}
 			return assert.Equal(t, expected, actual)
 		}),
 		mock.MatchedBy(func(actual metrics.Values) bool {
-			data, _ := json.Marshal(params)
 			expected := metrics.Values{
-				"id":      id,
-				"params":  data,
+				"params":  params,
 				"elapsed": 100,
-				"err":     err.Error(),
+				"error":   err.Error(),
 			}
-			elapsed := actual["elapsed"].(time.Duration)
-			actual["elapsed"] = int(elapsed / time.Millisecond)
 			return assert.Equal(t, expected, actual)
 		}),
 	)
+}
+
+func TestWorkerWithMetricsSendStartMetrics(t *testing.T) {
+	m := new(mmocks.Collector)
+	w := new(wmocks.Worker)
+	opts := worker.MetricsOptions{Host: "testhost", Origin: "test"}
+	wm := worker.NewWorkerWithMetrics(w, m, opts)
+
+	ctx := context.Background()
+	err := errors.New("MockWorkerError")
+	id := "MockWorker"
+	w.On("ID").Return(id)
+	w.On("Run", ctx, mock.Anything).Return(err)
+	m.On("Notify", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	params := worker.TaskParams{"key1": "val1"}
+	wm.Run(ctx, params)
+
+	m.AssertCalled(t, "Notify", worker.StartMetricsName,
+		metrics.Tags{"id": id, "host": opts.Host, "origin": opts.Origin},
+		mock.Anything)
 }
