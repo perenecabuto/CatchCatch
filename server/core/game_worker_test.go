@@ -139,18 +139,18 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 		gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
 		complete <- nil
 	}()
+
+	time.Sleep(time.Second)
 	cancel()
 	<-complete
 
 	assert.False(t, g.Started())
-
-	exampleGame := game.NewGame(g.ID)
-	example := &core.GameEventPayload{Game: exampleGame, Event: core.GameFinished, PlayerID: playerID}
-	gs.AssertCalled(t, "Remove", exampleGame.ID)
-	m.AssertCalled(t, "Publish", gameWorkerTopic, mock.MatchedBy(func(data []byte) bool {
-		jsonE, _ := json.Marshal(example)
-		return assert.JSONEq(t, string(jsonE), string(data))
-	}))
+	gs.AssertCalled(t, "Remove", g.ID)
+	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
+		p := &core.GameEventPayload{}
+		json.Unmarshal(data, p)
+		return p.Event == core.GameFinished
+	})
 }
 
 func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {

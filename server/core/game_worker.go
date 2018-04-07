@@ -141,13 +141,14 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 		select {
 		case evt, ok := <-evtChan:
 			if !ok {
-				return nil
+				stop()
+				break
 			}
 			started, finished, err :=
 				gw.processGameEvent(g, evt)
 			if finished || err != nil {
 				stop()
-				return err
+				break
 			}
 			if started {
 				// TODO: monitor game start
@@ -159,19 +160,15 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			stop()
 		case <-gCtx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
-			err := gw.service.Remove(g.ID)
-			if err != nil {
-				return err
-			}
-			players := g.Players()
-			g.Stop()
-			for _, gp := range players {
+			stop()
+			for _, gp := range g.Players() {
 				err := gw.publish(GameFinished, gp, g)
 				if err != nil {
 					return err
 				}
 			}
-			return nil
+			g.Stop()
+			return gw.service.Remove(g.ID)
 		}
 	}
 }
