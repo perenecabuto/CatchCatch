@@ -94,24 +94,12 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	err := playerH.OnStart(ctx, wss)
 	require.NoError(t, err)
 
-	rank := g.Rank()
-	playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
-	for i, pr := range rank.PlayerRank {
-		playersRank[i] = &protobuf.PlayerRank{Player: proto.String(pr.Player), Points: proto.Int32(int32(pr.Points))}
-	}
-	expected := &protobuf.GameRank{
-		EventName: proto.String(GameFinished.String()),
-		Id:        &rank.Game, Game: &rank.Game,
-		PlayersRank: playersRank,
-	}
-
 	connections := []*wsmocks.WSConnection{c1, c2, c3}
 	for _, c := range connections {
 		c.AssertCalled(t, "Send", mock.MatchedBy(func(data []byte) bool {
 			actual := &protobuf.GameRank{}
 			proto.Unmarshal(data, actual)
-			return assert.EqualValues(t,
-				expected.PlayersRank, actual.PlayersRank)
+			return assert.EqualValues(t, GameFinished, actual.GetEventName())
 		}))
 	}
 }
