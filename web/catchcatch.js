@@ -147,27 +147,25 @@ let Player = function (x, y, admin) {
 
         socket.on('game:started', function (msg) {
             let info = messages.GameInfo.decode(msg);
-            log(player.id + ':game:started:' + info.game + ":role:" + info.role);
+            log(player.id + ':started:' + info.game + ":role:" + info.role);
         })
-        socket.on('game:loose', function (msg) {
+        socket.on('game:player:near', function (msg) {
+            let near = messages.Distance.decode(msg);
+            log(player.id + ':near:' + near.dist);
+        })
+        socket.on('game:player:lose', function (msg) {
             let game = messages.Simple.decode(msg);
-            // log(player.id + ':game:loose:' + game.id)
+            log(player.id + ':lose:' + game.id)
         })
-        socket.on('game:target:near', function (msg) {
+        socket.on('game:player:win', function (msg) {
             let near = messages.Distance.decode(msg);
-            log(player.id + ':target:near:' + near.dist);
+            log(player.id + ':win:' + near.dist);
         })
-        socket.on('game:target:reached', function (msg) {
-            let near = messages.Distance.decode(msg);
-            log(player.id + ':target:reached:' + near.dist);
-        })
-        socket.on('game:target:win', function () {
-            log(player.id + ':target:win');
-        })
-        socket.on('game:finish', function (msg) {
+        socket.on('game:finished', function (msg) {
             let rank = messages.GameRank.decode(msg);
-            log(player.id + ':game:finish:' + rank.game + "\n" + JSON.stringify(rank.playersRank));
+            log(player.id + ':game:finished:' + rank.game + "\n" + JSON.stringify(rank.playersRank));
         })
+
         socket.on('checkpoint:detected', function (msg) {
             let detection = messages.Detection.decode(msg);
             admin.showCircleOnMap(player.id, [detection.lon, detection.lat], detection.nearByMeters);
