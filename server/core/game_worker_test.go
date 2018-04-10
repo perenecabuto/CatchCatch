@@ -53,24 +53,26 @@ func TestGameWorkerDoNotRunWithoutCoords(t *testing.T) {
 }
 
 func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
-	ctx, finish := context.WithCancel(context.Background())
+	ctx := context.Background()
 	g := &service.GameWithCoords{Game: game.NewGame("test-gameworker-game-1")}
-
 	gs := new(smocks.GameService)
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
 	gs.On("Remove", mock.Anything).Return(nil)
 	gs.On("Update", mock.Anything).Return(nil)
 
+	completed := make(chan interface{})
 	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]*game.Player), func() {
-		finish()
+		completed <- nil
 	})
 
 	m := new(smocks.Dispatcher)
-	received := map[string]core.GameEventPayload{}
+	var playersWithRoles []game.Player
 	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
-		actual := core.GameEventPayload{}
-		json.Unmarshal(data, &actual)
-		received[actual.PlayerID] = actual
+		event := core.GameEventPayload{}
+		json.Unmarshal(data, &event)
+		if event.Event == core.GameStarted {
+			playersWithRoles = event.Game.Players()
+		}
 		return true
 	})).Return(nil)
 
@@ -80,36 +82,18 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	<-ctx.Done()
+	<-completed
 
-	var targetID string
-	for _, r := range received {
-		targetID = r.Game.TargetID()
-		for _, p := range r.Game.Players() {
-			examplePlayers[p.ID].Role = p.Role
-		}
-		break
+	assert.Len(t, playersWithRoles, len(examplePlayers))
+	for _, p := range playersWithRoles {
+		assert.NotEmpty(t, p.Role)
 	}
 
-	exampleList := []game.Player{}
-	for _, e := range examplePlayers {
-		exampleList = append(exampleList, *e)
-	}
-	exampleGame := game.NewGameWithParams(g.ID, true, exampleList, targetID)
-	examples := map[string]core.GameEventPayload{}
-	for _, p := range exampleGame.Players() {
-		payload := core.GameEventPayload{Event: core.GameStarted,
-			Game:         exampleGame,
-			PlayerID:     p.ID,
-			DistToTarget: p.DistToTarget}
-		examples[p.ID] = payload
-	}
-
-	m.AssertCalled(t, "Publish", gameWorkerTopic, mock.MatchedBy(func([]byte) bool {
-		jsonE, _ := json.Marshal(examples)
-		jsonR, _ := json.Marshal(received)
-		return assert.JSONEq(t, string(jsonE), string(jsonR))
-	}))
+	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
+		p := &core.GameEventPayload{}
+		json.Unmarshal(data, p)
+		return p.Event == core.GameStarted
+	})
 }
 
 func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
