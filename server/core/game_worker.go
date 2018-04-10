@@ -18,6 +18,10 @@ import (
 var (
 	// ErrGameStoped happens when game can't change anymore
 	ErrGameStoped = errors.New("game stoped")
+	// ErrGameIDCantBeEmpty happens when run is called without game id
+	ErrGameIDCantBeEmpty = errors.New("gameID can't be empty")
+	// ErrGameCoordsCantBeEmpty happens when run is called without game id
+	ErrGameCoordsCantBeEmpty = errors.New("coords can't be empty")
 )
 
 const (
@@ -88,16 +92,14 @@ func (gw *GameWorker) OnGameEvent(ctx context.Context, cb func(payload *GameEven
 }
 
 // Run starts this Worker to listen to player events over games
-// TODO: monitor game watches
-// TODO: monitor game player watches
 func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	gameID, ok := params["gameID"].(string)
 	if !ok {
-		return errors.New("gameID can't be empty")
+		return ErrGameIDCantBeEmpty
 	}
 	coordinates, ok := params["coordinates"].(string)
 	if !ok {
-		return errors.New("game coordinates can't be empty")
+		return ErrGameCoordsCantBeEmpty
 	}
 
 	// FIXME: avoid duplicated games

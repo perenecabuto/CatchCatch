@@ -30,6 +30,28 @@ var (
 	}
 )
 
+func TestGameWorkerDoNotRunWithoutGameID(t *testing.T) {
+	m := new(smocks.Dispatcher)
+	gs := new(smocks.GameService)
+	gw := core.NewGameWorker(gs, m)
+	ctx := context.Background()
+
+	err := gw.Run(ctx, worker.TaskParams{})
+
+	assert.EqualError(t, err, core.ErrGameIDCantBeEmpty.Error())
+}
+
+func TestGameWorkerDoNotRunWithoutCoords(t *testing.T) {
+	m := new(smocks.Dispatcher)
+	gs := new(smocks.GameService)
+	gw := core.NewGameWorker(gs, m)
+	ctx := context.Background()
+
+	err := gw.Run(ctx, worker.TaskParams{"gameID": "test-game-1"})
+
+	assert.EqualError(t, err, core.ErrGameCoordsCantBeEmpty.Error())
+}
+
 func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())
 	g := &service.GameWithCoords{Game: game.NewGame("test-gameworker-game-1")}
