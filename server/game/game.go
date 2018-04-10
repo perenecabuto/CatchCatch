@@ -224,6 +224,7 @@ func (g *Game) RemovePlayer(id string) (Event, error) {
 		return Event{Name: GamePlayerRemoved, Player: *p}, nil
 	}
 
+	g.playersLock.Lock()
 	g.players[id].Lose = true
 	playersInGame := make([]*Player, 0)
 	for _, gp := range g.players {
@@ -231,6 +232,8 @@ func (g *Game) RemovePlayer(id string) (Event, error) {
 			playersInGame = append(playersInGame, gp)
 		}
 	}
+	g.playersLock.Unlock()
+
 	if len(playersInGame) == 1 {
 		return Event{Name: GameLastPlayerDetected, Player: *p}, nil
 	} else if len(playersInGame) == 0 {
