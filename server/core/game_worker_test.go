@@ -22,6 +22,12 @@ import (
 
 var (
 	gameWorkerTopic = "game:update"
+
+	examplePlayers = map[string]*game.Player{
+		"test-gameworker-player-1": &game.Player{Player: model.Player{ID: "test-gameworker-player-1"}},
+		"test-gameworker-player-2": &game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
+		"test-gameworker-player-3": &game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
+	}
 )
 
 func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
@@ -32,12 +38,6 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
 	gs.On("Remove", mock.Anything).Return(nil)
 	gs.On("Update", mock.Anything).Return(nil)
-
-	examplePlayers := map[string]*game.Player{
-		"test-gameworker-player-1": &game.Player{Player: model.Player{ID: "test-gameworker-player-1"}},
-		"test-gameworker-player-2": &game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
-		"test-gameworker-player-3": &game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
-	}
 
 	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]*game.Player), func() {
 		finish()
@@ -162,12 +162,8 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	core.GameTimeOut = 2 * time.Second
 
 	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
-	examplePlayers := []*game.Player{
-		&game.Player{Player: model.Player{ID: "test-gameworker-player-1"}},
-		&game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
-		&game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
-	}
-	addPlayersToGameServiceMock(gs, g.ID, examplePlayers, func() {
+	players := funk.Values(examplePlayers).([]*game.Player)
+	addPlayersToGameServiceMock(gs, g.ID, players, func() {
 		assert.Len(t, g.Players(), 3)
 	})
 
@@ -203,14 +199,13 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	gw := core.NewGameWorker(gs, m)
 	ctx, finish := context.WithCancel(context.Background())
 
-	loser := model.Player{ID: "loser-player-1"}
-
-	examplePlayers := []game.Player{
-		game.Player{Player: loser},
-		game.Player{Player: model.Player{ID: "test-gameworker-player-2"}},
-		game.Player{Player: model.Player{ID: "test-gameworker-player-3"}},
+	players := []game.Player{}
+	for _, p := range examplePlayers {
+		players = append(players, *p)
 	}
-	g := game.NewGameWithParams("game-test-1", true, examplePlayers, "test-gameworker-player-3")
+	loser := players[0]
+
+	g := game.NewGameWithParams("game-test-1", true, players, players[2].ID)
 	gwc := &service.GameWithCoords{Game: g}
 
 	gs.On("Create", mock.Anything, mock.Anything).Return(gwc, nil)
@@ -220,7 +215,7 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
 		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
-			cb(loser, true)
+			cb(loser.Player, true)
 			finish()
 			return true
 		}),
