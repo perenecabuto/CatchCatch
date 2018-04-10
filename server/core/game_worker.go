@@ -201,6 +201,7 @@ func (gw *GameWorker) processGameEvent(
 			started = true
 
 			go gw.service.Update(g)
+			// TODO: send the player role
 			for _, gp := range g.Players() {
 				err = gw.publish(GameStarted, gp, g)
 				if err != nil {

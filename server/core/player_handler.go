@@ -94,8 +94,11 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 
 func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServer) error {
 	return h.games.OnGameEvent(ctx, func(p *GameEventPayload) error {
+		// TODO: send the game id and game rank instead of the game object
+
 		switch p.Event {
 		case GameStarted:
+			// TODO: stop looping game players and receive the game role
 			g := p.Game
 			for _, p := range g.Players() {
 				wss.Emit(p.ID, &protobuf.GameInfo{
