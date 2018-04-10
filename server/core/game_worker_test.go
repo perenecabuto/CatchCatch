@@ -131,8 +131,7 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
 	gs.On("ObserveGamePlayers", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
-
-	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
 	complete := make(chan interface{})
 	go func() {
@@ -171,7 +170,7 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	gs.On("Update", mock.Anything).Return(nil)
 	gs.On("ObserveGamePlayers", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
-	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
 	complete := make(chan interface{})
 	go func() {
@@ -212,7 +211,7 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	gs.On("Update", mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
 
-	m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
 		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
 			cb(loser.Player, true)
