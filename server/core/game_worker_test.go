@@ -222,7 +222,7 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 	callbackReached := make(chan func(model.Player, bool) error)
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
 		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
-			callbackReached <- cb
+			go func() { callbackReached <- cb }()
 			return true
 		}),
 	).Return(nil)
