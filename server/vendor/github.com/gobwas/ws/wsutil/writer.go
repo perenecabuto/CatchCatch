@@ -55,7 +55,7 @@ func NewControlWriter(dest io.Writer, state ws.State, op ws.OpCode) *ControlWrit
 // ws.MinHeaderSize or ws.MinHeaderSize+4 (depending on state). At most
 // (ws.MaxControlFramePayloadSize + x) bytes of buf will be used.
 //
-// It panics if len(buf) <= ws.MinHeaderSize + .
+// It panics if len(buf) <= ws.MinHeaderSize + x.
 func NewControlWriterBuffer(dest io.Writer, state ws.State, op ws.OpCode, buf []byte) *ControlWriter {
 	max := ws.MaxControlFramePayloadSize + headerSize(state, ws.MaxControlFramePayloadSize)
 	if len(buf) > max {
@@ -116,7 +116,7 @@ type Writer struct {
 	err error
 }
 
-var writers = pool.MakePoolMap(128, 65536)
+var writers = pool.New(128, 65536)
 
 // GetWriter tries to reuse Writer getting it from the pool.
 //
@@ -128,24 +128,21 @@ var writers = pool.MakePoolMap(128, 65536)
 // If you have your own bytes buffer pool you could use NewWriterBuffer to use
 // pooled bytes in writer.
 func GetWriter(dest io.Writer, state ws.State, op ws.OpCode, n int) *Writer {
-	n = pool.CeilToPowerOfTwo(n)
-	if p, ok := writers[n]; ok {
-		if w := p.Get(); w != nil {
-			ret := w.(*Writer)
-			ret.Reset(dest, state, op)
-			return ret
-		}
+	x, m := writers.Get(n)
+	if x != nil {
+		w := x.(*Writer)
+		w.Reset(dest, state, op)
+		return w
 	}
-	return NewWriterBufferSize(dest, state, op, n)
+	// NOTE: we use m instead of n, because m is an attempt to reuse w of such
+	// size in the future.
+	return NewWriterBufferSize(dest, state, op, m)
 }
 
 // PutWriter puts w for future reuse by GetWriter().
 func PutWriter(w *Writer) {
-	n := pool.CeilToPowerOfTwo(len(w.buf))
-	if p, ok := writers[n]; ok {
-		w.Reset(nil, 0, 0)
-		p.Put(w)
-	}
+	w.Reset(nil, 0, 0)
+	writers.Put(w, w.Size())
 }
 
 // NewWriter returns a new Writer whose buffer has the DefaultWriteBuffer size.
@@ -184,7 +181,7 @@ func NewWriterBufferSize(dest io.Writer, state ws.State, op ws.OpCode, n int) *W
 // Note that it reserves x bytes of buf for header data, where x is in range
 // [ws.MinHeaderSize,ws.MaxHeaderSize] (depending on state and buf size).
 //
-// You could use ws.SizeOfHeader() to calculate number of bytes needed to store
+// You could use ws.HeaderSize() to calculate number of bytes needed to store
 // header data.
 //
 // It panics if len(buf) is too small to fit header and payload data.
@@ -205,7 +202,7 @@ func NewWriterBuffer(dest io.Writer, state ws.State, op ws.OpCode, buf []byte) *
 
 func reserve(state ws.State, n int) (offset int) {
 	var mask int
-	if state.Is(ws.StateClientSide) {
+	if state.ClientSide() {
 		mask = 4
 	}
 
@@ -224,7 +221,7 @@ func reserve(state ws.State, n int) (offset int) {
 func headerSize(s ws.State, n int) int {
 	return ws.HeaderSize(ws.Header{
 		Length: int64(n),
-		Masked: s.Is(ws.StateClientSide),
+		Masked: s.ClientSide(),
 	})
 }
 
@@ -237,6 +234,11 @@ func (w *Writer) Reset(dest io.Writer, state ws.State, op ws.OpCode) {
 	w.dest = dest
 	w.state = state
 	w.op = op
+}
+
+// Size returns the size of the underlying buffer in bytes.
+func (w *Writer) Size() int {
+	return len(w.buf)
 }
 
 // Available returns how many bytes are unused in the buffer.
@@ -386,7 +388,7 @@ func (w *Writer) FlushFragment() error {
 
 func (w *Writer) flushFragment(fin bool) error {
 	frame := ws.NewFrame(w.opCode(), fin, w.buf[:w.n])
-	if w.state.Is(ws.StateClientSide) {
+	if w.state.ClientSide() {
 		frame = ws.MaskFrameInPlace(frame)
 	}
 
@@ -431,7 +433,7 @@ func (w *bytesWriter) Write(p []byte) (int, error) {
 
 func writeFrame(w io.Writer, s ws.State, op ws.OpCode, fin bool, p []byte) error {
 	var frame ws.Frame
-	if s.Is(ws.StateClientSide) {
+	if s.ClientSide() {
 		// Should copy bytes to prevent corruption of caller data.
 		payload := pbytes.GetLen(len(p))
 		defer pbytes.Put(payload)

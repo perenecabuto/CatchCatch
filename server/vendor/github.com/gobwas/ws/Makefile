@@ -1,29 +1,27 @@
-TEST ?=.
-
 BENCH     ?=.
 BENCH_BASE?=master
 
-autobahn:
-	go build -o ./bin/autobahn ./example/autobahn
+clean:
+	rm -f bin/reporter
+	rm -fr autobahn/report/*
+
+bin/reporter:
+	go build -o bin/reporter ./autobahn
+
+bin/gocovmerge:
+	go build -o bin/gocovmerge github.com/wadey/gocovmerge
+
+.PHONY: autobahn
+autobahn: clean bin/reporter 
+	./autobahn/script/test.sh --build
+	bin/reporter $(PWD)/autobahn/report/index.json
 
 test:
-	go test -run=$(TEST) -cover ./...
+	go test -coverprofile=ws.coverage .
+	go test -coverprofile=wsutil.coverage ./wsutil
 
-testrfc: PID:=$(shell mktemp -t autobahn.XXXX)
-testrfc: autobahn
-	./bin/autobahn & echo $$! > $(PID)
-	if [ -z "$$(ps | grep $$(cat $(PID)) | grep autobahn)" ]; then\
-		echo "could not start autobahn";\
-		exit 1;\
-	fi;\
-	wstest -m fuzzingclient -s ./example/autobahn/fuzzingclient.json
-	pkill -9 -F $(PID)
-
-rfc: testrfc
-	open ./example/autobahn/reports/servers/index.html
-
-bench:
-	go test -run=none -bench=$(BENCH) -benchmem
+cover: bin/gocovmerge test autobahn
+	bin/gocovmerge ws.coverage wsutil.coverage autobahn/report/server.coverage > total.coverage
 
 benchcmp: BENCH_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 benchcmp: BENCH_OLD:=$(shell mktemp -t old.XXXX)

@@ -56,8 +56,7 @@ func (r *PrivateRR) len() int { return r.Hdr.len() + r.Data.Len() }
 func (r *PrivateRR) copy() RR {
 	// make new RR like this:
 	rr := mkPrivateRR(r.Hdr.Rrtype)
-	newh := r.Hdr.copyHeader()
-	rr.Hdr = *newh
+	rr.Hdr = r.Hdr
 
 	err := r.Data.Copy(rr.Data)
 	if err != nil {
@@ -135,7 +134,7 @@ func PrivateHandle(rtypestr string, rtype uint16, generator func() PrivateRdata)
 	typeToparserFunc[rtype] = parserFunc{setPrivateRR, true}
 }
 
-// PrivateHandleRemove removes defenitions required to support private RR type.
+// PrivateHandleRemove removes definitions required to support private RR type.
 func PrivateHandleRemove(rtype uint16) {
 	rtypestr, ok := TypeToString[rtype]
 	if ok {
@@ -145,5 +144,4 @@ func PrivateHandleRemove(rtype uint16) {
 		delete(StringToType, rtypestr)
 		delete(typeToUnpack, rtype)
 	}
-	return
 }
