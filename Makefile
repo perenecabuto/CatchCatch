@@ -20,8 +20,7 @@ DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.
 
 
 test: clean-redis
-	$(SERVER_SRC) IGNORE_GOCRAFT_WORKER_TEST=1 \
-	go test -count=1 -cover -race -v ./...
+	$(SERVER_SRC) go test -count=1 -cover -race -v ./...
 
 clean-redis:
 	@-echo FLUSHALL | nc -w1 localhost 6379
