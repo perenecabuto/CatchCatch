@@ -99,8 +99,8 @@ setup-ssl:
 	$(DOKKU_CMD) letsencrypt catchcatch
 
 update-deps:
-	-go get github.com/Masterminds/glide
-	$(SERVER_SRC) glide update
+	-go get github.com/golang/dep
+	$(SERVER_SRC) dep ensure -v -update
 
 install-docker-machine:
 	wget -c $(DOCKER_MACHINE_URL)
