@@ -23,7 +23,7 @@ func NewGobwasWSDriver() WSDriver {
 // HTTPHandler implements WSDriver.Handler
 func (d GobwasWSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, _, _, err := ws.UpgradeHTTP(r, w, nil)
+		c, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 		}

@@ -124,7 +124,7 @@ func mustConnectRedis(addr string, debug bool) *redis.Client {
 	if debug {
 		client.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
 			return func(cmd redis.Cmder) error {
-				log.Printf("[REDIS(%s)]: %s", addr, cmd.String())
+				log.Printf("[REDIS(%s)]: %s", addr, cmd)
 				return oldProcess(cmd)
 			}
 		})
