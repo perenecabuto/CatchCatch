@@ -14,6 +14,10 @@ services:
             - "tile38:9851"
             - "-influxdb-addr"
             - "http://influxdb:8086"
+            - "-nats-addr"
+            - "nats:4222"
+            - "-workers-redis-addr"
+            - "redis:6379"
         links:
             - nats
             - tile38
@@ -43,6 +47,13 @@ services:
         image: nats
         ports:
             - "4222:4222"
+        networks:
+            - internal
+
+    redis:
+        image: redis
+        ports:
+            - "6379:6379"
         networks:
             - internal
 
@@ -79,6 +90,7 @@ services:
             - traefik-net
         ports:
             - 80:80
+            - 443:443
             - 8080:8080
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
