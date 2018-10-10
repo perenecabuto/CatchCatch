@@ -42,9 +42,9 @@ gen-mocks:
 
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
-	$(SERVER_SRC) CGO_ENABLED=0 go build -ldflags="-s -w" -tags netgo -a
+	$(SERVER_SRC) go build
 
-docker-compose: build
+docker-compose:
 	docker-compose up --build
 
 run: run-tile38 run-nats run-redis run-influxdb
