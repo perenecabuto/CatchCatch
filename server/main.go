@@ -34,6 +34,7 @@ var (
 	wsdriver       = flag.String("wsdriver", "xnet", "options: xnet, gobwas")
 
 	workerRedisAddr = flag.String("workers-redis-addr", "localhost:6379", "distributed workers' redis address")
+	natsAddr        = flag.String("nats-addr", nats.DefaultURL, "nats address")
 
 	influxdbAddr = flag.String("influxdb-addr", "http://localhost:8086", "influxdb address")
 	influxdbDB   = flag.String("influxdb-db", "catchcatch", "influxdb database name")
@@ -62,7 +63,7 @@ func main() {
 	repo := repository.NewRepository(tile38Cli)
 	playerService := service.NewPlayerLocationService(repo, stream)
 
-	natsConn := mustConnectNats(nats.DefaultURL)
+	natsConn := mustConnectNats(*natsAddr)
 	dispatcher := messages.NewNatsDispatcher(natsConn)
 	gameService := service.NewGameService(repo, stream)
 	wsdriver := selectWsDriver(*wsdriver)
