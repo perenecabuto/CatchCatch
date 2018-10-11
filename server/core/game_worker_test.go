@@ -34,7 +34,8 @@ func TestGameWorkerDoNotRunWithoutGameID(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	err := gw.Run(ctx, worker.TaskParams{})
 
@@ -45,7 +46,8 @@ func TestGameWorkerDoNotRunWithoutCoords(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	err := gw.Run(ctx, worker.TaskParams{"gameID": "test-game-1"})
 
@@ -53,7 +55,8 @@ func TestGameWorkerDoNotRunWithoutCoords(t *testing.T) {
 }
 
 func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	g := &service.GameWithCoords{Game: game.NewGame("test-gameworker-game-1")}
 	gs := &smocks.GameService{}
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
@@ -100,7 +103,8 @@ func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	g := game.NewGame("test-game-1")
 	playerID := "test-game-player-1"
@@ -162,7 +166,8 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	core.GameTimeOut = 2 * time.Second
 
@@ -202,7 +207,8 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
