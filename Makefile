@@ -19,7 +19,7 @@ DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.
 %-beta: DOMAIN=beta-catchcatch.ddns.net
 
 
-test: clean-redis
+test:
 	$(SERVER_SRC) go test -count=1 -cover -race -v ./...
 
 clean-redis:
