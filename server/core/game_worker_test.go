@@ -319,27 +319,39 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	gs.On("Create", mock.Anything, mock.Anything).Return(gwc, nil)
 	gs.On("Update", mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
-
 	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	complete := make(chan interface{})
+	regiserPlayerLose := make(chan interface{})
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
 		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
 			cb(loser.Player, true)
-			complete <- nil
+			go func() { regiserPlayerLose <- nil }()
 			return true
 		}),
 	).Return(nil)
 
+	complete := make(chan interface{})
 	go func() {
 		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": gwc.Coords})
 		require.NoError(t, err)
+		complete <- nil
 	}()
 
+	<-regiserPlayerLose
+	targetID := g.TargetID()
+	actualGamePlayers := g.Players()
+	actualLoser := funk.Find(actualGamePlayers, func(p game.Player) bool {
+		return p.ID == loser.ID
+	}).(game.Player)
+
+	cancel()
 	<-complete
 
-	p := &core.GameEventPayload{Event: core.GamePlayerLose, PlayerID: loser.ID, Game: g}
-	smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
+	assert.True(t, actualLoser.Lose)
+
+	actualPayload := &core.GameEventPayload{Event: core.GamePlayerLose, PlayerID: loser.ID,
+		Game: game.NewGameWithParams(g.ID, true, actualGamePlayers, targetID)}
+	smocks.AssertPublished(t, m, gameWorkerTopic, actualPayload, time.Second)
 }
 
 func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []*game.Player, afterAdd func()) {
