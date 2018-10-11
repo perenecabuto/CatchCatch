@@ -63,11 +63,6 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 	gs.On("Remove", mock.Anything).Return(nil)
 	gs.On("Update", mock.Anything).Return(nil)
 
-	completed := make(chan interface{})
-	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]*game.Player), func() {
-		completed <- nil
-	})
-
 	m := &smocks.Dispatcher{}
 	var playersWithRoles []game.Player
 	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
@@ -85,6 +80,10 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	completed := make(chan interface{})
+	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]*game.Player), func() {
+		completed <- nil
+	})
 	<-completed
 
 	assert.Len(t, playersWithRoles, len(examplePlayers))
@@ -92,11 +91,10 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 		assert.NotEmpty(t, p.Role)
 	}
 
-	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
-		p := &core.GameEventPayload{}
-		json.Unmarshal(data, p)
-		return p.Event == core.GameStarted
-	})
+	for _, pl := range examplePlayers {
+		p := &core.GameEventPayload{PlayerID: pl.ID, Event: core.GameStarted, Game: g.Game}
+		smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
+	}
 }
 
 func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
@@ -136,8 +134,6 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	playerID := "game-test-1-player-1"
 
 	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
-	g.Game.SetPlayer(playerID, 0, 0)
-	g.Start()
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
 	gs.On("ObserveGamePlayers", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
@@ -149,17 +145,19 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 		complete <- nil
 	}()
 
+	g.SetPlayer(playerID, 0, 0)
+	g.Start()
+
 	time.Sleep(time.Second)
 	cancel()
 	<-complete
 
 	assert.False(t, g.Started())
 	gs.AssertCalled(t, "Remove", g.ID)
-	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
-		p := &core.GameEventPayload{}
-		json.Unmarshal(data, p)
-		return p.Event == core.GameFinished
-	})
+
+	p := &core.GameEventPayload{PlayerID: playerID, Event: core.GameFinished,
+		Game: game.NewGameWithParams(g.ID, false, nil, "")}
+	smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
 }
 
 func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
@@ -172,14 +170,9 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	core.GameTimeOut = 2 * time.Second
 
 	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
-	players := funk.Values(examplePlayers).([]*game.Player)
-	addPlayersToGameServiceMock(gs, g.ID, players, func() {
-		assert.Len(t, g.Players(), 3)
-	})
 
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
 	gs.On("Update", mock.Anything).Return(nil)
-	gs.On("ObserveGamePlayers", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
 	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
@@ -190,17 +183,21 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 		complete <- nil
 	}()
 
+	players := funk.Values(examplePlayers).([]*game.Player)
+	addPlayersToGameServiceMock(gs, g.ID, players,
+		func() { assert.Len(t, g.Players(), 3) })
+
 	time.Sleep(core.GameTimeOut + time.Second)
+	<-complete
 
 	assert.False(t, g.Started())
 	gs.AssertCalled(t, "Remove", g.ID)
 
-	<-complete
-	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
-		p := &core.GameEventPayload{}
-		json.Unmarshal(data, p)
-		return p.Event == core.GameFinished
-	})
+	for _, p := range players {
+		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameFinished,
+			Game: game.NewGameWithParams(g.ID, false, nil, "")}
+		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+	}
 }
 
 func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
@@ -240,28 +237,31 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 		complete <- nil
 	}()
 
-	callback := <-callbackReached
+	playerMoveCallback := <-callbackReached
 	for _, p := range examplePlayers {
-		callback(p.Player, false)
+		exitGameArena := false
+		playerMoveCallback(p.Player, exitGameArena)
 	}
 	<-gameStartedCH
 	for _, p := range examplePlayers {
-		callback(p.Player, true)
+		exitGameArena := true
+		playerMoveCallback(p.Player, exitGameArena)
 	}
 	<-complete
 
-	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
-		p := &core.GameEventPayload{}
-		json.Unmarshal(data, p)
-		return p.Event == core.GameFinished
-	})
+	for _, p := range examplePlayers {
+		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameFinished,
+			Game: game.NewGameWithParams(g.ID, false, nil, "")}
+		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+	}
 }
 
 func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
-	ctx, finish := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	players := []game.Player{}
 	for _, p := range examplePlayers {
@@ -277,27 +277,25 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	gs.On("Remove", mock.Anything).Return(nil)
 
 	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
+
+	complete := make(chan interface{})
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
 		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
 			cb(loser.Player, true)
-			finish()
+			complete <- nil
 			return true
 		}),
 	).Return(nil)
 
-	complete := make(chan interface{})
 	go func() {
 		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": gwc.Coords})
 		require.NoError(t, err)
-		complete <- nil
 	}()
 
 	<-complete
-	smocks.AssertPublished(t, m, time.Second, gameWorkerTopic, func(data []byte) bool {
-		p := &core.GameEventPayload{}
-		json.Unmarshal(data, p)
-		return p.Event == core.GamePlayerLose && p.PlayerID == loser.ID
-	})
+
+	p := &core.GameEventPayload{Event: core.GamePlayerLose, PlayerID: loser.ID, Game: g}
+	smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
 }
 
 func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []*game.Player, afterAdd func()) {
