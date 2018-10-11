@@ -17,8 +17,8 @@ import (
 )
 
 func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
-	m := new(mmocks.Collector)
-	w := new(wmocks.Worker)
+	m := &mmocks.Collector{}
+	w := &wmocks.Worker{}
 	opts := worker.MetricsOptions{
 		Host:   "testhost",
 		Origin: "test",
@@ -59,8 +59,8 @@ func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 }
 
 func TestWorkerWithMetricsSendStartMetrics(t *testing.T) {
-	m := new(mmocks.Collector)
-	w := new(wmocks.Worker)
+	m := &mmocks.Collector{}
+	w := &wmocks.Worker{}
 	opts := worker.MetricsOptions{Host: "testhost", Origin: "test"}
 	wm := worker.NewWorkerWithMetrics(w, m, opts)
 

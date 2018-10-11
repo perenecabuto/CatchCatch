@@ -31,8 +31,8 @@ var (
 )
 
 func TestGameWorkerDoNotRunWithoutGameID(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	gs := new(smocks.GameService)
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
 	ctx := context.Background()
 
@@ -42,8 +42,8 @@ func TestGameWorkerDoNotRunWithoutGameID(t *testing.T) {
 }
 
 func TestGameWorkerDoNotRunWithoutCoords(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	gs := new(smocks.GameService)
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
 	ctx := context.Background()
 
@@ -55,7 +55,7 @@ func TestGameWorkerDoNotRunWithoutCoords(t *testing.T) {
 func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 	ctx := context.Background()
 	g := &service.GameWithCoords{Game: game.NewGame("test-gameworker-game-1")}
-	gs := new(smocks.GameService)
+	gs := &smocks.GameService{}
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
 	gs.On("Remove", mock.Anything).Return(nil)
 	gs.On("Update", mock.Anything).Return(nil)
@@ -65,7 +65,7 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 		completed <- nil
 	})
 
-	m := new(smocks.Dispatcher)
+	m := &smocks.Dispatcher{}
 	var playersWithRoles []game.Player
 	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
 		event := core.GameEventPayload{}
@@ -97,8 +97,8 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 }
 
 func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	gs := new(smocks.GameService)
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
 	ctx := context.Background()
 
@@ -124,8 +124,8 @@ func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
 }
 
 func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	gs := new(smocks.GameService)
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -159,8 +159,8 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 }
 
 func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	gs := new(smocks.GameService)
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
 	ctx := context.Background()
 
@@ -199,8 +199,8 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 }
 
 func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	gs := new(smocks.GameService)
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
 	ctx := context.Background()
 
@@ -252,8 +252,8 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 }
 
 func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	gs := new(smocks.GameService)
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
 	ctx, finish := context.WithCancel(context.Background())
 

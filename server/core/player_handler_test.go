@@ -20,12 +20,12 @@ import (
 )
 
 func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
-	wsDriver := new(wsmocks.WSDriver)
-	c := new(wsmocks.WSConnection)
+	wsDriver := &wsmocks.WSDriver{}
+	c := &wsmocks.WSConnection{}
 	c.On("Send", mock.Anything).Return(nil)
 
-	gs := new(smocks.GameService)
-	m := new(smocks.Dispatcher)
+	gs := &smocks.GameService{}
+	m := &smocks.Dispatcher{}
 	w := NewGameWorker(gs, m)
 	playerH := NewPlayerHandler(nil, w)
 	wss := websocket.NewWSServer(wsDriver, playerH)
@@ -59,16 +59,16 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 }
 
 func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
-	wsDriver := new(wsmocks.WSDriver)
-	gs := new(smocks.GameService)
-	m := new(smocks.Dispatcher)
+	wsDriver := &wsmocks.WSDriver{}
+	gs := &smocks.GameService{}
+	m := &smocks.Dispatcher{}
 	w := NewGameWorker(gs, m)
 	playerH := NewPlayerHandler(nil, w)
 	wss := websocket.NewWSServer(wsDriver, playerH)
 
-	c1 := new(wsmocks.WSConnection)
-	c2 := new(wsmocks.WSConnection)
-	c3 := new(wsmocks.WSConnection)
+	c1 := &wsmocks.WSConnection{}
+	c2 := &wsmocks.WSConnection{}
+	c3 := &wsmocks.WSConnection{}
 	c1.On("Send", mock.Anything).Return(nil)
 	c2.On("Send", mock.Anything).Return(nil)
 	c3.On("Send", mock.Anything).Return(nil)

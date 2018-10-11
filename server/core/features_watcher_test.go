@@ -16,8 +16,8 @@ import (
 )
 
 func TestFeaturesWatcherNotifiesFeaturesEventsToAdmin(t *testing.T) {
-	m := new(smocks.Dispatcher)
-	p := new(smocks.PlayerLocationService)
+	m := &smocks.Dispatcher{}
+	p := &smocks.PlayerLocationService{}
 	w := core.NewFeaturesEventsWatcher(m, p)
 
 	example := &core.FeatureEventsNearToAdminPayload{
@@ -44,8 +44,8 @@ func TestFeaturesWatcherNotifiesFeaturesEventsToAdmin(t *testing.T) {
 }
 
 func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
-	p := new(smocks.PlayerLocationService)
-	m := new(smocks.Dispatcher)
+	p := &smocks.PlayerLocationService{}
+	m := &smocks.Dispatcher{}
 	w := core.NewFeaturesEventsWatcher(m, p)
 
 	ctx, finish := context.WithCancel(context.Background())

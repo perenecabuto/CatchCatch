@@ -17,7 +17,7 @@ type GobwasWSDriver struct{}
 
 // NewGobwasWSDriver creates a gobwas/ws WSDriver
 func NewGobwasWSDriver() WSDriver {
-	return new(GobwasWSDriver)
+	return &GobwasWSDriver{}
 }
 
 // HTTPHandler implements WSDriver.Handler

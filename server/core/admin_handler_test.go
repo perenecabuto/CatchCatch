@@ -19,13 +19,13 @@ import (
 )
 
 func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
-	p := new(smocks.PlayerLocationService)
-	w := new(wmocks.EventsNearToAdminWatcher)
+	p := &smocks.PlayerLocationService{}
+	w := &wmocks.EventsNearToAdminWatcher{}
 	h := core.NewAdminHandler(p, w)
 	ctx, finish := context.WithCancel(context.Background())
 	defer finish()
 
-	adminConn := new(wsmocks.WSConnection)
+	adminConn := &wsmocks.WSConnection{}
 	adminConn.On("Send", mock.Anything).Return(nil)
 	wss := websocket.NewWSServer(nil, h)
 	adminID := wss.Add(adminConn).ID

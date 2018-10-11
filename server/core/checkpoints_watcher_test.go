@@ -16,8 +16,8 @@ import (
 )
 
 func TestCheckpointsWatcherWatcherPlayersNearToCheckpoints(t *testing.T) {
-	playerService := new(smocks.PlayerLocationService)
-	dispatcher := new(smocks.Dispatcher)
+	playerService := &smocks.PlayerLocationService{}
+	dispatcher := &smocks.Dispatcher{}
 	watcher := NewCheckpointWatcher(dispatcher, playerService)
 
 	playerID := "player-test-1"
@@ -57,8 +57,8 @@ func TestCheckpointsWatcherWatcherPlayersNearToCheckpoints(t *testing.T) {
 }
 
 func TestCheckpointsWatcherNotifyThePlayersAroundCheckpoints(t *testing.T) {
-	playerService := new(smocks.PlayerLocationService)
-	dispatcher := new(smocks.Dispatcher)
+	playerService := &smocks.PlayerLocationService{}
+	dispatcher := &smocks.Dispatcher{}
 	watcher := NewCheckpointWatcher(dispatcher, playerService)
 
 	playerID := "player-test-1"

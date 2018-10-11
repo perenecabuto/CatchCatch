@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
-	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
+	"github.com/perenecabuto/CatchCatch/server/service/mocks"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
 
 	"github.com/perenecabuto/CatchCatch/server/service"
 )
 
 func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
-	r := new(smocks.Repository)
+	r := &mocks.Repository{}
 	s := &mockStream{}
 	pls := service.NewPlayerLocationService(r, s)
 
