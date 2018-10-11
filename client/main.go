@@ -13,6 +13,20 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 )
 
+// connect and listen to server events
+// send position
+//// validate step size on server when player is in game
+//// loses game when disconnect
+// get/request notifications about games around
+// receive notifications: game started, lose, win, game finished, near to player
+// request game ranking
+// request global ranking
+// request features info (game arena, checkpoint)
+// request how many players are around
+
+// client needs websocket driver (web, go, android...), events watcher (callbacks)
+// presenter to centralize client/server rules
+
 var addr = flag.String("addr", "localhost:5000", "http service address")
 
 func main() {
