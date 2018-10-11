@@ -19,9 +19,9 @@ var (
 	// ErrGameStoped happens when game can't change anymore
 	ErrGameStoped = errors.New("game stoped")
 	// ErrGameIDCantBeEmpty happens when run is called without game id
-	ErrGameIDCantBeEmpty = errors.New("gameID can't be empty")
+	ErrGameIDCantBeEmpty = errors.New("gameID is empty or invalid")
 	// ErrGameCoordsCantBeEmpty happens when run is called without game id
-	ErrGameCoordsCantBeEmpty = errors.New("coords can't be empty")
+	ErrGameCoordsCantBeEmpty = errors.New("coordinates is empty or invalid")
 )
 
 const (
