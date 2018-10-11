@@ -103,7 +103,7 @@ func (g *Game) TargetID() string {
 
 func (g *Game) String() string {
 	return fmt.Sprintf("[ID: %s, Started: %v, Players: %+v]",
-		g.ID, g.started, g.Players())
+		g.ID, g.Started(), g.Players())
 }
 
 /*
@@ -118,17 +118,17 @@ func (g *Game) Start() {
 // Stop the game
 func (g *Game) Stop() {
 	atomic.StoreInt32(&g.started, 0)
+	g.targetID = ""
 	g.playersLock.Lock()
 	g.players = make(map[string]*Player)
-	g.targetID = ""
 	g.playersLock.Unlock()
 }
 
 // Players return game players
 func (g *Game) Players() []Player {
+	var i int
 	g.playersLock.Lock()
 	players := make([]Player, len(g.players))
-	var i int
 	for _, p := range g.players {
 		players[i] = *p
 		i++

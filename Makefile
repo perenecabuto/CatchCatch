@@ -20,7 +20,7 @@ DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.
 
 
 test:
-	$(SERVER_SRC) go test -count=1 -cover -race -v ./...
+	$(SERVER_SRC) go test -count=1 -timeout=30s -cover -race -v ./...
 
 clean-redis:
 	@-echo FLUSHALL | nc -w1 localhost 6379
