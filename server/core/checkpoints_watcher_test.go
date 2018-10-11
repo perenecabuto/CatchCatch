@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
@@ -18,7 +19,7 @@ import (
 func TestCheckpointsWatcherWatcherPlayersNearToCheckpoints(t *testing.T) {
 	playerService := &smocks.PlayerLocationService{}
 	dispatcher := &smocks.Dispatcher{}
-	watcher := NewCheckpointWatcher(dispatcher, playerService)
+	watcher := core.NewCheckpointWatcher(dispatcher, playerService)
 
 	playerID := "player-test-1"
 
@@ -59,7 +60,7 @@ func TestCheckpointsWatcherWatcherPlayersNearToCheckpoints(t *testing.T) {
 func TestCheckpointsWatcherNotifyThePlayersAroundCheckpoints(t *testing.T) {
 	playerService := &smocks.PlayerLocationService{}
 	dispatcher := &smocks.Dispatcher{}
-	watcher := NewCheckpointWatcher(dispatcher, playerService)
+	watcher := core.NewCheckpointWatcher(dispatcher, playerService)
 
 	playerID := "player-test-1"
 	ctx, finish := context.WithCancel(context.Background())

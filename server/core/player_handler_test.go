@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
@@ -26,8 +27,8 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 
 	gs := &smocks.GameService{}
 	m := &smocks.Dispatcher{}
-	w := NewGameWorker(gs, m)
-	playerH := NewPlayerHandler(nil, w)
+	w := core.NewGameWorker(gs, m)
+	playerH := core.NewPlayerHandler(nil, w)
 	wss := websocket.NewWSServer(wsDriver, playerH)
 	playerID := wss.Add(c).ID
 
@@ -39,7 +40,7 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 	g.SetPlayer(playerID, 0, 0)
 	g.Start()
 
-	example := &GameEventPayload{Event: GameStarted, PlayerID: playerID, Game: g}
+	example := &core.GameEventPayload{Event: core.GameStarted, PlayerID: playerID, Game: g}
 
 	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
 		data, _ := json.Marshal(example)
@@ -62,8 +63,8 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	wsDriver := &wsmocks.WSDriver{}
 	gs := &smocks.GameService{}
 	m := &smocks.Dispatcher{}
-	w := NewGameWorker(gs, m)
-	playerH := NewPlayerHandler(nil, w)
+	w := core.NewGameWorker(gs, m)
+	playerH := core.NewPlayerHandler(nil, w)
 	wss := websocket.NewWSServer(wsDriver, playerH)
 
 	c1 := &wsmocks.WSConnection{}
@@ -85,7 +86,7 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	g := game.NewGameWithParams(gameID, true, players, player3ID)
 
 	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
-		data, _ := json.Marshal(&GameEventPayload{Event: GameFinished, PlayerID: player1ID, Game: g})
+		data, _ := json.Marshal(&core.GameEventPayload{Event: core.GameFinished, PlayerID: player1ID, Game: g})
 		cb(data)
 		return true
 	})).Return(nil)
@@ -99,7 +100,7 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 		c.AssertCalled(t, "Send", mock.MatchedBy(func(data []byte) bool {
 			actual := &protobuf.GameRank{}
 			proto.Unmarshal(data, actual)
-			return assert.EqualValues(t, GameFinished, actual.GetEventName())
+			return assert.EqualValues(t, core.GameFinished, actual.GetEventName())
 		}))
 	}
 }
