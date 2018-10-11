@@ -119,7 +119,6 @@ func (g *Game) Start() {
 func (g *Game) Stop() {
 	atomic.StoreInt32(&g.started, 0)
 	g.playersLock.Lock()
-	log.Println("game:", g.ID, ":stop!!!!!!!")
 	g.players = make(map[string]*Player)
 	g.targetID = ""
 	g.playersLock.Unlock()

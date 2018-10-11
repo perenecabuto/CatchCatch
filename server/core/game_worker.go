@@ -114,6 +114,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 
 	gCtx, stop := context.WithCancel(ctx)
 	defer stop()
+
 	evtChan := make(chan game.Event, 1)
 	go func() {
 		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, exit bool) error {
@@ -147,9 +148,12 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				stop()
 				break
 			}
-			started, finished, err :=
-				gw.processGameEvent(g, evt)
-			if finished || err != nil {
+			started, finished, err := gw.processGameEvent(g, evt)
+			if err != nil {
+				// TODO: fix it by worker manager retry
+				return err
+			}
+			if finished {
 				stop()
 				break
 			}
@@ -159,18 +163,19 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			}
 		case <-gameTimer.C:
 			// TODO: notificar Game Timed Out
+			// TODO: notificar quando target ganha
 			log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
 			stop()
 		case <-gCtx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
-			stop()
-			for _, gp := range g.Players() {
+			players := g.Players()
+			g.Stop()
+			for _, gp := range players {
 				err := gw.publish(GameFinished, gp, g)
 				if err != nil {
 					return err
 				}
 			}
-			g.Stop()
 			return gw.service.Remove(g.ID)
 		}
 	}
