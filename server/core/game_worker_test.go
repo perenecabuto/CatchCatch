@@ -200,6 +200,50 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	}
 }
 
+func TestGameWorkerStartWithAsPlayersEnterAndNotifyThenThatTheGameStarted(t *testing.T) {
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
+	gw := core.NewGameWorker(gs, m)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("Update", mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+
+	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
+
+	callbackReached := make(chan func(model.Player, bool) error)
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
+			go func() { callbackReached <- cb }()
+			return true
+		}),
+	).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		require.NoError(t, err)
+		complete <- nil
+	}()
+
+	playerMoveCallback := <-callbackReached
+	for _, p := range examplePlayers {
+		exitGameArena := false
+		playerMoveCallback(p.Player, exitGameArena)
+	}
+
+	gamePlayers := g.Players()
+	targetID := g.TargetID()
+	for _, p := range examplePlayers {
+		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameStarted,
+			Game: game.NewGameWithParams(g.ID, true, gamePlayers, targetID)}
+		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+	}
+}
+
 func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
