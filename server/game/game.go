@@ -21,13 +21,15 @@ const (
 	GameNothingHappens        EventName = "game:nothing"
 	GamePlayerAdded           EventName = "game:player:added"
 	GamePlayerRemoved         EventName = "game:player:removed"
-	GameTargetWin             EventName = "game:target:win"
 	GameLastPlayerDetected    EventName = "game:player:last"
-	GamePlayerLose            EventName = "game:player:lose"
-	GameTargetLose            EventName = "game:target:reached"
+	GamePlayerRanWay          EventName = "game:player:ranaway"
+	GameTargetReached         EventName = "game:target:reached"
 	GamePlayerNearToTarget    EventName = "game:player:near"
 	GameRunningWithoutPlayers EventName = "game:empty"
 )
+
+// DefaultMinDistToTarget is the minimum dist from the hunter to target to notify the hunter
+const DefaultMinDistToTarget = 100
 
 // Event is returned when something happens in the game
 type Event struct {
@@ -38,8 +40,6 @@ type Event struct {
 var (
 	// ErrAlreadyStarted happens when an action is denied on running game
 	ErrAlreadyStarted = errors.New("game already started")
-	// ErrPlayerIsNotInTheGame happens when try to change or remove an player not in the game
-	ErrPlayerIsNotInTheGame = errors.New("player is not in this game")
 	// GameEventNothing is the NULL event
 	GameEventNothing = Event{Name: GameNothingHappens}
 )
@@ -170,7 +170,7 @@ The rule is:
     - it can send messages to the player
     - it receives sessions to notify anything to this player games
 */
-func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
+func (g *Game) SetPlayer(id string, lon, lat float64) Event {
 	g.playersLock.RLock()
 	p, exists := g.players[id]
 	g.playersLock.RUnlock()
@@ -198,12 +198,12 @@ func (g *Game) SetPlayer(id string, lon, lat float64) (Event, error) {
 		p.DistToTarget = p.DistTo(target.Player)
 		if p.DistToTarget <= 20 {
 			target.Lose = true
-			return Event{Name: GameTargetLose, Player: *p}, nil
-		} else if p.DistToTarget <= 100 {
-			return Event{Name: GamePlayerNearToTarget, Player: *p}, nil
+			return Event{Name: GameTargetReached, Player: *p}
+		} else if p.DistToTarget <= DefaultMinDistToTarget {
+			return Event{Name: GamePlayerNearToTarget, Player: *p}
 		}
 	}
-	return GameEventNothing, nil
+	return GameEventNothing
 }
 
 /*
@@ -213,14 +213,14 @@ The role is:
     - it receives sessions to send messages to its players
     - it must remove players from the game
 */
-func (g *Game) RemovePlayer(id string) (Event, error) {
+func (g *Game) RemovePlayer(id string) Event {
 	p, exists := g.players[id]
 	if !exists {
-		return GameEventNothing, ErrPlayerIsNotInTheGame
+		return GameEventNothing
 	}
 	if !g.Started() {
 		delete(g.players, id)
-		return Event{Name: GamePlayerRemoved, Player: *p}, nil
+		return Event{Name: GamePlayerRemoved, Player: *p}
 	}
 
 	g.playersLock.Lock()
@@ -234,14 +234,12 @@ func (g *Game) RemovePlayer(id string) (Event, error) {
 	g.playersLock.Unlock()
 
 	if len(playersInGame) == 1 {
-		return Event{Name: GameLastPlayerDetected, Player: *p}, nil
+		return Event{Name: GameLastPlayerDetected, Player: *p}
 	} else if len(playersInGame) == 0 {
-		return Event{Name: GameRunningWithoutPlayers, Player: *p}, nil
-	} else if id == g.targetID {
-		return Event{Name: GameTargetLose, Player: *p}, nil
+		return Event{Name: GameRunningWithoutPlayers, Player: *p}
 	}
 
-	return Event{Name: GamePlayerLose, Player: *p}, nil
+	return Event{Name: GamePlayerRanWay, Player: *p}
 }
 
 func (g *Game) setPlayersRoles() {

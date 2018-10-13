@@ -119,14 +119,10 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	go func() {
 		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, exit bool) error {
 			var evt game.Event
-			var err error
 			if exit {
-				evt, err = g.RemovePlayer(p.ID)
+				evt = g.RemovePlayer(p.ID)
 			} else {
-				evt, err = g.SetPlayer(p.ID, p.Lat, p.Lon)
-			}
-			if err != nil {
-				return err
+				evt = g.SetPlayer(p.ID, p.Lat, p.Lon)
 			}
 			if evt.Name != game.GameNothingHappens {
 				evtChan <- evt
@@ -217,9 +213,16 @@ func (gw *GameWorker) processGameEvent(
 				err = fmt.Errorf("GameWorker:Start:%s:error:%s - %#v", g.ID, err.Error(), gevt)
 			}
 		}
-	case game.GamePlayerLose:
+	case game.GamePlayerRanWay:
+		if gevt.Player.Role == game.GameRoleHunter {
+			finished = true
+		}
 		err = gw.publish(GamePlayerLose, gevt.Player, g)
-	case game.GameTargetWin:
+		if err != nil {
+			break
+		}
+
+	case game.GameTargetReached:
 		finished = true
 		for _, gp := range g.Players() {
 			if gp.Role == game.GameRoleTarget {
@@ -231,18 +234,6 @@ func (gw *GameWorker) processGameEvent(
 				break
 			}
 		}
-	case game.GameTargetLose:
-		finished = true
-		target := g.TargetPlayer()
-		if target == nil {
-			err = errors.New("[GameWorker] target not found")
-			break
-		}
-		err = gw.publish(GamePlayerLose, *target, g)
-		if err != nil {
-			break
-		}
-		err = gw.publish(GamePlayerWin, gevt.Player, g)
 	case game.GameLastPlayerDetected,
 		game.GameRunningWithoutPlayers:
 		finished = true
