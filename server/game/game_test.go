@@ -1,15 +1,17 @@
 package game
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGameStringFormat(t *testing.T) {
 	g := NewGameWithParams("test", true,
-		[]Player{Player{model.Player{"1", 0, 1}, GameRoleHunter, 1, false}}, "target")
+		[]Player{Player{model.Player{ID: "1", Lat: 0, Lon: 1}, GameRoleHunter, 1, false}}, "target")
 	actual := g.String()
 	expected := "[ID: test, Started: true, Players: [[ID: 1, Role: hunter, DistToTarget: 1.000000, Lose: false]]]"
 
@@ -22,9 +24,7 @@ func TestGameMustAddPlayers(t *testing.T) {
 	g.SetPlayer("player2", 0, 0)
 	g.SetPlayer("player3", 0, 0)
 
-	if len(g.Players()) != 3 {
-		t.Fatalf("Wrong players num: %d expected: %d", len(g.Players()), 3)
-	}
+	assert.Len(t, g.Players(), 3)
 }
 
 func TestGameDoNotAddPlayersWhenItIsStarted(t *testing.T) {
@@ -34,7 +34,6 @@ func TestGameDoNotAddPlayersWhenItIsStarted(t *testing.T) {
 	g.SetPlayer("player3", 0, 0)
 
 	g.Start()
-
 	assert.Len(t, g.Players(), 3)
 
 	evt := g.SetPlayer("player4", 0, 0)
@@ -73,31 +72,25 @@ func TestGameReturnPlayerNearToTargetWhenHunterIsCloser(t *testing.T) {
 
 func TestGameMustSetPlayersRolesOnStart(t *testing.T) {
 	g := NewGame("test")
-	g.SetPlayer("player1", 0, 0)
-	g.SetPlayer("player2", 0, 0)
-	g.SetPlayer("player3", 0, 0)
+	totalPlayers := 6
+	for i := 1; i <= totalPlayers; i++ {
+		g.SetPlayer("player"+strconv.Itoa(i), 0, 0)
+	}
 	for _, p := range g.Players() {
-		if p.Role != GameRoleUndefined {
-			t.Fatal("Wrong game player role", p)
-		}
+		require.Equal(t, GameRoleUndefined, p.Role)
 	}
 
 	g.Start()
 	for _, p := range g.Players() {
-		if p.Role == GameRoleUndefined {
-			t.Fatal("Wrong game player role", p)
-		}
+		require.NotEqual(t, GameRoleUndefined, p.Role)
 	}
 	roles := make(map[Role]int)
 	for _, p := range g.Players() {
 		roles[p.Role]++
 	}
-	if roles[GameRoleHunter] != 2 {
-		t.Fatalf("Wrong hunter num: %d expected: %d", roles[GameRoleHunter], 2)
-	}
-	if roles[GameRoleTarget] != 1 {
-		t.Fatalf("Wrong hunter num: %d expected: %d", roles[GameRoleHunter], 1)
-	}
+
+	assert.Equal(t, totalPlayers-1, roles[GameRoleHunter])
+	assert.Equal(t, 1, roles[GameRoleTarget])
 }
 
 func TestGameMustSetDistToTargetWhenStart(t *testing.T) {
@@ -122,14 +115,7 @@ func TestGameMustSetDistToTargetWhenStart(t *testing.T) {
 		"target":  0,
 	}
 	for _, p := range g.Players() {
-		if p.Role == GameRoleTarget && p.DistToTarget != 0 {
-			t.Errorf("Wrong target %s DistToTarget: expected %d have %f",
-				p.ID, 0, p.DistToTarget)
-		}
-		if expectedDists[p.ID] != p.DistToTarget {
-			t.Errorf("Wrong player %s DistToTarget: expected %f have %f",
-				p.ID, expectedDists[p.ID], p.DistToTarget)
-		}
+		assert.Equal(t, expectedDists[p.ID], p.DistToTarget)
 	}
 }
 
@@ -153,10 +139,7 @@ func TestGamePlayersDistToTargetMustBeConsistent(t *testing.T) {
 	}
 	for _, p := range playersAfterStart {
 		pAfterSet := playersAfterSet[p.ID]
-		distChangedWithTheSamePosition := pAfterSet.DistToTarget != p.DistToTarget
-		if distChangedWithTheSamePosition {
-			t.Fatal("DistToTarget is different when set player to the same position", p.DistToTarget, pAfterSet.DistToTarget)
-		}
+		assert.Equal(t, p.DistToTarget, pAfterSet.DistToTarget)
 	}
 }
 
@@ -188,9 +171,7 @@ func TestGameRank(t *testing.T) {
 		"target":  0,
 	}
 	for pID, points := range expectedRank {
-		if rankByPlayer[pID] != points {
-			t.Fatalf("Wrong player rank: %d expected: %d", rankByPlayer[pID], points)
-		}
+		assert.Equal(t, points, rankByPlayer[pID])
 	}
 }
 

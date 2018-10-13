@@ -106,9 +106,7 @@ func (g *Game) String() string {
 		g.ID, g.Started(), g.Players())
 }
 
-/*
-Start the game
-*/
+// Start the game
 func (g *Game) Start() {
 	log.Println("game:", g.ID, ":start!!!!!!")
 	g.setPlayersRoles()
