@@ -175,23 +175,18 @@ func (g *Game) SetPlayer(id string, lon, lat float64) Event {
 	p, exists := g.players[id]
 	g.playersLock.RUnlock()
 
-	if !g.Started() {
-		if !exists {
-			log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
-
-			g.playersLock.Lock()
-			g.players[id] = &Player{
-				model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false}
-			g.playersLock.Unlock()
-
-			return Event{Name: GamePlayerAdded}, nil
-		}
-		return GameEventNothing, nil
+	if exists {
+		p.Lat, p.Lon = lat, lon
+	} else if !g.Started() {
+		log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
+		g.playersLock.Lock()
+		g.players[id] = &Player{
+			model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false}
+		g.playersLock.Unlock()
+		return Event{Name: GamePlayerAdded}
+	} else {
+		return GameEventNothing
 	}
-	if !exists {
-		return GameEventNothing, nil
-	}
-	p.Lon, p.Lat = lon, lat
 
 	if p.Role == GameRoleHunter {
 		target := g.players[g.targetID]
