@@ -7,6 +7,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGameStringFormat(t *testing.T) {
+	g := NewGameWithParams("test", true,
+		[]Player{Player{model.Player{"1", 0, 1}, GameRoleHunter, 1, false}}, "target")
+	actual := g.String()
+	expected := "[ID: test, Started: true, Players: [[ID: 1, Role: hunter, DistToTarget: 1.000000, Lose: false]]]"
+
+	assert.Equal(t, expected, actual)
+}
+
 func TestGameMustAddPlayers(t *testing.T) {
 	g := NewGame("test")
 	g.SetPlayer("player1", 0, 0)
@@ -16,6 +25,50 @@ func TestGameMustAddPlayers(t *testing.T) {
 	if len(g.Players()) != 3 {
 		t.Fatalf("Wrong players num: %d expected: %d", len(g.Players()), 3)
 	}
+}
+
+func TestGameDoNotAddPlayersWhenItIsStarted(t *testing.T) {
+	g := NewGame("test")
+	g.SetPlayer("player1", 0, 0)
+	g.SetPlayer("player2", 0, 0)
+	g.SetPlayer("player3", 0, 0)
+
+	g.Start()
+
+	assert.Len(t, g.Players(), 3)
+
+	evt := g.SetPlayer("player4", 0, 0)
+	assert.Equal(t, evt, GameEventNothing)
+	assert.Len(t, g.Players(), 3)
+}
+
+func TestGameTargetIDIsEmptyWhenItStartsWithoutPlayers(t *testing.T) {
+	g := NewGame("test")
+	g.Start()
+
+	assert.Equal(t, g.TargetID(), "")
+}
+
+func TestGameReturnPlayerNearToTargetWhenHunterIsCloser(t *testing.T) {
+	hunterID := "hunter-1"
+	players := []Player{
+		{Player: model.Player{ID: hunterID, Lat: 1, Lon: 1}, Role: GameRoleHunter},
+		{Player: model.Player{ID: "target", Lat: 0, Lon: 0}, Role: GameRoleTarget},
+	}
+	g := NewGameWithParams("game", true, players, "target")
+
+	expected := Event{
+		Name: GamePlayerNearToTarget,
+		Player: Player{
+			Player:       model.Player{ID: hunterID, Lat: 0.0002, Lon: 0.0002},
+			DistToTarget: 31.45067466553135,
+			Role:         GameRoleHunter,
+			Lose:         false,
+		},
+	}
+	evt := g.SetPlayer(hunterID, expected.Player.Lon, expected.Player.Lat)
+
+	assert.Equal(t, expected, evt)
 }
 
 func TestGameMustSetPlayersRolesOnStart(t *testing.T) {
