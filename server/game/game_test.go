@@ -7,6 +7,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	funk "github.com/thoas/go-funk"
 )
 
 func TestGameStringFormat(t *testing.T) {
@@ -194,6 +195,82 @@ func TestGameReturnsNilWhenTargetPlayerIsNotSet(t *testing.T) {
 	}, targetID)
 
 	assert.Nil(t, g.TargetPlayer())
+}
+
+func TestGameRemovePlayerAndReturnItWasRemovedWhenGameIsNotStarted(t *testing.T) {
+	g := NewGame("test")
+
+	playerID := "player-1"
+	g.SetPlayer(playerID, 0, 0)
+
+	expected := Event{Name: GamePlayerRemoved,
+		Player: Player{model.Player{ID: playerID, Lat: 0, Lon: 0}, GameRoleUndefined, 0, false}}
+	actual := g.RemovePlayer(playerID)
+	assert.Equal(t, expected, actual)
+}
+
+func TestGameReturnNothingHappendWhenRemoveAnInexistentPlayer(t *testing.T) {
+	g := NewGame("test")
+
+	expected := GameEventNothing
+	actual := g.RemovePlayer("not-existent-player")
+	assert.Equal(t, expected, actual)
+}
+
+func TestGameReturnPlayerRanAwayWhenItIsRemovedFromAStartedGameWithOtherPlayers(t *testing.T) {
+	g := NewGame("test")
+	for i := 0; i < 6; i++ {
+		g.SetPlayer("player-"+strconv.Itoa(i), 0, 0)
+	}
+	g.Start()
+
+	loserID := "player-1"
+	loser := funk.Find(g.Players(), func(p Player) bool {
+		return p.ID == loserID
+	}).(Player)
+
+	expected := Event{Name: GamePlayerRanWay,
+		Player: Player{loser.Player, loser.Role, 0, true}}
+	actual := g.RemovePlayer(loserID)
+	assert.Equal(t, expected, actual)
+}
+
+func TestGameReturnLastPlayerDetectedWhenOnlyOnePlayerStillInRunningGame(t *testing.T) {
+	g := NewGame("test")
+	for i := 0; i < 6; i++ {
+		g.SetPlayer("player-"+strconv.Itoa(i), 0, 0)
+	}
+	g.Start()
+
+	for i := 0; i < 4; i++ {
+		g.RemovePlayer("player-" + strconv.Itoa(i))
+	}
+
+	actual := g.RemovePlayer("player-4")
+	lastPlayer := funk.Find(g.Players(), func(p Player) bool {
+		return !p.Lose
+	}).(Player)
+	expected := Event{Name: GameLastPlayerDetected,
+		Player: Player{lastPlayer.Player, lastPlayer.Role, 0, false}}
+
+	assert.Equal(t, expected, actual)
+}
+
+func TestGameReturnRunningWithoutPlayerWhenEveryBodyLoses(t *testing.T) {
+	g := NewGame("test")
+	for i := 0; i < 6; i++ {
+		g.SetPlayer("player-"+strconv.Itoa(i), 0, 0)
+	}
+	g.Start()
+
+	for i := 0; i < 5; i++ {
+		g.RemovePlayer("player-" + strconv.Itoa(i))
+	}
+
+	actual := g.RemovePlayer("player-5")
+	expected := Event{Name: GameRunningWithoutPlayers}
+
+	assert.Equal(t, expected, actual)
 }
 
 func TestGameClenUpWhenStop(t *testing.T) {
