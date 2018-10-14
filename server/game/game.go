@@ -226,13 +226,14 @@ func (g *Game) RemovePlayer(id string) Event {
 	}
 	g.playersLock.Unlock()
 
-	if len(playersInGame) == 1 {
-		return Event{Name: GameLastPlayerDetected, Player: *p}
-	} else if len(playersInGame) == 0 {
-		return Event{Name: GameRunningWithoutPlayers, Player: *p}
+	switch len(playersInGame) {
+	case 1:
+		return Event{Name: GameLastPlayerDetected, Player: *playersInGame[0]}
+	case 0:
+		return Event{Name: GameRunningWithoutPlayers}
+	default:
+		return Event{Name: GamePlayerRanWay, Player: *p}
 	}
-
-	return Event{Name: GamePlayerRanWay, Player: *p}
 }
 
 func (g *Game) setPlayersRoles() {
