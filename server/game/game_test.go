@@ -144,38 +144,6 @@ func TestGamePlayersDistToTargetMustBeConsistent(t *testing.T) {
 	}
 }
 
-func TestGameRank(t *testing.T) {
-	g := NewGame("test")
-	g.SetPlayer("player1", 0.0, 0.0)
-	g.SetPlayer("player2", 0.0, 0.0)
-	g.SetPlayer("target", 0.0, 0.0)
-	g.Start()
-
-	g.players["player1"].Role = GameRoleHunter
-	g.players["player2"].Role = GameRoleHunter
-	g.players["target"].Role = GameRoleTarget
-	g.targetID = "target"
-
-	g.SetPlayer("target", 0.0, 0.0)
-	g.SetPlayer("player2", 0.0, 0.1)
-	g.SetPlayer("player1", 0.1, 0.1)
-
-	rank := g.Rank()
-	rankByPlayer := make(map[string]int)
-	for _, r := range rank.PlayerRank {
-		rankByPlayer[r.Player] = r.Points
-	}
-
-	expectedRank := map[string]int{
-		"player1": 99,
-		"player2": 70,
-		"target":  0,
-	}
-	for pID, points := range expectedRank {
-		assert.Equal(t, points, rankByPlayer[pID])
-	}
-}
-
 func TestGameReturnsTheTargetPlayerWhenItIsSet(t *testing.T) {
 	targetID := "test-game-1-target"
 	targetPlayer := Player{Player: model.Player{ID: targetID}}
