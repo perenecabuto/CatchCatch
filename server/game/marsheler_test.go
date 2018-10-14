@@ -7,6 +7,7 @@ import (
 
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -35,13 +36,20 @@ var (
 
 func TestGameMarshaler(t *testing.T) {
 	serialized, err := json.Marshal(exampleGame)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, exampleGameJSONString, string(serialized))
 }
 
 func TestGameUnmarshaler(t *testing.T) {
 	deserialized := &Game{}
 	err := json.Unmarshal([]byte(exampleGameJSONString), deserialized)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, exampleGame, deserialized)
+}
+
+func TestGameUnmarshalerReturnErrorWhenPlayerListIsInvalid(t *testing.T) {
+	example := strings.TrimSpace(`{"id": "game-test-1", "players": {"ovo": ""}}`)
+	deserialized := &Game{}
+	err := json.Unmarshal([]byte(example), deserialized)
+	assert.Error(t, err)
 }
