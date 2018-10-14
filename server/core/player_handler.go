@@ -123,10 +123,10 @@ func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServe
 			rank := p.Game.Rank()
 			playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
 			for i, pr := range rank.PlayerRank {
-				playersRank[i] = &protobuf.PlayerRank{Player: proto.String(pr.Player), Points: proto.Int32(int32(pr.Points))}
+				playersRank[i] = &protobuf.PlayerRank{Player: proto.String(pr.Player.ID), Points: proto.Int32(int32(pr.Points))}
 			}
-			for _, pID := range rank.PlayerIDs {
-				wss.Emit(pID, &protobuf.GameRank{
+			for _, pr := range rank.PlayerRank {
+				wss.Emit(pr.Player.ID, &protobuf.GameRank{
 					EventName: proto.String(GameFinished.String()),
 					Id:        &rank.Game, Game: &rank.Game,
 					PlayersRank: playersRank,

@@ -255,3 +255,16 @@ func TestGameClenUpWhenStop(t *testing.T) {
 	assert.False(t, g.Started())
 	assert.Empty(t, g.Players())
 }
+
+func TestGameGetRank(t *testing.T) {
+	g := NewGame("test")
+	g.SetPlayer("target", 0.0, 0.0)
+	g.SetPlayer("player2", 0.0, 0.1)
+	g.SetPlayer("player1", 0.1, 0.1)
+	g.Start()
+
+	players := g.Players()
+	actual := g.Rank()
+	expected := NewGameRank("test").ByPlayersDistanceToTarget(players)
+	assert.Equal(t, expected, actual)
+}
