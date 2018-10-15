@@ -8,11 +8,11 @@
     - tile 38 observers
 
 + prepare integrated tests
-+ organize packages - ok
-+ separate admin and game routes
++ separate "game queue" (pre game) and "game arena" (when game start)
 
 ## Client
 
-+ Cli
++ Cli lib
++ Cli WASM
 + PWA
 + New Android APP
