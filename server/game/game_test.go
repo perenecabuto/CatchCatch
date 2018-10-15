@@ -14,7 +14,7 @@ func TestGameStringFormat(t *testing.T) {
 	g := NewGameWithParams("test", true,
 		[]Player{Player{model.Player{ID: "1", Lat: 0, Lon: 1}, GameRoleHunter, 1, false}}, "target")
 	actual := g.String()
-	expected := "[ID: test, Started: true, Players: [[ID: 1, Role: hunter, DistToTarget: 1.000000, Lose: false]]]"
+	expected := "[ID:test|Started:true|TargetID:target|Players: [[ID: 1, Role: hunter, DistToTarget: 1.000000, Lose: false]]]"
 
 	assert.Equal(t, expected, actual)
 }
