@@ -72,14 +72,16 @@ type Game struct {
 	ID       string
 	started  int32
 	players  map[string]*Player
-	targetID string
+	targetID atomic.Value
 
 	playersLock sync.RWMutex
 }
 
 // NewGame create a game with duration
 func NewGame(id string) *Game {
-	return &Game{ID: id, started: 0, players: make(map[string]*Player)}
+	var tid atomic.Value
+	tid.Store("")
+	return &Game{ID: id, started: 0, players: make(map[string]*Player), targetID: tid}
 }
 
 // NewGameWithParams ...
@@ -93,12 +95,14 @@ func NewGameWithParams(gameID string, started bool, players []Player, targetID s
 	if started {
 		s = 1
 	}
-	return &Game{ID: gameID, started: s, players: mPlayers, targetID: targetID}
+	var tid atomic.Value
+	tid.Store(targetID)
+	return &Game{ID: gameID, started: s, players: mPlayers, targetID: tid}
 }
 
 // TargetID returns the targe player id
 func (g *Game) TargetID() string {
-	return g.targetID
+	return g.targetID.Load().(string)
 }
 
 func (g *Game) String() string {
@@ -116,7 +120,7 @@ func (g *Game) Start() {
 // Stop the game
 func (g *Game) Stop() {
 	atomic.StoreInt32(&g.started, 0)
-	g.targetID = ""
+	g.targetID.Store("")
 	g.playersLock.Lock()
 	g.players = make(map[string]*Player)
 	g.playersLock.Unlock()
@@ -138,7 +142,7 @@ func (g *Game) Players() []Player {
 // TargetPlayer returns the target player when it's set
 func (g *Game) TargetPlayer() *Player {
 	g.playersLock.RLock()
-	target := g.players[g.targetID]
+	target := g.players[g.TargetID()]
 	g.playersLock.RUnlock()
 	return target
 }
@@ -187,7 +191,7 @@ func (g *Game) SetPlayer(id string, lon, lat float64) Event {
 	}
 
 	if p.Role == GameRoleHunter {
-		target := g.players[g.targetID]
+		target := g.TargetPlayer()
 		p.DistToTarget = p.DistTo(target.Player)
 		if p.DistToTarget <= 20 {
 			target.Lose = true
@@ -237,12 +241,12 @@ func (g *Game) RemovePlayer(id string) Event {
 }
 
 func (g *Game) setPlayersRoles() {
-	g.targetID = raffleTargetPlayer(g.players)
+	g.targetID.Store(raffleTargetPlayer(g.players))
 	for id, p := range g.players {
-		if id == g.targetID {
+		if id == g.TargetID() {
 			p.Role = GameRoleTarget
 		} else {
-			p.DistToTarget = p.DistTo(g.players[g.targetID].Player)
+			p.DistToTarget = p.DistTo(g.TargetPlayer().Player)
 			p.Role = GameRoleHunter
 		}
 	}

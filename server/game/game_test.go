@@ -95,16 +95,12 @@ func TestGameMustSetPlayersRolesOnStart(t *testing.T) {
 }
 
 func TestGameMustSetDistToTargetWhenStart(t *testing.T) {
-	g := NewGame("test")
-	g.SetPlayer("player1", 0.0, 0.0)
-	g.SetPlayer("player2", 0.0, 0.0)
-	g.SetPlayer("target", 0.0, 0.0)
-	g.Start()
-
-	g.players["player1"].Role = GameRoleHunter
-	g.players["player2"].Role = GameRoleHunter
-	g.players["target"].Role = GameRoleTarget
-	g.targetID = "target"
+	players := []Player{
+		{Player: model.Player{ID: "player1", Lat: 0, Lon: 0}, Role: GameRoleHunter},
+		{Player: model.Player{ID: "player2", Lat: 0, Lon: 0}, Role: GameRoleHunter},
+		{Player: model.Player{ID: "target", Lat: 0, Lon: 0}, Role: GameRoleTarget},
+	}
+	g := NewGameWithParams("test", true, players, "target")
 
 	g.SetPlayer("player1", 0.1, 0.01)
 	g.SetPlayer("player2", 0.01, 0.01)
