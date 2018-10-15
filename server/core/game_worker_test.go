@@ -149,7 +149,6 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	g.SetPlayer(playerID, 0, 0)
 	g.Start()
 
-	time.Sleep(time.Second)
 	cancel()
 	<-complete
 
@@ -168,7 +167,7 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	core.GameTimeOut = time.Second
+	core.GameTimeOut = time.Millisecond * 100
 
 	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
 
