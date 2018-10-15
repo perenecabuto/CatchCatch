@@ -212,7 +212,15 @@ func TestGameWorkerStartWithAsPlayersEnterAndNotifyThenThatTheGameStarted(t *tes
 	gs.On("Update", mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
 
-	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	gameStartedCH := make(chan interface{})
+	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
+		event := core.GameEventPayload{}
+		json.Unmarshal(data, &event)
+		if event.Event == core.GameStarted {
+			go func() { gameStartedCH <- nil }()
+		}
+		return true
+	})).Return(nil)
 
 	callbackReached := make(chan func(model.Player, service.GamePlayerAction) error)
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
@@ -234,8 +242,14 @@ func TestGameWorkerStartWithAsPlayersEnterAndNotifyThenThatTheGameStarted(t *tes
 		playerMoveCallback(p.Player, service.GamePlayerActionEnter)
 	}
 
+	<-gameStartedCH
+
 	gamePlayers := g.Players()
 	targetID := g.TargetID()
+
+	cancel()
+	<-complete
+
 	for _, p := range examplePlayers {
 		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameStarted,
 			Game: game.NewGameWithParams(g.ID, true, gamePlayers, targetID)}
