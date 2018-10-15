@@ -112,14 +112,12 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 		return err
 	}
 
-	gCtx, stop := context.WithCancel(ctx)
+	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 
 	evtChan := make(chan game.Event, 1)
-	defer close(evtChan)
-
 	go func() {
-		err := gw.service.ObserveGamePlayers(gCtx, g.ID, func(p model.Player, a service.GamePlayerAction) error {
+		err := gw.service.ObserveGamePlayers(ctx, g.ID, func(p model.Player, a service.GamePlayerAction) error {
 			var evt game.Event
 			switch a {
 			case service.GamePlayerActionExit:
@@ -165,7 +163,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			// TODO: notificar quando target ganha
 			log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
 			stop()
-		case <-gCtx.Done():
+		case <-ctx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
 			players := g.Players()
 			g.Stop()
