@@ -586,6 +586,73 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 }
 
+func TestGameWorkerNotifiesWhenHunterIsNearToTarget(t *testing.T) {
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
+	gw := core.NewGameWorker(gs, m)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("Update", mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+
+	gameStartedCH := make(chan interface{})
+	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
+		event := core.GameEventPayload{}
+		json.Unmarshal(data, &event)
+		if event.Event == core.GameStarted {
+			go func() { gameStartedCH <- nil }()
+		}
+		return true
+	})).Return(nil)
+
+	callbackReached := make(chan func(model.Player, service.GamePlayerMove) error)
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
+			go func() { callbackReached <- cb }()
+			return true
+		}),
+	).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		require.NoError(t, err)
+		complete <- nil
+	}()
+
+	playerMoveCallback := <-callbackReached
+	for i := 0; i < 3; i++ {
+		p := game.Player{Player: model.Player{ID: "player-" + strconv.Itoa(i),
+			Lat: float64(i), Lon: float64(i)}}
+		playerMoveCallback(p.Player, service.GamePlayerMoveInside)
+	}
+
+	<-gameStartedCH
+	target := funk.Find(g.Players(), func(p game.Player) bool {
+		return p.Role == game.GameRoleTarget
+	}).(game.Player)
+	hunter := funk.Find(g.Players(), func(p game.Player) bool {
+		return p.Role == game.GameRoleHunter
+	}).(game.Player)
+
+	target.Player.Lat, target.Player.Lon = 0, 0
+	playerMoveCallback(target.Player, service.GamePlayerMoveInside)
+	hunter.Player.Lat, hunter.Player.Lon = 0.0002, 0.0002
+	playerMoveCallback(hunter.Player, service.GamePlayerMoveInside)
+
+	gamePlayers := g.Players()
+
+	cancel()
+	<-complete
+
+	payload := &core.GameEventPayload{Event: core.GamePlayerNearToTarget, PlayerID: hunter.ID,
+		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID), DistToTarget: 31.45067466553135}
+	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+}
+
 func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []*game.Player, afterAdd func()) {
 	gs.On("ObserveGamePlayers", mock.Anything, gameID,
 		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
