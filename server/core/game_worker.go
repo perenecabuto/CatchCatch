@@ -169,6 +169,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			players := g.Players()
 			g.Stop()
 			for _, gp := range players {
+				gp.DistToTarget = 0
 				err := gw.publish(GameFinished, gp, g)
 				if err != nil {
 					return err
@@ -222,18 +223,15 @@ func (gw *GameWorker) processGameEvent(
 		if err != nil {
 			break
 		}
-
 	case game.GameTargetReached:
 		finished = true
-		for _, gp := range g.Players() {
-			if gp.Role == game.GameRoleTarget {
-				err = gw.publish(GamePlayerWin, gp, g)
-			} else {
-				err = gw.publish(GamePlayerLose, gp, g)
-			}
-			if err != nil {
-				break
-			}
+		err = gw.publish(GamePlayerWin, gevt.Player, g)
+		if err != nil {
+			break
+		}
+		err = gw.publish(GamePlayerLose, *g.TargetPlayer(), g)
+		if err != nil {
+			break
 		}
 	case game.GameLastPlayerDetected:
 		finished = true
