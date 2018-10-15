@@ -92,6 +92,7 @@ func (gw *GameWorker) OnGameEvent(ctx context.Context, cb func(payload *GameEven
 }
 
 // Run starts this Worker to listen to player events over games
+// TODO: monitor errors
 func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	gameID, ok := params["gameID"].(string)
 	if !ok {
