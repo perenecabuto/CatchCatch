@@ -518,6 +518,81 @@ func TestGameWorkerNotifiesWhenTargetIsReached(t *testing.T) {
 	}
 }
 
+func TestGameWorkerNotifiesWhenTargetWinsWhileInArenaAfterTimeout(t *testing.T) {
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
+	gw := core.NewGameWorker(gs, m)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	g := game.NewGame("game-test-1")
+	gwc := &service.GameWithCoords{Game: g}
+
+	gs.On("Create", mock.Anything, mock.Anything).Return(gwc, nil)
+	gs.On("Update", mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+
+	gameStartedCH := make(chan interface{})
+	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
+		event := core.GameEventPayload{}
+		json.Unmarshal(data, &event)
+		if event.Event == core.GameStarted {
+			go func() { gameStartedCH <- nil }()
+		}
+		return true
+	})).Return(nil)
+
+	callbackReached := make(chan func(model.Player, service.GamePlayerMove) error)
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
+			go func() { callbackReached <- cb }()
+			return true
+		}),
+	).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": gwc.Coords})
+		require.NoError(t, err)
+		complete <- nil
+	}()
+
+	core.GameTimeOut = time.Millisecond * 100
+
+	playerMoveCallback := <-callbackReached
+	for i := 0; i < 3; i++ {
+		p := game.Player{Player: model.Player{ID: "player-" + strconv.Itoa(i),
+			Lat: float64(i), Lon: float64(i)}}
+		playerMoveCallback(p.Player, service.GamePlayerMoveInside)
+	}
+
+	<-gameStartedCH
+
+	gamePlayers := g.Players()
+	target := funk.Find(gamePlayers, func(p game.Player) bool {
+		return p.Role == game.GameRoleTarget
+	}).(game.Player)
+
+	<-complete
+	hunters := []game.Player{}
+	for i, p := range gamePlayers {
+		if p.Role == game.GameRoleHunter {
+			gamePlayers[i].Lose = true
+			hunters = append(hunters, p)
+		}
+	}
+
+	payload := &core.GameEventPayload{Event: core.GamePlayerWin, PlayerID: target.ID,
+		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)}
+	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+
+	for _, p := range hunters {
+		payload := &core.GameEventPayload{Event: core.GamePlayerLose, PlayerID: p.ID,
+			Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID), DistToTarget: p.DistToTarget}
+		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+	}
+}
+
 func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}

@@ -31,6 +31,7 @@ const (
 
 var (
 	// GameTimeOut default 5 min
+	// TODO: move it to worker constructor!!!
 	GameTimeOut = 5 * time.Minute
 )
 
@@ -160,8 +161,20 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				gameTimer = time.NewTimer(GameTimeOut)
 			}
 		case <-gameTimer.C:
-			// TODO: notificar Game Timed Out
-			// TODO: notificar quando target ganha
+			if g.Started() {
+				for _, gp := range g.Players() {
+					if gp.Role != game.GameRoleTarget {
+						g.RemovePlayer(gp.Player.ID)
+					}
+				}
+				for _, gp := range g.Players() {
+					if gp.Role == game.GameRoleTarget {
+						gw.publish(GamePlayerWin, gp, g)
+					} else {
+						gw.publish(GamePlayerLose, gp, g)
+					}
+				}
+			}
 			log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
 			stop()
 		case <-ctx.Done():
