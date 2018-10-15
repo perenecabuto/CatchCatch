@@ -15,11 +15,11 @@ const (
 	DefaultGeoEventRange = 5000
 )
 
-type GamePlayerAction int
+type GamePlayerMove int
 
 const (
-	GamePlayerActionEnter GamePlayerAction = iota
-	GamePlayerActionExit
+	GamePlayerMoveInside GamePlayerMove = iota
+	GamePlayerMoveOutside
 )
 
 type GameService interface {
@@ -29,7 +29,7 @@ type GameService interface {
 	GameByID(gameID string) (*GameWithCoords, error)
 	GamesAround(p model.Player) ([]GameWithCoords, error)
 
-	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit GamePlayerAction) error) error
+	ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, exit GamePlayerMove) error) error
 }
 
 type GameWithCoords struct {
@@ -126,12 +126,12 @@ func (gs *Tile38GameService) GamesAround(p model.Player) ([]GameWithCoords, erro
 	return games, nil
 }
 
-func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, action GamePlayerAction) error) error {
+func (gs *Tile38GameService) ObserveGamePlayers(ctx context.Context, gameID string, callback func(p model.Player, action GamePlayerMove) error) error {
 	return gs.stream.StreamIntersects(ctx, "player", "game", gameID, func(d *repository.Detection) error {
 		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
-		action := GamePlayerActionEnter
+		action := GamePlayerMoveInside
 		if d.Intersects == repository.Exit {
-			action = GamePlayerActionExit
+			action = GamePlayerMoveOutside
 		}
 		return callback(p, action)
 	})

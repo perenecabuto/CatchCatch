@@ -118,12 +118,12 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 
 	evtChan := make(chan game.Event, 1)
 	go func() {
-		err := gw.service.ObserveGamePlayers(ctx, g.ID, func(p model.Player, a service.GamePlayerAction) error {
+		err := gw.service.ObserveGamePlayers(ctx, g.ID, func(p model.Player, a service.GamePlayerMove) error {
 			var evt game.Event
 			switch a {
-			case service.GamePlayerActionExit:
+			case service.GamePlayerMoveOutside:
 				evt = g.RemovePlayer(p.ID)
-			case service.GamePlayerActionEnter:
+			case service.GamePlayerMoveInside:
 				evt = g.SetPlayer(p.ID, p.Lat, p.Lon)
 			}
 			if evt.Name != game.GameNothingHappens {

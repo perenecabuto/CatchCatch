@@ -81,11 +81,11 @@ func (_m *GameService) GamesAround(p model.Player) ([]service.GameWithCoords, er
 }
 
 // ObserveGamePlayers provides a mock function with given fields: ctx, gameID, callback
-func (_m *GameService) ObserveGamePlayers(ctx context.Context, gameID string, callback func(model.Player, service.GamePlayerAction) error) error {
+func (_m *GameService) ObserveGamePlayers(ctx context.Context, gameID string, callback func(model.Player, service.GamePlayerMove) error) error {
 	ret := _m.Called(ctx, gameID, callback)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, func(model.Player, service.GamePlayerAction) error) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, func(model.Player, service.GamePlayerMove) error) error); ok {
 		r0 = rf(ctx, gameID, callback)
 	} else {
 		r0 = ret.Error(0)
