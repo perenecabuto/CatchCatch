@@ -13,9 +13,6 @@
 + monitor games per machine
 + write tests
     - game worker with game watcher
-        - TestGameWorkerNotifiesWhenHunterIsNearToTarget
-        - TestGameWorkerNotifiesWhenTargetWinsWhileInArenaAfterTimeout
-        - TestGameWorkerNotifiesWhenTargetIsReached
     - tile 38 observers
 
 + prepare integrated tests
