@@ -2,11 +2,14 @@ package mocks
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/stretchr/testify/assert"
+	funk "github.com/thoas/go-funk"
 )
 
 // AssertPublished checks if dispacher has published a message on a topic
@@ -17,7 +20,14 @@ func AssertPublished(t *testing.T, d *Dispatcher, topic string, evt *core.GameEv
 	for {
 		select {
 		case <-timer.C:
-			t.Errorf("Nothing found or published on topic:%s\nexpected:%+v\nreceive:%+v", topic, evt, received)
+			events := funk.Reverse(received).([]core.GameEventPayload)[:5]
+			eventsStr := funk.Map(events, func(e core.GameEventPayload) string {
+				return fmt.Sprint(e)
+			}).([]string)
+			t.Errorf(
+				"Nothing found or published on topic:%v\nExpected:\n%v\nReceived:\n%s",
+				topic, *evt, strings.Join(eventsStr, "\n------\n"),
+			)
 			return false
 		default:
 			_t := &testing.T{}
