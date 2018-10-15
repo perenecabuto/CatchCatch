@@ -167,7 +167,7 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	core.GameTimeOut = 2 * time.Second
+	core.GameTimeOut = time.Second
 
 	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
 
