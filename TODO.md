@@ -34,6 +34,8 @@
 + monitor:
     - game start/destroy
     - errors
++ redis worker:
+    - remove ID() from interface, just add task with name as parameter
 
 fix: player isn't being remove on lost connection
 
