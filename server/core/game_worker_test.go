@@ -369,6 +369,68 @@ func TestGameWorkerNotifiesWhenLastPlayerIsInGame(t *testing.T) {
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 }
 
+func TestGameWorkerNotifiesFinishWhenTargetLeaveTheGame(t *testing.T) {
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
+	gw := core.NewGameWorker(gs, m)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("Update", mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+
+	gameStartedCH := make(chan interface{})
+	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
+		event := core.GameEventPayload{}
+		json.Unmarshal(data, &event)
+		if event.Event == core.GameStarted {
+			go func() { gameStartedCH <- nil }()
+		}
+		return true
+	})).Return(nil)
+
+	callbackReached := make(chan func(model.Player, service.GamePlayerAction) error)
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerAction) error) bool {
+			go func() { callbackReached <- cb }()
+			return true
+		}),
+	).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		require.NoError(t, err)
+		complete <- nil
+	}()
+
+	playerMoveCallback := <-callbackReached
+	for _, p := range examplePlayers {
+		playerMoveCallback(p.Player, service.GamePlayerActionEnter)
+	}
+
+	<-gameStartedCH
+	target := funk.Find(g.Players(), func(p game.Player) bool {
+		return p.Role == game.GameRoleTarget
+	}).(game.Player)
+
+	playerMoveCallback(target.Player, service.GamePlayerActionExit)
+	gamePlayers := g.Players()
+	<-complete
+
+	payload := &core.GameEventPayload{PlayerID: target.ID, Event: core.GamePlayerLose,
+		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)}
+	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+
+	for _, p := range examplePlayers {
+		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameFinished,
+			Game: game.NewGameWithParams(g.ID, false, nil, "")}
+		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
+	}
+}
+
 func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
