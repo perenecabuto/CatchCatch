@@ -217,7 +217,7 @@ func (gw *GameWorker) processGameEvent(
 			}
 		}
 	case game.GamePlayerRanWay:
-		if gevt.Player.Role == game.GameRoleHunter {
+		if gevt.Player.Role == game.GameRoleTarget {
 			finished = true
 		}
 		err = gw.publish(GamePlayerLose, gevt.Player, g)
@@ -237,8 +237,13 @@ func (gw *GameWorker) processGameEvent(
 				break
 			}
 		}
-	case game.GameLastPlayerDetected,
-		game.GameRunningWithoutPlayers:
+	case game.GameLastPlayerDetected:
+		finished = true
+		err = gw.publish(GamePlayerWin, gevt.Player, g)
+		if err != nil {
+			break
+		}
+	case game.GameRunningWithoutPlayers:
 		finished = true
 	}
 	return started, finished, err
