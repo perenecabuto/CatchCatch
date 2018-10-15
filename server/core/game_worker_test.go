@@ -214,9 +214,9 @@ func TestGameWorkerStartWithAsPlayersEnterAndNotifyThenThatTheGameStarted(t *tes
 
 	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	callbackReached := make(chan func(model.Player, bool) error)
+	callbackReached := make(chan func(model.Player, service.GamePlayerAction) error)
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
-		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerAction) error) bool {
 			go func() { callbackReached <- cb }()
 			return true
 		}),
@@ -231,8 +231,7 @@ func TestGameWorkerStartWithAsPlayersEnterAndNotifyThenThatTheGameStarted(t *tes
 
 	playerMoveCallback := <-callbackReached
 	for _, p := range examplePlayers {
-		exitGameArena := false
-		playerMoveCallback(p.Player, exitGameArena)
+		playerMoveCallback(p.Player, service.GamePlayerActionEnter)
 	}
 
 	gamePlayers := g.Players()
@@ -266,9 +265,9 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 		return true
 	})).Return(nil)
 
-	callbackReached := make(chan func(model.Player, bool) error)
+	callbackReached := make(chan func(model.Player, service.GamePlayerAction) error)
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
-		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerAction) error) bool {
 			go func() { callbackReached <- cb }()
 			return true
 		}),
@@ -283,13 +282,11 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 
 	playerMoveCallback := <-callbackReached
 	for _, p := range examplePlayers {
-		exitGameArena := false
-		playerMoveCallback(p.Player, exitGameArena)
+		playerMoveCallback(p.Player, service.GamePlayerActionEnter)
 	}
 	<-gameStartedCH
 	for _, p := range examplePlayers {
-		exitGameArena := true
-		playerMoveCallback(p.Player, exitGameArena)
+		playerMoveCallback(p.Player, service.GamePlayerActionExit)
 	}
 	<-complete
 
@@ -323,8 +320,8 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 
 	regiserPlayerLose := make(chan interface{})
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
-		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
-			cb(loser.Player, true)
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerAction) error) bool {
+			cb(loser.Player, service.GamePlayerActionExit)
 			go func() { regiserPlayerLose <- nil }()
 			return true
 		}),
@@ -356,9 +353,9 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 
 func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []*game.Player, afterAdd func()) {
 	gs.On("ObserveGamePlayers", mock.Anything, gameID,
-		mock.MatchedBy(func(cb func(model.Player, bool) error) bool {
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerAction) error) bool {
 			for _, p := range players {
-				cb(p.Player, false)
+				cb(p.Player, service.GamePlayerActionEnter)
 			}
 			afterAdd()
 			return true
