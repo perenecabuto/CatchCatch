@@ -214,12 +214,13 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:cf4fdb98e23a565bd82473027d37512a3d5b186fba3a1895d7e8401d8ce3ffe1"
+  digest = "1:ffae6a0390594c05dc5ba534c385229e883508f17f6da257624913fd9aaa4d21"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
     "mock",
     "require",
+    "suite",
   ]
   pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
@@ -331,11 +332,13 @@
     "github.com/influxdata/influxdb/client/v2",
     "github.com/kellydunn/golang-geo",
     "github.com/nats-io/go-nats",
+    "github.com/pkg/errors",
     "github.com/quorzz/redis-protocol",
     "github.com/satori/go.uuid",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
+    "github.com/stretchr/testify/suite",
     "github.com/tevjef/go-runtime-metrics",
     "github.com/tevjef/go-runtime-metrics/expvar",
     "github.com/thoas/go-funk",

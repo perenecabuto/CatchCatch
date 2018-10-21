@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/perenecabuto/CatchCatch/server/worker"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 var (
@@ -21,9 +21,22 @@ var (
 	dupWorker3 = &mockWorker{id: "worker1"}
 )
 
-func TestGoredisWorkerManagerAddWorker(t *testing.T) {
-	client := redis.NewClient(opts)
-	manager := worker.NewGoredisWorkerManager(client)
+type GoRedisSuite struct {
+	suite.Suite
+	client *redis.Client
+}
+
+func TestGoRedis(t *testing.T) {
+	suite.Run(t, &GoRedisSuite{})
+}
+
+func (t *GoRedisSuite) SetupTest() {
+	t.client = redis.NewClient(opts)
+	t.client.FlushAll()
+}
+
+func (s *GoRedisSuite) TestGoredisWorkerManagerAddWorker() {
+	manager := worker.NewGoredisWorkerManager(s.client)
 
 	manager.Add(worker1)
 	manager.Add(dupWorker1)
@@ -38,16 +51,15 @@ func TestGoredisWorkerManagerAddWorker(t *testing.T) {
 
 	actualWorkers := grManager.WorkersIDs()
 
-	assert.Len(t, actualWorkers, 3)
-	assert.Contains(t, actualWorkers, worker1.ID())
-	assert.Contains(t, actualWorkers, worker2.ID())
-	assert.Contains(t, actualWorkers, worker3.ID())
-	assert.NotContains(t, actualWorkers, "worker4")
+	s.Assert().Len(actualWorkers, 3)
+	s.Assert().Contains(actualWorkers, worker1.ID())
+	s.Assert().Contains(actualWorkers, worker2.ID())
+	s.Assert().Contains(actualWorkers, worker3.ID())
+	s.Assert().NotContains(actualWorkers, "worker4")
 }
 
-func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
-	client := redis.NewClient(opts)
-	manager := worker.NewGoredisWorkerManager(client)
+func (s *GoRedisSuite) TestGoredisWorkerManagerRunItsWorkerTasks() {
+	manager := worker.NewGoredisWorkerManager(s.client)
 	manager.Flush()
 
 	runChan := make(chan worker.TaskParams)
@@ -67,28 +79,27 @@ func TestGoredisWorkerManagerRunItsWorkerTasks(t *testing.T) {
 		"param1": "value1", "param2": "value2",
 	}
 	err := manager.Run(w, expected)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 
 	actual := <-runChan
-	assert.Equal(t, expected, actual)
+	s.Assert().Equal(expected, actual)
 }
 
-func TestGoredisWorkerManagerStopWhenContextDone(t *testing.T) {
-	client := redis.NewClient(opts)
-	manager := worker.NewGoredisWorkerManager(client)
+func (s *GoRedisSuite) TestGoredisWorkerManagerStopWhenContextDone() {
+	manager := worker.NewGoredisWorkerManager(s.client)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	manager.Start(ctx)
 	time.Sleep(time.Millisecond * 100)
-	assert.True(t, manager.Started())
+	s.Assert().True(manager.Started())
 
 	cancel()
 	time.Sleep(time.Millisecond * 100)
-	assert.False(t, manager.Started())
+	s.Assert().False(manager.Started())
 }
 
-func TestGoredisWorkerManagerRunTasks(t *testing.T) {
+func (s *GoRedisSuite) TestGoredisWorkerManagerRunTasks() {
 	client1 := redis.NewClient(opts)
 	client2 := redis.NewClient(opts)
 	client3 := redis.NewClient(opts)
@@ -120,8 +131,8 @@ func TestGoredisWorkerManagerRunTasks(t *testing.T) {
 	manager3.Run(worker3, nil)
 
 	runningTasks, err := manager1.RunningTasks()
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(runningTasks))
+	s.Require().NoError(err)
+	s.Assert().Equal(0, len(runningTasks))
 
 	ctx := context.Background()
 	manager1.Start(ctx)
@@ -131,19 +142,19 @@ func TestGoredisWorkerManagerRunTasks(t *testing.T) {
 	time.Sleep(time.Second)
 
 	runningTasks, err = manager1.RunningTasks()
-	assert.NoError(t, err)
-	assert.Equal(t, 9, len(runningTasks))
+	s.Require().NoError(err)
+	s.Assert().Equal(9, len(runningTasks))
 
 	manager1.Stop()
 	manager2.Stop()
 	manager3.Stop()
 
 	runningTasks, err = manager1.RunningTasks()
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(runningTasks))
+	s.Require().NoError(err)
+	s.Assert().Equal(0, len(runningTasks))
 }
 
-func TestGoredisWorkerManagerRunUniqueTasks(t *testing.T) {
+func (s *GoRedisSuite) TestGoredisWorkerManagerRunUniqueTasks() {
 	client1 := redis.NewClient(opts)
 	client2 := redis.NewClient(opts)
 
@@ -167,13 +178,13 @@ func TestGoredisWorkerManagerRunUniqueTasks(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	runningTasks, err := manager1.RunningTasks()
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(runningTasks))
+	s.Require().NoError(err)
+	s.Assert().Equal(1, len(runningTasks))
 
 	manager1.Stop()
 	manager2.Stop()
 
 	runningTasks, err = manager1.RunningTasks()
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(runningTasks))
+	s.Require().NoError(err)
+	s.Assert().Equal(0, len(runningTasks))
 }
