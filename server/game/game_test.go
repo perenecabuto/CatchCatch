@@ -240,9 +240,10 @@ func TestGameReturnRunningWithoutPlayerWhenEveryBodyLoses(t *testing.T) {
 func TestGameClenUpWhenStop(t *testing.T) {
 	targetID := "test-game-1-target"
 	targetPlayer := Player{Player: model.Player{ID: targetID}}
-	otherPlayer := Player{Player: model.Player{ID: "1234"}}
+	otherPlayer1 := Player{Player: model.Player{ID: "1234a"}}
+	otherPlayer2 := Player{Player: model.Player{ID: "1234b"}}
 	g := NewGameWithParams("test-game-1", true, []Player{
-		targetPlayer, otherPlayer, otherPlayer,
+		targetPlayer, otherPlayer1, otherPlayer2,
 	}, targetID)
 
 	g.Stop()
