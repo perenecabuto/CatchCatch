@@ -129,7 +129,10 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				evt = g.SetPlayer(p.ID, p.Lat, p.Lon)
 			}
 			if evt.Name != game.GameNothingHappens {
-				evtChan <- evt
+				select {
+				case evtChan <- evt:
+				case <-ctx.Done():
+				}
 			}
 			return nil
 		})
