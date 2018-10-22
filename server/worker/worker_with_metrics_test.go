@@ -48,12 +48,9 @@ func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 			return assert.Equal(t, expected, actual)
 		}),
 		mock.MatchedBy(func(actual metrics.Values) bool {
-			expected := metrics.Values{
-				"params":  params,
-				"elapsed": 100,
-				"error":   err.Error(),
-			}
-			return assert.Equal(t, expected, actual)
+			return assert.Equal(t, params, actual["params"]) &&
+				assert.Equal(t, 100, actual["elapsed"]) &&
+				assert.Contains(t, err.Error(), actual["error"])
 		}),
 	)
 }

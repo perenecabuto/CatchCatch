@@ -3,10 +3,11 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
@@ -185,7 +186,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				gp.DistToTarget = 0
 				err := gw.publish(GameFinished, gp, g)
 				if err != nil {
-					return err
+					return errors.Cause(err)
 				}
 			}
 			return gw.service.Remove(g.ID)
@@ -197,10 +198,7 @@ func (gw *GameWorker) publish(evt GameWatcherEvent, gp game.Player, g *service.G
 	p := &GameEventPayload{Event: evt, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget}
 	data, _ := json.Marshal(p)
 	err := gw.messages.Publish(gameChangeTopic, data)
-	if err != nil {
-		return fmt.Errorf("GameWorker:watchGame:%s:error:%s - %#v", p.Game.ID, err.Error(), p)
-	}
-	return nil
+	return errors.Wrapf(err, "GameWorker:publish:game:%s:player:%+v", p.Game.ID, p)
 }
 
 func (gw *GameWorker) processGameEvent(
@@ -249,11 +247,8 @@ func (gw *GameWorker) processGameEvent(
 	case game.GameLastPlayerDetected:
 		finished = true
 		err = gw.publish(GamePlayerWin, gevt.Player, g)
-		if err != nil {
-			break
-		}
 	case game.GameRunningWithoutPlayers:
 		finished = true
 	}
-	return started, finished, err
+	return started, finished, errors.Wrapf(err, "can't process event %+v", gevt)
 }
