@@ -32,6 +32,12 @@ func TestGoRedis(t *testing.T) {
 
 func (t *GoRedisSuite) SetupTest() {
 	t.client = redis.NewClient(opts)
+	err := t.client.Ping().Err()
+	if err != nil {
+		t.T().Skip(err)
+		return
+	}
+
 	t.client.FlushAll()
 }
 
