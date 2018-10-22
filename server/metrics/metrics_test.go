@@ -8,7 +8,7 @@ import (
 )
 
 func TestNotify(t *testing.T) {
-	m, err := metrics.NewCollector("http://localhost:8086", "catchcatch", "", "")
+	m, err := metrics.NewCollector("http://influxdb:8086", "catchcatch", "", "")
 	if err != nil {
 		t.Skip(err)
 	}

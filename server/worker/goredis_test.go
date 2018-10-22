@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	opts = &redis.Options{Addr: "localhost:6379"}
+	opts = &redis.Options{Addr: "redis:6379"}
 
 	worker1    = &mockWorker{id: "worker1"}
 	dupWorker1 = &mockWorker{id: "worker1"}
