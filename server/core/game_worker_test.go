@@ -649,6 +649,7 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 		return p.ID == loser.ID
 	}).(game.Player)
 
+	time.Sleep(time.Millisecond * 100)
 	cancel()
 	<-complete
 
@@ -718,6 +719,7 @@ func TestGameWorkerNotifiesWhenHunterIsNearToTarget(t *testing.T) {
 
 	gamePlayers := g.Players()
 
+	time.Sleep(time.Millisecond * 100)
 	cancel()
 	<-complete
 
