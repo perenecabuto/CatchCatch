@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -54,49 +53,31 @@ const (
 	GameRoleHunter    Role = "hunter"
 )
 
-// Player wraps model.Player and its role in the game
-type Player struct {
-	model.Player
-	Role         Role
-	DistToTarget float64
-	Lose         bool
-}
-
-func (gp Player) String() string {
-	return fmt.Sprintf("[ID: %s, Role: %s, DistToTarget: %f, Lose: %v]",
-		gp.ID, gp.Role, gp.DistToTarget, gp.Lose)
-}
-
 // Game controls rounds and players
 type Game struct {
 	ID       string
 	started  int32
-	players  map[string]*Player
+	players  *GamePlayers
 	targetID atomic.Value
-
-	playersLock sync.RWMutex
 }
 
 // NewGame create a game with duration
 func NewGame(id string) *Game {
 	var tid atomic.Value
 	tid.Store("")
-	return &Game{ID: id, started: 0, players: make(map[string]*Player), targetID: tid}
+	return &Game{ID: id, started: 0, players: NewGamePlayers(), targetID: tid}
 }
 
 // NewGameWithParams ...
 func NewGameWithParams(gameID string, started bool, players []Player, targetID string) *Game {
-	mPlayers := map[string]*Player{}
-	for _, p := range players {
-		copy := p
-		mPlayers[p.ID] = &copy
-	}
 	var s int32
 	if started {
 		s = 1
 	}
 	var tid atomic.Value
 	tid.Store(targetID)
+	mPlayers := NewGamePlayers()
+	mPlayers.Set(players...)
 	return &Game{ID: gameID, started: s, players: mPlayers, targetID: tid}
 }
 
@@ -107,7 +88,7 @@ func (g *Game) TargetID() string {
 
 func (g *Game) String() string {
 	return fmt.Sprintf("[ID:%s|Started:%v|TargetID:%s|Players: %+v]",
-		g.ID, g.Started(), g.TargetID(), g.Players())
+		g.ID, g.Started(), g.TargetID(), g.players.Copy())
 }
 
 // Start the game
@@ -121,30 +102,18 @@ func (g *Game) Start() {
 func (g *Game) Stop() {
 	atomic.StoreInt32(&g.started, 0)
 	g.targetID.Store("")
-	g.playersLock.Lock()
-	g.players = make(map[string]*Player)
-	g.playersLock.Unlock()
+	g.players.DeleteAll()
 }
 
 // Players return game players
 func (g *Game) Players() []Player {
-	var i int
-	g.playersLock.Lock()
-	players := make([]Player, len(g.players))
-	for _, p := range g.players {
-		players[i] = *p
-		i++
-	}
-	g.playersLock.Unlock()
-	return players
+	return g.players.Copy()
 }
 
 // TargetPlayer returns the target player when it's set
 func (g *Game) TargetPlayer() *Player {
-	g.playersLock.RLock()
-	target := g.players[g.TargetID()]
-	g.playersLock.RUnlock()
-	return target
+	p, _ := g.players.GetByID(g.TargetID())
+	return p
 }
 
 // Info ...
@@ -173,18 +142,13 @@ The rule is:
     - it receives sessions to notify anything to this player games
 */
 func (g *Game) SetPlayer(id string, lon, lat float64) Event {
-	g.playersLock.RLock()
-	p, exists := g.players[id]
-	g.playersLock.RUnlock()
-
+	p, exists := g.players.GetByID(id)
 	if exists {
 		p.Lat, p.Lon = lat, lon
 	} else if !g.Started() {
 		log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
-		g.playersLock.Lock()
-		g.players[id] = &Player{
-			model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false}
-		g.playersLock.Unlock()
+		g.players.Set(Player{
+			model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false})
 		return Event{Name: GamePlayerAdded}
 	} else {
 		return GameEventNothing
@@ -211,24 +175,17 @@ The role is:
     - it must remove players from the game
 */
 func (g *Game) RemovePlayer(id string) Event {
-	p, exists := g.players[id]
+	p, exists := g.players.GetByID(id)
 	if !exists {
 		return GameEventNothing
 	}
 	if !g.Started() {
-		delete(g.players, id)
+		g.players.DeleteByID(id)
 		return Event{Name: GamePlayerRemoved, Player: *p}
 	}
 
-	g.playersLock.Lock()
-	g.players[id].Lose = true
-	playersInGame := make([]*Player, 0)
-	for _, gp := range g.players {
-		if !gp.Lose {
-			playersInGame = append(playersInGame, gp)
-		}
-	}
-	g.playersLock.Unlock()
+	g.players.SetLoserByID(id)
+	playersInGame := g.players.AllExceptLosers()
 
 	switch len(playersInGame) {
 	case 1:
@@ -241,9 +198,11 @@ func (g *Game) RemovePlayer(id string) Event {
 }
 
 func (g *Game) setPlayersRoles() {
-	g.targetID.Store(raffleTargetPlayer(g.players))
-	for id, p := range g.players {
-		if id == g.TargetID() {
+	players := g.players.All()
+	targetID := raffleTargetPlayer(players)
+	g.targetID.Store(targetID)
+	for _, p := range players {
+		if p.ID == targetID {
 			p.Role = GameRoleTarget
 		} else {
 			p.DistToTarget = p.DistTo(g.TargetPlayer().Player)
@@ -252,11 +211,11 @@ func (g *Game) setPlayersRoles() {
 	}
 }
 
-func raffleTargetPlayer(players map[string]*Player) string {
+func raffleTargetPlayer(players []*Player) string {
 	rand.New(rand.NewSource(time.Now().Unix()))
 	ids := make([]string, 0)
-	for id := range players {
-		ids = append(ids, id)
+	for _, p := range players {
+		ids = append(ids, p.ID)
 	}
 	if len(ids) == 0 {
 		return ""
