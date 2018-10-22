@@ -356,21 +356,19 @@ func TestGameWorkerNotifiesWhenLastPlayerIsInGame(t *testing.T) {
 	}
 
 	<-gameStartedCH
-	losers := funk.Values(examplePlayers).([]*game.Player)[:len(examplePlayers)-1]
-	for _, p := range losers {
-		playerMoveCallback(p.Player, service.GamePlayerMoveOutside)
-	}
-
 	gamePlayers := g.Players()
 	target := funk.Find(gamePlayers, func(p game.Player) bool {
 		return p.Role == game.GameRoleTarget
 	}).(game.Player)
-	winner := funk.Find(gamePlayers, func(p game.Player) bool {
-		return !p.Lose
-	}).(game.Player)
+	for _, p := range gamePlayers {
+		if p.Role == game.GameRoleHunter {
+			playerMoveCallback(p.Player, service.GamePlayerMoveOutside)
+		}
+	}
+	gamePlayers = g.Players()
 	<-complete
 
-	payload := &core.GameEventPayload{PlayerID: winner.ID, Event: core.GamePlayerWin,
+	payload := &core.GameEventPayload{PlayerID: target.ID, Event: core.GamePlayerWin,
 		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)}
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 }
