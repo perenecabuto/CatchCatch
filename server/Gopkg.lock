@@ -174,6 +174,27 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:ab54eea8d482272009e9e4af07d4d9b5236c27b4d8c54a3f2c99d163be883eca"
+  name = "github.com/onsi/gomega"
+  packages = [
+    ".",
+    "format",
+    "internal/assertion",
+    "internal/asyncassertion",
+    "internal/oraclematcher",
+    "internal/testingtsupport",
+    "matchers",
+    "matchers/support/goraph/bipartitegraph",
+    "matchers/support/goraph/edge",
+    "matchers/support/goraph/node",
+    "matchers/support/goraph/util",
+    "types",
+  ]
+  pruneopts = "UT"
+  revision = "7615b9433f86a8bdf29709bf288bc4fd0636a369"
+  version = "v1.4.2"
+
+[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -296,11 +317,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6e056aca4c8349a52f54a538473524d28ab5c245f479b0fa5f7373e0efacfaac"
+  digest = "1:9672bfa4cb9ea2fa3710bf583ebd606b178275bd143b78c0b00f11ccc5cc5bda"
   name = "golang.org/x/net"
   packages = [
     "bpf",
     "context",
+    "html",
+    "html/atom",
+    "html/charset",
     "internal/iana",
     "internal/socket",
     "ipv4",
@@ -318,6 +342,40 @@
   pruneopts = "UT"
   revision = "4497e2df6f9e69048a54498c7affbbec3294ad47"
 
+[[projects]]
+  digest = "1:aa4d6967a3237f8367b6bf91503964a77183ecf696f1273e8ad3551bb4412b5f"
+  name = "golang.org/x/text"
+  packages = [
+    "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
+    "encoding/unicode",
+    "internal/gen",
+    "internal/tag",
+    "internal/utf8internal",
+    "language",
+    "runes",
+    "transform",
+    "unicode/cldr",
+  ]
+  pruneopts = "UT"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
+
+[[projects]]
+  digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -332,6 +390,7 @@
     "github.com/influxdata/influxdb/client/v2",
     "github.com/kellydunn/golang-geo",
     "github.com/nats-io/go-nats",
+    "github.com/onsi/gomega",
     "github.com/pkg/errors",
     "github.com/quorzz/redis-protocol",
     "github.com/satori/go.uuid",

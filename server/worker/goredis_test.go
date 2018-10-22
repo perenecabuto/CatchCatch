@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
+	"github.com/onsi/gomega"
 	"github.com/perenecabuto/CatchCatch/server/worker"
 	"github.com/stretchr/testify/suite"
 )
@@ -92,10 +93,9 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerRunItsWorkerTasks() {
 }
 
 func (s *GoRedisSuite) TestGoredisWorkerManagerStopWhenContextDone() {
-	manager := worker.NewGoredisWorkerManager(s.client)
-
 	ctx, cancel := context.WithCancel(context.Background())
 
+	manager := worker.NewGoredisWorkerManager(s.client)
 	manager.Start(ctx)
 	time.Sleep(time.Millisecond * 100)
 	s.Assert().True(manager.Started())
@@ -145,19 +145,14 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerRunTasks() {
 	manager2.Start(ctx)
 	manager3.Start(ctx)
 
-	time.Sleep(time.Second)
-
-	runningTasks, err = manager1.RunningTasks()
-	s.Require().NoError(err)
-	s.Assert().Equal(9, len(runningTasks))
+	gomega.RegisterTestingT(s.T())
+	gomega.Eventually(manager1.RunningTasks).Should(gomega.HaveLen(9))
 
 	manager1.Stop()
 	manager2.Stop()
 	manager3.Stop()
 
-	runningTasks, err = manager1.RunningTasks()
-	s.Require().NoError(err)
-	s.Assert().Equal(0, len(runningTasks))
+	gomega.Eventually(manager1.RunningTasks).Should(gomega.HaveLen(0))
 }
 
 func (s *GoRedisSuite) TestGoredisWorkerManagerRunUniqueTasks() {
