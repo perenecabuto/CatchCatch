@@ -65,35 +65,47 @@ func TestGameWorkerStartsWhenTheNumberOfPlayersIsEnough(t *testing.T) {
 	gs.On("Update", mock.Anything).Return(nil)
 
 	m := &smocks.Dispatcher{}
-	var playersWithRoles []game.Player
+	gameStartedCH := make(chan interface{})
 	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
 		event := core.GameEventPayload{}
 		json.Unmarshal(data, &event)
 		if event.Event == core.GameStarted {
-			playersWithRoles = event.Game.Players()
+			go func() { gameStartedCH <- nil }()
 		}
 		return true
 	})).Return(nil)
 
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
+			for _, p := range examplePlayers {
+				cb(p.Player, service.GamePlayerMoveInside)
+			}
+			return true
+		}),
+	).Return(nil)
+
+	completed := make(chan interface{})
 	go func() {
 		gw := core.NewGameWorker(gs, m)
 		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
 		require.NoError(t, err)
+		completed <- nil
 	}()
 
-	completed := make(chan interface{})
-	addPlayersToGameServiceMock(gs, g.ID, funk.Values(examplePlayers).([]*game.Player), func() {
-		completed <- nil
-	})
+	<-gameStartedCH
+	gamePlayers := g.Players()
+
+	cancel()
+	time.Sleep(time.Millisecond * 100)
 	<-completed
 
-	assert.Len(t, playersWithRoles, len(examplePlayers))
-	for _, p := range playersWithRoles {
+	assert.Len(t, gamePlayers, len(examplePlayers))
+	for _, p := range gamePlayers {
 		assert.NotEmpty(t, p.Role)
 	}
-
-	for _, pl := range examplePlayers {
-		p := &core.GameEventPayload{PlayerID: pl.ID, Event: core.GameStarted, Game: g.Game}
+	for _, pl := range gamePlayers {
+		p := &core.GameEventPayload{PlayerID: pl.ID, PlayerRole: pl.Role,
+			Event: core.GameStarted, Game: g.Game.ID}
 		smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
 	}
 }
@@ -108,7 +120,7 @@ func TestGameWorkerMustObserveGameChangeEvents(t *testing.T) {
 	g := game.NewGame("test-game-1")
 	playerID := "test-game-player-1"
 	dist := 100.0
-	example := &core.GameEventPayload{Event: core.GameFinished, Game: g, PlayerID: playerID, DistToTarget: dist}
+	example := &core.GameEventPayload{Event: core.GameFinished, Game: g.ID, PlayerID: playerID, DistToTarget: dist}
 
 	m.On("Subscribe", mock.Anything, mock.Anything,
 		mock.MatchedBy(func(cb func(data []byte) error) bool {
@@ -149,14 +161,16 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	g.SetPlayer(playerID, 0, 0)
 	g.Start()
 
+	player := g.Players()[0]
+
 	cancel()
 	<-complete
 
 	assert.False(t, g.Started())
 	gs.AssertCalled(t, "Remove", g.ID)
 
-	p := &core.GameEventPayload{PlayerID: playerID, Event: core.GameFinished,
-		Game: game.NewGameWithParams(g.ID, false, nil, "")}
+	p := &core.GameEventPayload{PlayerID: player.ID, PlayerRole: player.Role,
+		Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
 	smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
 }
 
@@ -174,7 +188,25 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
 	gs.On("Update", mock.Anything).Return(nil)
 	gs.On("Remove", mock.Anything).Return(nil)
-	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
+
+	gameStartedCH := make(chan interface{})
+	m.On("Publish", mock.Anything, mock.MatchedBy(func(data []byte) bool {
+		event := core.GameEventPayload{}
+		json.Unmarshal(data, &event)
+		if event.Event == core.GameStarted {
+			go func() { gameStartedCH <- nil }()
+		}
+		return true
+	})).Return(nil)
+
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
+			for _, p := range examplePlayers {
+				cb(p.Player, service.GamePlayerMoveInside)
+			}
+			return true
+		}),
+	).Return(nil)
 
 	complete := make(chan interface{})
 	go func() {
@@ -183,24 +215,23 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 		complete <- nil
 	}()
 
-	players := funk.Values(examplePlayers).([]*game.Player)
-	addPlayersToGameServiceMock(gs, g.ID, players,
-		func() { assert.Len(t, g.Players(), 3) })
+	<-gameStartedCH
+	gamePlayers := g.Players()
 
-	time.Sleep(core.GameTimeOut + time.Second)
+	time.Sleep(core.GameTimeOut + (time.Millisecond * 100))
 	<-complete
 
 	assert.False(t, g.Started())
 	gs.AssertCalled(t, "Remove", g.ID)
 
-	for _, p := range players {
-		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameFinished,
-			Game: game.NewGameWithParams(g.ID, false, nil, "")}
+	for _, p := range gamePlayers {
+		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
+			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
 
-func TestGameWorkerStartWithAsPlayersEnterAndNotifyThenThatTheGameStarted(t *testing.T) {
+func TestGameWorkerStartsAsPlayersEnterAndNotifyThenThatTheGameStarted(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
@@ -243,18 +274,14 @@ func TestGameWorkerStartWithAsPlayersEnterAndNotifyThenThatTheGameStarted(t *tes
 	}
 
 	<-gameStartedCH
-
-	target := funk.Find(g.Players(), func(p game.Player) bool {
-		return p.Role == game.GameRoleTarget
-	}).(game.Player)
 	gamePlayers := g.Players()
 
 	cancel()
 	<-complete
 
-	for _, p := range examplePlayers {
-		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameStarted,
-			Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)}
+	for _, p := range gamePlayers {
+		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
+			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -301,14 +328,16 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 		playerMoveCallback(p.Player, service.GamePlayerMoveInside)
 	}
 	<-gameStartedCH
+	gamePlayers := g.Players()
+
 	for _, p := range examplePlayers {
 		playerMoveCallback(p.Player, service.GamePlayerMoveOutside)
 	}
-	<-complete
 
-	for _, p := range examplePlayers {
-		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameFinished,
-			Game: game.NewGameWithParams(g.ID, false, nil, "")}
+	<-complete
+	for _, p := range gamePlayers {
+		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
+			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -365,11 +394,11 @@ func TestGameWorkerNotifiesWhenLastPlayerIsInGame(t *testing.T) {
 			playerMoveCallback(p.Player, service.GamePlayerMoveOutside)
 		}
 	}
-	gamePlayers = g.Players()
 	<-complete
 
-	payload := &core.GameEventPayload{PlayerID: target.ID, Event: core.GamePlayerWin,
-		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)}
+	payload := &core.GameEventPayload{
+		PlayerID: target.ID, PlayerRole: game.GameRoleTarget,
+		Event: core.GamePlayerWin, Game: g.ID}
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 }
 
@@ -416,21 +445,22 @@ func TestGameWorkerNotifiesFinishWhenTargetLeaveTheGame(t *testing.T) {
 	}
 
 	<-gameStartedCH
-	target := funk.Find(g.Players(), func(p game.Player) bool {
+	gamePlayers := g.Players()
+	target := funk.Find(gamePlayers, func(p game.Player) bool {
 		return p.Role == game.GameRoleTarget
 	}).(game.Player)
 
 	playerMoveCallback(target.Player, service.GamePlayerMoveOutside)
-	gamePlayers := g.Players()
 	<-complete
 
-	payload := &core.GameEventPayload{PlayerID: target.ID, Event: core.GamePlayerLose,
-		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)}
+	payload := &core.GameEventPayload{
+		PlayerID: target.ID, PlayerRole: game.GameRoleTarget,
+		Event: core.GamePlayerLose, Game: g.ID}
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 
-	for _, p := range examplePlayers {
-		payload := &core.GameEventPayload{PlayerID: p.ID, Event: core.GameFinished,
-			Game: game.NewGameWithParams(g.ID, false, nil, "")}
+	for _, p := range gamePlayers {
+		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
+			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -494,21 +524,22 @@ func TestGameWorkerNotifiesWhenTargetIsReached(t *testing.T) {
 	gamePlayers := g.Players()
 	<-complete
 
-	exptectedG := game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)
 	payloads := []core.GameEventPayload{
 		{
-			PlayerID: hunter.ID, Event: core.GamePlayerWin, Game: exptectedG,
+			PlayerID: hunter.ID, PlayerRole: game.GameRoleHunter,
+			Event: core.GamePlayerWin, Game: g.ID,
 			DistToTarget: hunter.DistTo(target.Player),
 		},
 		{
-			PlayerID: target.ID, Event: core.GamePlayerLose, Game: exptectedG,
+			PlayerID: target.ID, PlayerRole: game.GameRoleTarget,
+			Event: core.GamePlayerLose, Game: g.ID,
 			DistToTarget: 0,
 		},
 	}
 	for _, p := range gamePlayers {
 		payloads = append(payloads, core.GameEventPayload{
-			PlayerID: p.ID, Event: core.GameFinished,
-			Game: game.NewGameWithParams(g.ID, false, nil, ""),
+			PlayerID: p.ID, PlayerRole: p.Role,
+			Event: core.GameFinished, Game: g.ID, Rank: g.Rank(),
 		})
 	}
 	for _, p := range payloads {
@@ -580,13 +611,15 @@ func TestGameWorkerNotifiesWhenTargetWinsWhileInArenaAfterTimeout(t *testing.T) 
 		}
 	}
 
-	payload := &core.GameEventPayload{Event: core.GamePlayerWin, PlayerID: target.ID,
-		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID)}
+	payload := &core.GameEventPayload{Event: core.GamePlayerWin, Game: g.ID,
+		PlayerID: target.ID, PlayerRole: game.GameRoleTarget}
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 
 	for _, p := range hunters {
-		payload := &core.GameEventPayload{Event: core.GamePlayerLose, PlayerID: p.ID,
-			Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID), DistToTarget: p.DistToTarget}
+		payload := &core.GameEventPayload{
+			Event:    core.GamePlayerLose,
+			PlayerID: p.ID, PlayerRole: game.GameRoleHunter,
+			Game: g.ID, DistToTarget: p.DistToTarget}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -642,9 +675,6 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 	playerMoveCallback(loser.Player, service.GamePlayerMoveOutside)
 
 	gamePlayers := g.Players()
-	target := funk.Find(gamePlayers, func(p game.Player) bool {
-		return p.Role == game.GameRoleTarget
-	}).(game.Player)
 	actualLoser := funk.Find(gamePlayers, func(p game.Player) bool {
 		return p.ID == loser.ID
 	}).(game.Player)
@@ -655,8 +685,9 @@ func TestGameWorkerNotifiesWhenPlayerLose(t *testing.T) {
 
 	assert.True(t, actualLoser.Lose)
 
-	payload := &core.GameEventPayload{Event: core.GamePlayerLose, PlayerID: loser.ID,
-		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID), DistToTarget: loser.DistToTarget}
+	payload := &core.GameEventPayload{Event: core.GamePlayerLose,
+		PlayerID: loser.ID, PlayerRole: loser.Role,
+		Game: g.ID, DistToTarget: loser.DistToTarget}
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 }
 
@@ -717,25 +748,12 @@ func TestGameWorkerNotifiesWhenHunterIsNearToTarget(t *testing.T) {
 	hunter.Player.Lat, hunter.Player.Lon = 0.0002, 0.0002
 	playerMoveCallback(hunter.Player, service.GamePlayerMoveInside)
 
-	gamePlayers := g.Players()
-
 	time.Sleep(time.Millisecond * 100)
 	cancel()
 	<-complete
 
-	payload := &core.GameEventPayload{Event: core.GamePlayerNearToTarget, PlayerID: hunter.ID,
-		Game: game.NewGameWithParams(g.ID, true, gamePlayers, target.ID), DistToTarget: 31.45067466553135}
+	payload := &core.GameEventPayload{Event: core.GamePlayerNearToTarget, Game: g.ID,
+		PlayerID: hunter.ID, PlayerRole: game.GameRoleHunter,
+		DistToTarget: 31.45067466553135}
 	smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
-}
-
-func addPlayersToGameServiceMock(gs *smocks.GameService, gameID string, players []*game.Player, afterAdd func()) {
-	gs.On("ObserveGamePlayers", mock.Anything, gameID,
-		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
-			for _, p := range players {
-				cb(p.Player, service.GamePlayerMoveInside)
-			}
-			afterAdd()
-			return true
-		}),
-	).Return(nil)
 }

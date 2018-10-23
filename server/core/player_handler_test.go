@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -36,11 +35,9 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 	defer cancel()
 
 	gameID := "player-handler-game-1"
-	g := game.NewGame(gameID)
-	g.SetPlayer(playerID, 0, 0)
-	g.Start()
 
-	example := &core.GameEventPayload{Event: core.GameStarted, PlayerID: playerID, Game: g}
+	example := &core.GameEventPayload{Event: core.GameStarted,
+		PlayerID: playerID, PlayerRole: game.GameRoleTarget, Game: gameID}
 
 	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
 		data, _ := json.Marshal(example)
@@ -52,8 +49,8 @@ func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
 	require.NoError(t, err)
 
 	expected, _ := proto.Marshal(&protobuf.GameInfo{
-		EventName: proto.String("game:started"),
-		Id:        &g.ID, Game: &g.ID,
+		EventName: proto.String(core.GameStarted.String()),
+		Id:        &gameID, Game: &gameID,
 		Role: proto.String(string("target")),
 	})
 	c.AssertCalled(t, "Send", expected)
@@ -86,8 +83,12 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	g := game.NewGameWithParams(gameID, true, players, player3ID)
 
 	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
-		data, _ := json.Marshal(&core.GameEventPayload{Event: core.GameFinished, PlayerID: player1ID, Game: g})
-		cb(data)
+		for _, p := range players {
+			data, _ := json.Marshal(&core.GameEventPayload{
+				Event: core.GameFinished, PlayerID: p.ID, PlayerRole: p.Role,
+				Game: g.ID, Rank: g.Rank()})
+			cb(data)
+		}
 		return true
 	})).Return(nil)
 
@@ -97,10 +98,16 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 
 	connections := []*wsmocks.WSConnection{c1, c2, c3}
 	for _, c := range connections {
-		c.AssertCalled(t, "Send", mock.MatchedBy(func(data []byte) bool {
-			actual := &protobuf.GameRank{}
-			proto.Unmarshal(data, actual)
-			return assert.EqualValues(t, core.GameFinished, actual.GetEventName())
-		}))
+		playerRank := g.Rank().PlayerRank
+		rank := make([]*protobuf.PlayerRank, len(playerRank))
+		for i, pr := range playerRank {
+			rank[i] = &protobuf.PlayerRank{Player: proto.String(pr.Player.ID), Points: proto.Int32(int32(pr.Points))}
+		}
+		expected, _ := proto.Marshal(&protobuf.GameRank{
+			EventName: proto.String(core.GameFinished.String()),
+			Id:        &gameID, Game: &gameID,
+			PlayersRank: rank,
+		})
+		c.AssertCalled(t, "Send", expected)
 	}
 }

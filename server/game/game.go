@@ -46,6 +46,10 @@ var (
 // Role represents Player role
 type Role string
 
+func (r Role) String() string {
+	return string(r)
+}
+
 // Role options
 const (
 	GameRoleUndefined Role = "undefined"

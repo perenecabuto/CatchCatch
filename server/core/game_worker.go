@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -55,9 +54,11 @@ const (
 // GameEventPayload ...
 type GameEventPayload struct {
 	PlayerID     string
-	Game         *game.Game
-	Event        GameWatcherEvent
+	PlayerRole   game.Role
 	DistToTarget float64
+	Game         string
+	Rank         game.Rank
+	Event        GameWatcherEvent
 }
 
 // GameWorker observe manage and run games
@@ -173,13 +174,13 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				}
 				for _, gp := range g.Players() {
 					if gp.Role == game.GameRoleTarget {
-						gw.publish(GamePlayerWin, gp, g)
+						gw.publish(GamePlayerWin, &gp, g.Game)
 					} else {
-						gw.publish(GamePlayerLose, gp, g)
+						gw.publish(GamePlayerLose, &gp, g.Game)
 					}
 				}
+				log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
 			}
-			log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
 			stop()
 		case <-ctx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
@@ -187,7 +188,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			g.Stop()
 			for _, gp := range players {
 				gp.DistToTarget = 0
-				err := gw.publish(GameFinished, gp, g)
+				err := gw.publish(GameFinished, &gp, g.Game)
 				if err != nil {
 					return errors.Cause(err)
 				}
@@ -197,61 +198,70 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	}
 }
 
-func (gw *GameWorker) publish(evt GameWatcherEvent, gp game.Player, g *service.GameWithCoords) error {
-	p := &GameEventPayload{Event: evt, PlayerID: gp.ID, Game: g.Game, DistToTarget: gp.DistToTarget}
-	data, _ := json.Marshal(p)
-	err := gw.messages.Publish(gameChangeTopic, data)
-	return errors.Wrapf(err, "GameWorker:publish:game:%s:player:%+v", p.Game.ID, p)
-}
-
-func (gw *GameWorker) processGameEvent(
-	g *service.GameWithCoords, gevt game.Event) (started bool, finished bool, err error) {
+func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, gevt game.Event) (
+	started bool, finished bool, err error) {
 
 	log.Printf("GameWorker:%s:GameEvent:%-v", g.ID, gevt)
 	switch gevt.Name {
 	case game.GamePlayerNearToTarget:
-		gp := gevt.Player
-		err = gw.publish(GamePlayerNearToTarget, gp, g)
+		err = gw.publish(GamePlayerNearToTarget, &gevt.Player, g.Game)
 	case game.GamePlayerAdded, game.GamePlayerRemoved:
-		ready := !g.Started() && len(g.Game.Players()) >= minPlayersPerGame
+		ready := !g.Started() && len(g.Players()) >= minPlayersPerGame
 		if ready {
 			g.Start()
 			started = true
 
 			go gw.service.Update(g)
 			for _, gp := range g.Players() {
-				err = gw.publish(GameStarted, gp, g)
+				err = gw.publish(GameStarted, &gp, g.Game)
 				if err != nil {
 					return false, false, err
 				}
 			}
 			if err != nil {
-				err = fmt.Errorf("GameWorker:Start:%s:error:%s - %#v", g.ID, err.Error(), gevt)
+				err = errors.Wrapf(err, "GameWorker:Start:%s:%+v", g.ID, gevt)
 			}
 		}
 	case game.GamePlayerRanWay:
 		if gevt.Player.Role == game.GameRoleTarget {
 			finished = true
 		}
-		err = gw.publish(GamePlayerLose, gevt.Player, g)
+		err = gw.publish(GamePlayerLose, &gevt.Player, g.Game)
 		if err != nil {
 			break
 		}
 	case game.GameTargetReached:
 		finished = true
-		err = gw.publish(GamePlayerWin, gevt.Player, g)
+		err = gw.publish(GamePlayerWin, &gevt.Player, g.Game)
 		if err != nil {
 			break
 		}
-		err = gw.publish(GamePlayerLose, *g.TargetPlayer(), g)
+		err = gw.publish(GamePlayerLose, g.TargetPlayer(), g.Game)
 		if err != nil {
 			break
 		}
 	case game.GameLastPlayerDetected:
 		finished = true
-		err = gw.publish(GamePlayerWin, gevt.Player, g)
+		err = gw.publish(GamePlayerWin, &gevt.Player, g.Game)
 	case game.GameRunningWithoutPlayers:
 		finished = true
 	}
 	return started, finished, errors.Wrapf(err, "can't process event %+v", gevt)
 }
+
+func (gw *GameWorker) publish(evt GameWatcherEvent, player *game.Player, g *game.Game) error {
+	p := &GameEventPayload{
+		Event:        evt,
+		PlayerID:     player.ID,
+		PlayerRole:   player.Role,
+		Game:         g.ID,
+		DistToTarget: player.DistToTarget,
+	}
+	if evt == GameFinished {
+		p.Rank = g.Rank()
+	}
+	data, _ := json.Marshal(p)
+	err := gw.messages.Publish(gameChangeTopic, data)
+	return errors.Wrapf(err, "GameWorker:publish:game:%s:player:%+v", g.ID, p)
+}
+

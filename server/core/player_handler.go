@@ -98,14 +98,10 @@ func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServe
 
 		switch p.Event {
 		case GameStarted:
-			// TODO: stop looping game players and receive the game role
-			g := p.Game
-			for _, p := range g.Players() {
-				wss.Emit(p.ID, &protobuf.GameInfo{
-					EventName: proto.String("game:started"),
-					Id:        &g.ID, Game: &g.ID,
-					Role: proto.String(string(p.Role))})
-			}
+			wss.Emit(p.PlayerID, &protobuf.GameInfo{
+				EventName: proto.String(GameStarted.String()),
+				Id:        &p.Game, Game: &p.Game,
+				Role: proto.String(p.PlayerRole.String())})
 
 		case GamePlayerNearToTarget:
 			wss.Emit(p.PlayerID, &protobuf.Distance{
@@ -113,25 +109,23 @@ func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServe
 
 		case GamePlayerLose:
 			wss.Emit(p.PlayerID, &protobuf.Simple{
-				EventName: proto.String(GamePlayerLose.String()), Id: &p.Game.ID})
+				EventName: proto.String(GamePlayerLose.String()), Id: &p.Game})
 
 		case GamePlayerWin:
 			wss.Emit(p.PlayerID, &protobuf.Distance{
 				EventName: proto.String(GamePlayerWin.String()), Dist: &p.DistToTarget})
 
 		case GameFinished:
-			rank := p.Game.Rank()
+			rank := p.Rank
 			playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
 			for i, pr := range rank.PlayerRank {
 				playersRank[i] = &protobuf.PlayerRank{Player: proto.String(pr.Player.ID), Points: proto.Int32(int32(pr.Points))}
 			}
-			for _, pr := range rank.PlayerRank {
-				wss.Emit(pr.Player.ID, &protobuf.GameRank{
-					EventName: proto.String(GameFinished.String()),
-					Id:        &rank.Game, Game: &rank.Game,
-					PlayersRank: playersRank,
-				})
-			}
+			wss.Emit(p.PlayerID, &protobuf.GameRank{
+				EventName: proto.String(GameFinished.String()),
+				Id:        &rank.Game, Game: &rank.Game,
+				PlayersRank: playersRank,
+			})
 		}
 
 		return nil
