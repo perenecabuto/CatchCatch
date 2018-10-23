@@ -20,7 +20,8 @@ DOCKER_MACHINE_URL := https://github.com/docker/machine/releases/download/v0.13.
 
 
 test:
-	$(SERVER_SRC) go test -count=1 -timeout=30s -cover -race -v ./...
+	go get -u github.com/rakyll/gotest
+	$(SERVER_SRC) gotest -count=1 -timeout=30s -cover -race -v ./...
 
 test-with-compose:
 	docker-compose -f docker-compose.test.yml run --rm test
