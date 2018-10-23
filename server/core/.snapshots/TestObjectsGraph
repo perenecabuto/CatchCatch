@@ -1,0 +1,22 @@
+digraph structs {
+  node [shape=Mrecord];
+  2 [label="<name> PlayerLocationService |<f0> Mock "];
+  2:f0 -> 2:name;
+  3 [label="<name> *mocks.PlayerLocationService"];
+  3:name -> 2:name;
+  5 [label="<name> GameService |<f0> Mock "];
+  5:f0 -> 5:name;
+  6 [label="<name> *mocks.GameService"];
+  6:name -> 5:name;
+  7 [label="<name> Dispatcher |<f0> Mock "];
+  7:f0 -> 7:name;
+  8 [label="<name> *mocks.Dispatcher"];
+  8:name -> 7:name;
+  4 [label="<name> GameWorker |<f0> service|<f1> messages "];
+  4:f0 -> 6:name;
+  4:f1 -> 8:name;
+  1 [label="<name> PlayerHandler |<f0> players|<f1> games "];
+  1:f0 -> 3:name;
+  1:f1 -> 4:name;
+}
+

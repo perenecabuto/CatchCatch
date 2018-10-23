@@ -2,6 +2,22 @@
 
 
 [[projects]]
+  digest = "1:5d7ed16e3359fcc983d93b17126d26ffbc4056ff509d34ef030fc3345ecc5616"
+  name = "github.com/bradleyjkemp/cupaloy"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "29f58f1e4393a0062f60596ee97bfec34a25cd5f"
+  version = "v2.3.0"
+
+[[projects]]
+  digest = "1:bb99f17f96480afae47b2b6888bcde0d044469bef82de45f821fd2d6ff052603"
+  name = "github.com/bradleyjkemp/memviz"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "71460d4a94035dd9536f3cbec655d060d3e0dd74"
+  version = "v0.2.2"
+
+[[projects]]
   digest = "1:2209584c0f7c9b68c23374e659357ab546e1b70eec2761f03280f69a8fd23d77"
   name = "github.com/cenkalti/backoff"
   packages = ["."]
@@ -380,6 +396,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/bradleyjkemp/cupaloy",
+    "github.com/bradleyjkemp/memviz",
     "github.com/go-redis/redis",
     "github.com/gobwas/ws",
     "github.com/gobwas/ws/wsutil",
