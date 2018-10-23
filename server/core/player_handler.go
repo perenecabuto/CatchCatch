@@ -47,16 +47,16 @@ func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnect
 	}
 	log.Println("new player connected", player)
 	c.On("player:update", h.onPlayerUpdate(player, c))
-	c.OnDisconnected(func() {
-		h.onPlayerDisconnect(player)
-	})
+	c.OnDisconnected(h.onPlayerDisconnect(player))
 
 	return nil
 }
 
-func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) {
-	log.Println("player:disconnect", player.ID)
-	h.players.Remove(player.ID)
+func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) func() {
+	return func() {
+		log.Println("player:disconnect", player.ID)
+		h.players.Remove(player.ID)
+	}
 }
 
 func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConnectionHandler) func([]byte) {
@@ -94,25 +94,22 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 
 func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServer) error {
 	return h.games.OnGameEvent(ctx, func(p *GameEventPayload) error {
-		// TODO: send the game id and game rank instead of the game object
-
 		switch p.Event {
 		case GameStarted:
-			wss.Emit(p.PlayerID, &protobuf.GameInfo{
-				EventName: proto.String(GameStarted.String()),
-				Id:        &p.Game, Game: &p.Game,
+			wss.Emit(p.PlayerID, &protobuf.GameInfo{Id: &p.Game,
+				EventName: proto.String(GameStarted.String()), Game: &p.Game,
 				Role: proto.String(p.PlayerRole.String())})
 
 		case GamePlayerNearToTarget:
-			wss.Emit(p.PlayerID, &protobuf.Distance{
+			wss.Emit(p.PlayerID, &protobuf.Distance{Id: &p.Game,
 				EventName: proto.String(GamePlayerNearToTarget.String()), Dist: &p.DistToTarget})
 
 		case GamePlayerLose:
-			wss.Emit(p.PlayerID, &protobuf.Simple{
-				EventName: proto.String(GamePlayerLose.String()), Id: &p.Game})
+			wss.Emit(p.PlayerID, &protobuf.Simple{Id: &p.Game,
+				EventName: proto.String(GamePlayerLose.String())})
 
 		case GamePlayerWin:
-			wss.Emit(p.PlayerID, &protobuf.Distance{
+			wss.Emit(p.PlayerID, &protobuf.Distance{Id: &p.Game,
 				EventName: proto.String(GamePlayerWin.String()), Dist: &p.DistToTarget})
 
 		case GameFinished:

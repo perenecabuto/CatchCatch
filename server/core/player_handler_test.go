@@ -3,6 +3,7 @@ package core_test
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -19,41 +20,100 @@ import (
 	wsmocks "github.com/perenecabuto/CatchCatch/server/websocket/mocks"
 )
 
-func TestPlayerHandlerOnStartObserveGameEvents(t *testing.T) {
-	wsDriver := &wsmocks.WSDriver{}
-	c := &wsmocks.WSConnection{}
-	c.On("Send", mock.Anything).Return(nil)
+func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
+	tests := []struct {
+		payload *core.GameEventPayload
+		proto   proto.Message
+	}{
+		{
+			&core.GameEventPayload{
+				Event: core.GameStarted, Game: "game-id", PlayerRole: game.GameRoleTarget,
+			},
+			&protobuf.GameInfo{
+				EventName: proto.String(core.GameStarted.String()),
+				Id:        proto.String("game-id"), Game: proto.String("game-id"),
+				Role: proto.String(game.GameRoleTarget.String()),
+			},
+		},
+		{
+			&core.GameEventPayload{
+				Event: core.GamePlayerNearToTarget, Game: "game-id-2",
+				PlayerRole: game.GameRoleHunter, DistToTarget: 100,
+			},
+			&protobuf.Distance{
+				Id:        proto.String("game-id-2"),
+				EventName: proto.String(core.GamePlayerNearToTarget.String()),
+				Dist:      proto.Float64(100),
+			},
+		},
+		{
+			&core.GameEventPayload{
+				Event: core.GamePlayerWin, Game: "game-id-3",
+				PlayerRole: game.GameRoleTarget, DistToTarget: 0,
+			},
+			&protobuf.Distance{
+				Id:        proto.String("game-id-3"),
+				EventName: proto.String(core.GamePlayerWin.String()),
+				Dist:      proto.Float64(0),
+			},
+		},
+		{
+			&core.GameEventPayload{
+				Event: core.GamePlayerWin, Game: "game-id-4",
+				PlayerRole: game.GameRoleHunter, DistToTarget: 4.3,
+			},
+			&protobuf.Distance{
+				Id:        proto.String("game-id-4"),
+				EventName: proto.String(core.GamePlayerWin.String()),
+				Dist:      proto.Float64(4.3),
+			},
+		},
+		{
+			&core.GameEventPayload{
+				Event: core.GamePlayerLose, Game: "game-id-5",
+				PlayerRole: game.GameRoleHunter, DistToTarget: 67,
+			},
+			&protobuf.Simple{
+				Id:        proto.String("game-id-5"),
+				EventName: proto.String(core.GamePlayerLose.String()),
+			},
+		},
+	}
 
-	gs := &smocks.GameService{}
-	m := &smocks.Dispatcher{}
-	w := core.NewGameWorker(gs, m)
-	playerH := core.NewPlayerHandler(nil, w)
-	wss := websocket.NewWSServer(wsDriver, playerH)
-	playerID := wss.Add(c).ID
+	for _, tt := range tests {
+		wsDriver := &wsmocks.WSDriver{}
+		gs := &smocks.GameService{}
+		m := &smocks.Dispatcher{}
+		w := core.NewGameWorker(gs, m)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+		playerH := core.NewPlayerHandler(nil, w)
+		wss := websocket.NewWSServer(wsDriver, playerH)
+		c := &wsmocks.WSConnection{}
 
-	gameID := "player-handler-game-1"
+		expected, err := proto.Marshal(tt.proto)
+		require.NoError(t, err)
 
-	example := &core.GameEventPayload{Event: core.GameStarted,
-		PlayerID: playerID, PlayerRole: game.GameRoleTarget, Game: gameID}
+		c.On("Send", mock.MatchedBy(func(msg []byte) bool {
+			log.Println("Send:expected", string(expected))
+			log.Println("Send:actual", string(msg))
+			return true
+		})).Return(nil)
 
-	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
-		data, _ := json.Marshal(example)
-		cb(data)
-		return true
-	})).Return(nil)
+		tt.payload.PlayerID = wss.Add(c).ID
+		m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
+			data, _ := json.Marshal(tt.payload)
+			cb(data)
+			return true
+		})).Return(nil)
 
-	err := playerH.OnStart(ctx, wss)
-	require.NoError(t, err)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-	expected, _ := proto.Marshal(&protobuf.GameInfo{
-		EventName: proto.String(core.GameStarted.String()),
-		Id:        &gameID, Game: &gameID,
-		Role: proto.String(string("target")),
-	})
-	c.AssertCalled(t, "Send", expected)
+		err = playerH.OnStart(ctx, wss)
+		require.NoError(t, err)
+
+		c.AssertCalled(t, "Send", expected)
+	}
 }
 
 func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
