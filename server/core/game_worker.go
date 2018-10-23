@@ -119,30 +119,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
 
-	evtChan := make(chan game.Event, 1)
-	go func() {
-		err := gw.service.ObserveGamePlayers(ctx, g.ID, func(p model.Player, a service.GamePlayerMove) error {
-			var evt game.Event
-			switch a {
-			case service.GamePlayerMoveOutside:
-				evt = g.RemovePlayer(p.ID)
-			case service.GamePlayerMoveInside:
-				evt = g.SetPlayer(p.ID, p.Lat, p.Lon)
-			}
-			if evt.Name != game.GameNothingHappens {
-				select {
-				case evtChan <- evt:
-				case <-ctx.Done():
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			log.Println("Error on ObserveGamePlayers", err)
-			stop()
-		}
-	}()
-
+	evtChan := gw.observeGameEvents(ctx, g.Game)
 	gameTimer := time.NewTimer(time.Hour)
 	defer gameTimer.Stop()
 	for {
@@ -265,3 +242,29 @@ func (gw *GameWorker) publish(evt GameWatcherEvent, player *game.Player, g *game
 	return errors.Wrapf(err, "GameWorker:publish:game:%s:player:%+v", g.ID, p)
 }
 
+func (gw *GameWorker) observeGameEvents(ctx context.Context, g *game.Game) chan game.Event {
+	evtChan := make(chan game.Event, 1)
+	go func() {
+		err := gw.service.ObserveGamePlayers(ctx, g.ID, func(p model.Player, a service.GamePlayerMove) error {
+			var evt game.Event
+			switch a {
+			case service.GamePlayerMoveOutside:
+				evt = g.RemovePlayer(p.ID)
+			case service.GamePlayerMoveInside:
+				evt = g.SetPlayer(p.ID, p.Lat, p.Lon)
+			}
+			if evt.Name != game.GameNothingHappens {
+				select {
+				case evtChan <- evt:
+				case <-ctx.Done():
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			log.Println("Error on ObserveGamePlayers", err)
+			close(evtChan)
+		}
+	}()
+	return evtChan
+}
