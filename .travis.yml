@@ -3,7 +3,8 @@ go:
     1.11
 
 services:
-  - docker
+  #- docker
+  - redis
 
 env:
   DOCKER_COMPOSE_VERSION: 1.22.0
@@ -20,4 +21,4 @@ before_install:
 
 script:
   - make test
-  - make test-with-compose
+  #- make test-with-compose
