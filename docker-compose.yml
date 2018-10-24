@@ -25,7 +25,7 @@ services:
         networks:
         - internal
         environment:
-        - VIRTUAL_HOST=catchcatch.local,catchcatch.ddns.net
+        - VIRTUAL_HOST=localhost,catchcatch.local,catchcatch.ddns.net
         - VIRTUAL_PORT=5050
         - LETSENCRYPT_HOST=catchcatch.local,catchcatch.ddns.net
         - LETSENCRYPT_EMAIL=perenecabuto@gmail.com
