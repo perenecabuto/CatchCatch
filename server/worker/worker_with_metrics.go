@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -22,6 +23,7 @@ type WorkerWithMetrics struct {
 type MetricsOptions struct {
 	Host   string
 	Origin string
+	Params []string
 }
 
 func NewWorkerWithMetrics(w Worker, m metrics.Collector, opt MetricsOptions) Worker {
@@ -29,7 +31,16 @@ func NewWorkerWithMetrics(w Worker, m metrics.Collector, opt MetricsOptions) Wor
 }
 
 func (w WorkerWithMetrics) Run(ctx context.Context, params TaskParams) error {
-	tags := metrics.Tags{"host": w.options.Host, "origin": w.options.Origin, "id": w.ID()}
+	var paramsValue string
+	for _, p := range w.options.Params {
+		if v, ok := params[p]; ok {
+			paramsValue += fmt.Sprintf("%s=%v,", p, v)
+		}
+	}
+	tags := metrics.Tags{
+		"host": w.options.Host, "origin": w.options.Origin, "id": w.ID(),
+		"params": paramsValue,
+	}
 	values := metrics.Values{"params": params}
 
 	if err := w.collector.Notify(StartMetricsName, tags, values); err != nil {

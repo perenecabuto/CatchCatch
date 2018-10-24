@@ -78,7 +78,9 @@ func main() {
 	featuresWatcher := core.NewFeaturesEventsWatcher(dispatcher, playerService)
 
 	opts := worker.MetricsOptions{Host: *serverID, Origin: "initialization"}
-	workers.Add(worker.NewWorkerWithMetrics(gameWorker, metrics, opts))
+	workers.Add(worker.NewWorkerWithMetrics(gameWorker, metrics,
+		worker.MetricsOptions{Host: *serverID, Origin: "initialization", Params: []string{"gameID"}},
+	))
 	workers.Add(worker.NewWorkerWithMetrics(geofenceEventsWorker, metrics, opts))
 	workers.Add(worker.NewWorkerWithMetrics(checkpointWatcher, metrics, opts))
 	workers.Add(worker.NewWorkerWithMetrics(featuresWatcher, metrics, opts))

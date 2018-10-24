@@ -22,6 +22,7 @@ func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 	opts := worker.MetricsOptions{
 		Host:   "testhost",
 		Origin: "test",
+		Params: []string{"key1", "key3"},
 	}
 	wm := worker.NewWorkerWithMetrics(w, m, opts)
 
@@ -36,7 +37,7 @@ func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 
 	m.On("Notify", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	params := worker.TaskParams{"key1": "val1"}
+	params := worker.TaskParams{"key1": "val1", "key2": "val2", "key3": "val3"}
 	wm.Run(ctx, params)
 
 	w.AssertCalled(t, "Run", ctx, mock.MatchedBy(func(actual worker.TaskParams) bool {
@@ -44,7 +45,8 @@ func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 	}))
 	m.AssertCalled(t, "Notify", worker.RunMetricsName,
 		mock.MatchedBy(func(actual metrics.Tags) bool {
-			expected := metrics.Tags{"id": id, "host": opts.Host, "origin": opts.Origin}
+			expected := metrics.Tags{"id": id, "host": opts.Host,
+				"origin": opts.Origin, "params": "key1=val1,key3=val3,"}
 			return assert.Equal(t, expected, actual)
 		}),
 		mock.MatchedBy(func(actual metrics.Values) bool {
@@ -58,7 +60,7 @@ func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 func TestWorkerWithMetricsSendStartMetrics(t *testing.T) {
 	m := &mmocks.Collector{}
 	w := &wmocks.Worker{}
-	opts := worker.MetricsOptions{Host: "testhost", Origin: "test"}
+	opts := worker.MetricsOptions{Host: "testhost", Origin: "test", Params: []string{"param2"}}
 	wm := worker.NewWorkerWithMetrics(w, m, opts)
 
 	ctx := context.Background()
@@ -68,10 +70,10 @@ func TestWorkerWithMetricsSendStartMetrics(t *testing.T) {
 	w.On("Run", ctx, mock.Anything).Return(err)
 	m.On("Notify", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	params := worker.TaskParams{"key1": "val1"}
+	params := worker.TaskParams{"key1": "val1", "param2": "val-param2"}
 	wm.Run(ctx, params)
 
 	m.AssertCalled(t, "Notify", worker.StartMetricsName,
-		metrics.Tags{"id": id, "host": opts.Host, "origin": opts.Origin},
+		metrics.Tags{"id": id, "host": opts.Host, "origin": opts.Origin, "params": "param2=val-param2,"},
 		mock.Anything)
 }
