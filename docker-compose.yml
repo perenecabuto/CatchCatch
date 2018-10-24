@@ -5,99 +5,105 @@ services:
         image: perenecabuto/catchcatch
         build: .
         ports:
-            - "5050:5050"
+        - 5050:5050
         command:
-            - "./server"
-            - "-port"
-            - "5050"
-            - "-tile38-addr"
-            - "tile38:9851"
-            - "-influxdb-addr"
-            - "http://influxdb:8086"
-            - "-nats-addr"
-            - "nats:4222"
-            - "-workers-redis-addr"
-            - "redis:6379"
-        links:
-            - nats
-            - tile38
-            - influxdb
+        - "./server"
+        - "-port"
+        - "5050"
+        - "-tile38-addr"
+        - "tile38:9851"
+        - "-influxdb-addr"
+        - "http://influxdb:8086"
+        - "-nats-addr"
+        - "nats:4222"
+        - "-workers-redis-addr"
+        - "redis:6379"
         depends_on:
-            - nats
-            - tile38
-            - influxdb
+        - nats
+        - tile38
+        - influxdb
         networks:
-            - traefik-net
-            - internal            
+        - internal
+        environment:
+        - VIRTUAL_HOST=catchcatch.local,catchcatch.ddns.net
+        - VIRTUAL_PORT=5050
+        - LETSENCRYPT_HOST=catchcatch.local,catchcatch.ddns.net
+        - LETSENCRYPT_EMAIL=perenecabuto@gmail.com
         deploy:
             replicas: 3
-            labels:
-                - "traefik.port=5050"
-                - "traefik.docker.network=traefik-net"
-                - "traefik.frontend.rule=Host:catchcatch.local"
 
     tile38:
         image: tile38/tile38
         ports:
-            - "9851:9851"
+        - "9851:9851"
         networks:
-            - internal
+        - internal
 
     nats:
         image: nats
         ports:
-            - "4222:4222"
+        - "4222:4222"
         networks:
-            - internal
+        - internal
 
     redis:
         image: redis
         ports:
-            - "6379:6379"
+        - "6379:6379"
         networks:
-            - internal
+        - internal
 
     influxdb:
         image: influxdb
         ports:
-            - "8086:8086"
+        - "8086:8086"
         networks:
-            - internal
+        - internal
 
     grafana:
         image: grafana/grafana
         ports:
-            - "3000:3000"
-        links:
-            - influxdb
+        - "3000:3000"
+        depends_on:
+        - influxdb
         networks:
-            - internal
-            - traefik-net
-        deploy:
-            labels:
-                - "traefik.port=3000"
-                - "traefik.docker.network=traefik-net"
-                - "traefik.frontend.rule=Host:grafana.catchcatch.com"
+        - internal
+        environment:
+        - VIRTUAL_HOST=grafana.local,grafana.catchcatch.ddns.net
+        - VIRTUAL_PORT=3000
 
-    traefik:
-        image: traefik
-        command: --docker \
-            --docker.swarmmode \
-            --docker.domain=traefik \
-            --docker.watch \
-            --api
-        networks:
-            - traefik-net
+    nginx-proxy:
+        image: jwilder/nginx-proxy:alpine
         ports:
-            - 80:80
-            - 443:443
-            - 8080:8080
+        - 80:80
+        - 443:443
+        networks:
+        - public
+        - internal
         volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-            - /dev/null:/traefik.toml
+        - "/var/run/docker.sock:/tmp/docker.sock:ro"
+        - "nginx_vhost:/etc/nginx/vhost.d"
+        - "nginx_html:/usr/share/nginx/html"
+        - "nginx_certs:/etc/nginx/certs"
+        labels:
+        - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy=true
+
+    letsencrypt-nginx-proxy-companion:
+        image: jrcs/letsencrypt-nginx-proxy-companion
+        volumes:
+        - "/var/run/docker.sock:/var/run/docker.sock:ro"
+        - "nginx_vhost:/etc/nginx/vhost.d"
+        - "nginx_html:/usr/share/nginx/html"
+        - "nginx_certs:/etc/nginx/certs"
+
+volumes:
+    nginx_vhost:
+    nginx_html:
+    nginx_certs:
+
 
 networks:
-  traefik-net:
+  public:
     external: true
   internal:
     external: false
