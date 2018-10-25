@@ -1,110 +1,88 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
-	"net/url"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
-
-	"github.com/golang/protobuf/proto"
-	"github.com/gorilla/websocket"
-	"github.com/perenecabuto/CatchCatch/server/protobuf"
 )
 
-// connect and listen to server events
-// send position
-//// validate step size on server when player is in game
-//// loses game when disconnect
-// get/request notifications about games around
-// receive notifications: game started, lose, win, game finished, near to player
-// request game ranking
-// request global ranking
-// request features info (game arena, checkpoint)
-// request how many players are around
-
-// client needs websocket driver (web, go, android...), events watcher (callbacks)
-// presenter to centralize client/server rules
-
 var addr = flag.String("addr", "localhost:5000", "http service address")
+
+// TODO: OnDisconnect
+// TODO: add request
+//// TODO: SERVER validate step size on server when player is in game
+//// TODO: SERVER check rank bug
+//// TODO: SERVER bug disconnect admin
+// TODO: get/request notifications about games around
+// TODO: request game ranking
+// TODO: request global ranking
+// TODO: request features info (game arena, checkpoint)
+// TODO: request how many players are around
+// TODO: bin to load player routes from shape file
+// TODO: admin client
+// TODO: add event to listen for players closer/inside a shape
+// TODO: admin event for player connected
+// TODO: admin event for player entered into a game
 
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
 
+	// TODO: Create constructors
+	client := &Client{&GorillaWebSocket{}}
+
 	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGABRT, syscall.SIGKILL)
 
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
-	log.Printf("connecting to %s", u.String())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	log.Printf("connecting to %s", *addr)
+	player, err := client.ConnectAsPlayer(ctx, *addr)
 	if err != nil {
-		log.Fatal("dial:", err)
+		log.Fatal("connect:", err)
 	}
-	defer c.Close()
 
-	done := make(chan struct{})
-	player := &protobuf.Player{Lat: proto.Float64(0), Lon: proto.Float64(0)}
+	log.Printf("connected...")
+	err = player.UpdatePlayer(-30.03495, -51.21866)
+	if err != nil {
+		log.Fatal("update player:", err)
+	}
 
-	go func() {
-		defer c.Close()
-		defer close(done)
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
-			}
-
-			msg := &protobuf.Simple{}
-			if err := proto.Unmarshal(message, msg); err != nil {
-				log.Println("readMessage(unmarshall): ", err.Error(), message)
-				continue
-			}
-
-			switch *msg.EventName {
-			case "player:registered":
-				if err := proto.Unmarshal(message, player); err != nil {
-					log.Println("error parsing player: ", err.Error(), player)
-					continue
-				}
-
-				log.Println("player: ", player)
-				*player.Lat, *player.Lon = -30.03495, -51.21866
-			}
-			log.Printf("recv: %s", msg)
-		}
-	}()
+	player.OnGameStarted(func(game, role string) error {
+		log.Println("Game:", game, " Started - Role:", role)
+		return nil
+	})
+	player.OnGamePlayerNearToTarget(func(dist float64) error {
+		log.Println("near - dist to target:", dist)
+		return nil
+	})
+	player.OnGamePlayerWin(func(dist float64) error {
+		log.Println("you win - dist to target:", dist)
+		return nil
+	})
+	player.OnGamePlayerLose(func() error {
+		log.Println("you lose")
+		return nil
+	})
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-
 	for {
-		*player.Lat += 0.00001
-		*player.Lon += 0.00001
 		select {
 		case <-ticker.C:
-			*player.EventName = "player:update"
-			payload, _ := proto.Marshal(player)
-			err := c.WriteMessage(websocket.BinaryMessage, payload)
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
+			coords := player.Coords()
+			coords[0] += 0.0001
+			coords[1] += 0.0001
+			player.UpdatePlayer(coords[0], coords[1])
 		case <-interrupt:
 			log.Println("closing")
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				log.Println("write close:", err)
-				return
-			}
-			select {
-			case <-done:
-			case <-time.After(time.Second):
-			}
-			c.Close()
+			player.Disconnect()
+			cancel()
 			return
 		}
 	}
