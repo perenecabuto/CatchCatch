@@ -2,15 +2,21 @@ package core
 
 import (
 	"context"
-	"errors"
 	"log"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
+)
+
+const (
+	EventPlayerRegistered = "player:registered"
+	EventPlayerDisconnect = "player:disconnect"
+	EventPlayerUpdate     = "player:update"
 )
 
 // PlayerHandler handle websocket events
@@ -46,7 +52,7 @@ func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnect
 		return err
 	}
 	log.Println("new player connected", player)
-	c.On("player:update", h.onPlayerUpdate(player, c))
+	c.On(EventPlayerUpdate, h.onPlayerUpdate(player, c))
 	c.OnDisconnected(h.onPlayerDisconnect(player))
 
 	return nil
@@ -54,7 +60,7 @@ func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnect
 
 func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) func() {
 	return func() {
-		log.Println("player:disconnect", player.ID)
+		log.Println(EventPlayerDisconnect, player.ID)
 		h.players.Remove(player.ID)
 	}
 }
@@ -75,9 +81,9 @@ func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConn
 func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *model.Player, err error) {
 	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
 	if err := h.players.Set(player); err != nil {
-		return nil, errors.New("could not register: " + err.Error())
+		return nil, errors.Wrapf(err, "could not register player:%s", player.ID)
 	}
-	c.Emit(&protobuf.Player{EventName: proto.String("player:registered"), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
+	c.Emit(&protobuf.Player{EventName: proto.String(EventPlayerRegistered), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
 	return player, nil
 }
 
