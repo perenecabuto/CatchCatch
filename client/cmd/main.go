@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/perenecabuto/CatchCatch/client"
 )
 
 var addr = flag.String("addr", "localhost:5000", "http service address")
@@ -33,7 +35,8 @@ func main() {
 	log.SetFlags(0)
 
 	// TODO: Create constructors
-	client := &Client{&GorillaWebSocket{}}
+	ws := &client.GorillaWebSocket{}
+	client := client.New(ws)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGABRT, syscall.SIGKILL)

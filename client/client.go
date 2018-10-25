@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"context"
@@ -79,6 +79,10 @@ func (ws *GorillaWebSocket) Close() error {
 // Client
 type Client struct {
 	ws WebSocket
+}
+
+func New(ws WebSocket) *Client {
+	return &Client{ws}
 }
 
 func (c *Client) ConnectAsPlayer(ctx context.Context, addr string) (*Player, error) {
