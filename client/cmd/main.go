@@ -30,7 +30,7 @@ func main() {
 	}
 
 	ws := client.NewGorillaWebSocket()
-	client := client.New(ws)
+	cli := client.New(ws)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGABRT, syscall.SIGKILL)
@@ -39,11 +39,10 @@ func main() {
 	defer cancel()
 
 	log.Printf("connecting to %s", *addr)
-	player, err := client.ConnectAsPlayer(ctx, *addr)
+	player, err := cli.ConnectAsPlayer(ctx, *addr)
 	if err != nil {
 		log.Fatal("connect:", err)
 	}
-
 	log.Printf("connected...")
 
 	player.OnGameStarted(func(game, role string) error {
@@ -60,6 +59,10 @@ func main() {
 	})
 	player.OnGamePlayerLose(func() error {
 		log.Println("you lose")
+		return nil
+	})
+	player.OnGameFinished(func(game string, rank client.Rank) error {
+		log.Printf("game:%s finished - rank:%+v", game, rank)
 		return nil
 	})
 	player.OnDisconnect(func() error {
