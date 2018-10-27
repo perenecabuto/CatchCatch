@@ -7,8 +7,10 @@
     - auto deploy
 + nodes digital ocean
 
-
 ## Server
+
++ validate step size on server when player is in game
++ bug disconnect admin
 
 + monitor games per machine
 + write tests
@@ -34,11 +36,11 @@
 + redis worker:
     - remove ID() from interface, just add task with name as parameter
 
-fix: player isn't being remove on lost connection
+fix: player isn't being removed by admin
+(needs to disconnect it on players connections/but by message broker event)
 
 ## Client
 
-+ Cli lib
 + Cli WASM
 + PWA
 + New Android APP
@@ -54,3 +56,14 @@ fix: player isn't being remove on lost connection
 - use WASM lib on admin map
 - games around
 - show game status on map (by color change)
+
++ get/request notifications about games around
++ request game ranking
++ request global ranking
++ request features info (game arena, checkpoint)
++ request how many players are around
++ admin client
++ bin to load admin shape file
++ add event to listen for players closer/inside a shape
++ admin event for player connected
++ admin event for player entered into a game
