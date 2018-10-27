@@ -2,7 +2,6 @@ package main
 
 // TODO: add request
 //// TODO: SERVER validate step size on server when player is in game
-//// TODO: SERVER check rank bug
 //// TODO: SERVER bug disconnect admin
 //// TODO: SERVER bug disconnect admin map
 // TODO: get/request notifications about games around

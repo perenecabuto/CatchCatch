@@ -162,7 +162,6 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 		case <-ctx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
 			players := g.Players()
-			g.Stop()
 			for _, gp := range players {
 				gp.DistToTarget = 0
 				err := gw.publish(GameFinished, &gp, g.Game)
@@ -170,7 +169,10 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 					return errors.Cause(err)
 				}
 			}
-			return gw.service.Remove(g.ID)
+			g.Stop()
+			return errors.Wrapf(gw.service.Remove(g.ID),
+				"can't remove game %s", g.ID,
+			)
 		}
 	}
 }

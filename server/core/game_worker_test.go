@@ -162,6 +162,7 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	g.Start()
 
 	player := g.Players()[0]
+	rank := g.Rank()
 
 	cancel()
 	<-complete
@@ -170,7 +171,7 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	gs.AssertCalled(t, "Remove", g.ID)
 
 	p := &core.GameEventPayload{PlayerID: player.ID, PlayerRole: player.Role,
-		Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
+		Event: core.GameFinished, Game: g.ID, Rank: rank}
 	smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
 }
 
@@ -217,6 +218,11 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 
 	<-gameStartedCH
 	gamePlayers := g.Players()
+	rank := game.NewGameRank(g.ID).
+		ByPlayersDistanceToTarget(funk.Map(gamePlayers, func(p game.Player) game.Player {
+			p.Lose = p.Role == game.GameRoleHunter
+			return p
+		}).([]game.Player))
 
 	time.Sleep(core.GameTimeOut + (time.Millisecond * 100))
 	<-complete
@@ -226,7 +232,7 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 
 	for _, p := range gamePlayers {
 		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
-			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
+			Event: core.GameFinished, Game: g.ID, Rank: rank}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -275,13 +281,14 @@ func TestGameWorkerStartsAsPlayersEnterAndNotifyThenThatTheGameStarted(t *testin
 
 	<-gameStartedCH
 	gamePlayers := g.Players()
+	rank := g.Rank()
 
 	cancel()
 	<-complete
 
 	for _, p := range gamePlayers {
 		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
-			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
+			Event: core.GameFinished, Game: g.ID, Rank: rank}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -334,10 +341,12 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
 		playerMoveCallback(p.Player, service.GamePlayerMoveOutside)
 	}
 
+	rank := g.Rank()
+
 	<-complete
 	for _, p := range gamePlayers {
 		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
-			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
+			Event: core.GameFinished, Game: g.ID, Rank: rank}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -451,6 +460,8 @@ func TestGameWorkerNotifiesFinishWhenTargetLeaveTheGame(t *testing.T) {
 	}).(game.Player)
 
 	playerMoveCallback(target.Player, service.GamePlayerMoveOutside)
+	rank := g.Rank()
+
 	<-complete
 
 	payload := &core.GameEventPayload{
@@ -460,7 +471,7 @@ func TestGameWorkerNotifiesFinishWhenTargetLeaveTheGame(t *testing.T) {
 
 	for _, p := range gamePlayers {
 		payload := &core.GameEventPayload{PlayerID: p.ID, PlayerRole: p.Role,
-			Event: core.GameFinished, Game: g.ID, Rank: g.Rank()}
+			Event: core.GameFinished, Game: g.ID, Rank: rank}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
 }
@@ -522,6 +533,7 @@ func TestGameWorkerNotifiesWhenTargetIsReached(t *testing.T) {
 	playerMoveCallback(hunter.Player, service.GamePlayerMoveInside)
 
 	gamePlayers := g.Players()
+	rank := g.Rank()
 	<-complete
 
 	payloads := []core.GameEventPayload{
@@ -539,7 +551,7 @@ func TestGameWorkerNotifiesWhenTargetIsReached(t *testing.T) {
 	for _, p := range gamePlayers {
 		payloads = append(payloads, core.GameEventPayload{
 			PlayerID: p.ID, PlayerRole: p.Role,
-			Event: core.GameFinished, Game: g.ID, Rank: g.Rank(),
+			Event: core.GameFinished, Game: g.ID, Rank: rank,
 		})
 	}
 	for _, p := range payloads {
