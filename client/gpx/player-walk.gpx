@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gpx version="1.1" creator="JOSM GPX export" xmlns="http://www.topografix.com/GPX/1/1"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <bounds minlat="-30.0393776" minlon="-51.2201071" maxlat="-30.0344364" maxlon="-51.2117386"/>
+  </metadata>
+  <trk>
+    <trkseg>
+      <trkpt lat="-30.03484503945815" lon="-51.22010712146759">
+      </trkpt>
+      <trkpt lat="-30.035253718554575" lon="-51.217446370124826">
+      </trkpt>
+      <trkpt lat="-30.03443635867634" lon="-51.21568684101105">
+      </trkpt>
+      <trkpt lat="-30.034733581230263" lon="-51.21457104206085">
+      </trkpt>
+      <trkpt lat="-30.035328023663773" lon="-51.213369412422175">
+      </trkpt>
+      <trkpt lat="-30.036108223946435" lon="-51.21199612140656">
+      </trkpt>
+      <trkpt lat="-30.036702658134065" lon="-51.21173862934113">
+      </trkpt>
+      <trkpt lat="-30.03778006101038" lon="-51.213884396553034">
+      </trkpt>
+      <trkpt lat="-30.038597393309033" lon="-51.21534351825714">
+      </trkpt>
+      <trkpt lat="-30.039377567850323" lon="-51.21718887805938">
+      </trkpt>
+      <trkpt lat="-30.038448787938005" lon="-51.21804718494415">
+      </trkpt>
+      <trkpt lat="-30.0371113295696" lon="-51.21869091510773">
+      </trkpt>
+      <trkpt lat="-30.036182528414894" lon="-51.21942047595978">
+      </trkpt>
+      <trkpt lat="-30.035736700768407" lon="-51.21727470874787">
+      </trkpt>
+      <trkpt lat="-30.035588091107165" lon="-51.21512894153595">
+      </trkpt>
+      <trkpt lat="-30.036405441485975" lon="-51.21354107379913">
+      </trkpt>
+      <trkpt lat="-30.03729708875586" lon="-51.21491436481475">
+      </trkpt>
+      <trkpt lat="-30.03778006101038" lon="-51.21645931720734">
+      </trkpt>
+      <trkpt lat="-30.037148481434695" lon="-51.21757511615753">
+      </trkpt>
+      <trkpt lat="-30.03484503945815" lon="-51.22010712146759">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
