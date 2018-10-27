@@ -89,7 +89,6 @@ func main() {
 		case <-interrupt:
 			log.Println("closing")
 			player.Disconnect()
-			cancel()
 			return
 		}
 	}

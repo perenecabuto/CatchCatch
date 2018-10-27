@@ -63,12 +63,21 @@ func NewPlayer(ws WebSocket) *Player {
 type Rank map[string]int
 
 func (p *Player) listen(ctx context.Context) error {
-	chann := p.ws.Listen(ctx)
-	p.ws.OnClose(func() {
+	defer func() {
 		log.Println("disconnected")
-		close(chann)
+		p.Disconnect()
+		fn, ok := p.eventHandlers[core.EventPlayerDisconnect]
+		if ok {
+			fn()
+		}
+	}()
+
+	ctx, cancel := context.WithCancel(ctx)
+	p.ws.OnClose(func() {
+		cancel()
 	})
 
+	chann := p.ws.Listen(ctx)
 	for {
 		select {
 		case handler := <-p.eventHandlerChan:
@@ -96,8 +105,6 @@ func (p *Player) listen(ctx context.Context) error {
 				if p.state.Lat != 0 || p.state.Lon != 0 {
 					p.UpdatePlayer(p.state.Lat, p.state.Lon)
 				}
-			case core.EventPlayerDisconnect:
-				return errors.Wrap(p.ws.Close(), "on disconnect")
 
 			case core.GameStarted.String():
 				payload := protobuf.GameInfo{}
@@ -175,7 +182,6 @@ func (p *Player) Coords() LatLon {
 }
 
 func (p *Player) Disconnect() error {
-	// TODO: stop listener
 	return p.ws.Close()
 }
 
@@ -200,4 +206,8 @@ func (p *Player) OnGamePlayerWin(fn func(dist float64) error) {
 func (p *Player) OnGameFinished(fn func(game string, rank Rank) error) {
 	p.eventHandlerChan <- EventHandler{core.GameFinished,
 		func(params ...interface{}) error { return fn(params[0].(string), params[1].(Rank)) }}
+}
+func (p *Player) OnDisconnect(fn func() error) {
+	p.eventHandlerChan <- EventHandler{core.EventPlayerDisconnect,
+		func(params ...interface{}) error { return fn() }}
 }

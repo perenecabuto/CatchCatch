@@ -21,11 +21,12 @@ type WebSocket interface {
 }
 
 type GorillaWebSocket struct {
-	conn *websocket.Conn
+	conn    *websocket.Conn
+	onclose func()
 }
 
 func NewGorillaWebSocket() WebSocket {
-	return &GorillaWebSocket{}
+	return &GorillaWebSocket{onclose: func() {}}
 }
 
 func (ws GorillaWebSocket) NewConnection(url string) (WebSocket, error) {
@@ -38,8 +39,12 @@ func (ws GorillaWebSocket) NewConnection(url string) (WebSocket, error) {
 }
 
 func (ws *GorillaWebSocket) OnClose(fn func()) {
-	ws.conn.SetCloseHandler(func(code int, text string) error {
-		fn()
+	if fn == nil {
+		return
+	}
+	ws.onclose = fn
+	ws.conn.SetCloseHandler(func(int, string) error {
+		ws.onclose()
 		return nil
 	})
 }
@@ -50,6 +55,10 @@ func (ws *GorillaWebSocket) Listen(ctx context.Context) chan *WebSocketMessage {
 		defer close(msgChann)
 		for {
 			_, message, err := ws.conn.ReadMessage()
+			if _, ok := err.(*websocket.CloseError); ok {
+				ws.Close()
+				return
+			}
 			payload := &WebSocketMessage{message, errors.Wrap(err, "can't read websocket")}
 			select {
 			case msgChann <- payload:
@@ -67,5 +76,7 @@ func (ws *GorillaWebSocket) Send(payload []byte) error {
 }
 
 func (ws *GorillaWebSocket) Close() error {
-	return errors.Cause(ws.Close())
+	ws.onclose()
+	ws.onclose = func() {}
+	return errors.Cause(ws.conn.Close())
 }
