@@ -98,6 +98,7 @@ function init() {
     socket.on("admin:players:disconnected", evtHandler.onRemotePlayerDestroy);
     socket.on("admin:feature:added", evtHandler.onFeatureAdded);
     socket.on("admin:feature:inside", evtHandler.onFeatureAdded);
+    socket.on("admin:feature:exit", evtHandler.onFeatureRemoved);
     socket.on("admin:feature:checkpoint", evtHandler.onFeatureCheckpoint);
 }
 
@@ -365,6 +366,13 @@ let AdminController = function (socket, sourceLayer, view) {
         feat.getStyle().setText(makeText(feat, id));
         sourceLayer.addFeature(feat);
     };
+
+    this.removeFeature = function (id) {
+        let feat = sourceLayer.getFeatureById(id);
+        if (feat !== null) {
+            sourceLayer.removeFeature(feat);
+        }
+    };
 };
 
 let AdminEventHandler = function (controller) {
@@ -394,6 +402,16 @@ let AdminEventHandler = function (controller) {
         }
 
         controller.addFeature(feat.id, feat.group, geojson);
+    };
+    this.onFeatureRemoved = function (msg) {
+        let feat = messages.Feature.decode(msg);
+        if (feat.group == "player") {
+            let p = {id: feat.id, lon: 0, lat: 0};
+            controller.removePlayer(p);
+            return;
+        }
+
+        controller.removeFeature(feat.id, feat.group);
     };
 
     this.onFeatureCheckpoint = function (msg) {
