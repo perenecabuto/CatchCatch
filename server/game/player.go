@@ -92,14 +92,14 @@ func (gp *GamePlayers) Copy() []Player {
 }
 
 func (gp *GamePlayers) AllExceptLosers() []*Player {
-	gp.RLock()
+	gp.Lock()
 	players := make([]*Player, 0)
 	for _, p := range gp.players {
 		if !p.Lose {
 			players = append(players, p)
 		}
 	}
-	gp.RUnlock()
+	gp.Unlock()
 	return players
 }
 
