@@ -10,15 +10,24 @@ import (
 	"time"
 
 	"github.com/perenecabuto/CatchCatch/client"
+	"github.com/tkrajina/gpxgo/gpx"
 )
 
 var (
-	addr = flag.String("addr", "localhost:5000", "http service address")
+	gpxfile      = flag.String("gpx", "", "gpx file <mandatory>")
+	addr         = flag.String("addr", "localhost:5000", "http service address")
+	stepInterval = flag.Duration("step-interval", time.Millisecond*300,
+		"step interval to walk to next point in the gpx file")
 )
 
 func main() {
 	flag.Parse()
-	log.SetFlags(0)
+
+	gpxData, err := gpx.ParseFile(*gpxfile)
+	if err != nil {
+		flag.Usage()
+		log.Fatal(err)
+	}
 
 	ws := client.NewGorillaWebSocket()
 	client := client.New(ws)
@@ -36,10 +45,6 @@ func main() {
 	}
 
 	log.Printf("connected...")
-	err = player.UpdatePlayer(-30.03495, -51.21866)
-	if err != nil {
-		log.Fatal("update player:", err)
-	}
 
 	player.OnGameStarted(func(game, role string) error {
 		log.Println("Game:", game, " Started - Role:", role)
@@ -57,16 +62,30 @@ func main() {
 		log.Println("you lose")
 		return nil
 	})
+	player.OnDisconnect(func() error {
+		interrupt <- syscall.SIGABRT
+		return nil
+	})
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	stepChan := make(chan gpx.Point)
+	go func() {
+		points := pointsFromGPX(gpxData)
+		for {
+			for _, p := range points {
+				select {
+				case stepChan <- p:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
 	for {
 		select {
-		case <-ticker.C:
-			coords := player.Coords()
-			coords[0] += 0.0001
-			coords[1] += 0.0001
-			player.UpdatePlayer(coords[0], coords[1])
+		case point := <-stepChan:
+			player.UpdatePlayer(point.Latitude, point.Longitude)
+			time.Sleep(*stepInterval)
 		case <-interrupt:
 			log.Println("closing")
 			player.Disconnect()
@@ -74,4 +93,16 @@ func main() {
 			return
 		}
 	}
+}
+
+func pointsFromGPX(data *gpx.GPX) []gpx.Point {
+	points := make([]gpx.Point, 0)
+	for _, track := range data.Tracks {
+		for _, segment := range track.Segments {
+			for _, p := range segment.Points {
+				points = append(points, p.Point)
+			}
+		}
+	}
+	return points
 }
