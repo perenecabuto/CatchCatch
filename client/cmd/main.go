@@ -29,13 +29,15 @@ var addr = flag.String("addr", "localhost:5000", "http service address")
 // TODO: add event to listen for players closer/inside a shape
 // TODO: admin event for player connected
 // TODO: admin event for player entered into a game
+var (
+	addr = flag.String("addr", "localhost:5000", "http service address")
+)
 
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
 
-	// TODO: Create constructors
-	ws := &client.GorillaWebSocket{}
+	ws := client.NewGorillaWebSocket()
 	client := client.New(ws)
 
 	interrupt := make(chan os.Signal, 1)
