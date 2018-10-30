@@ -342,7 +342,7 @@ func TestGameWorkerStartsAsPlayersEnterAndNotifyThenThatTheGameStarted(t *testin
 	}
 }
 
-func TestGameWorkerFinishTheGameWhenGameIsRunningWhithoutPlayers(t *testing.T) {
+func TestGameWorkerFinishTheGameWhenGameIsRunningWithoutPlayers(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
