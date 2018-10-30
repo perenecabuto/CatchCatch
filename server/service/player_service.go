@@ -13,7 +13,7 @@ import (
 
 var ErrFeatureNotFound = repository.ErrFeatureNotFound
 
-// TODO: mudar este service para user location service ou map service
+// TODO: renomear este service para user location service ou map service
 
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
