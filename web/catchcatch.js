@@ -25,7 +25,6 @@ function log(msg) {
 
 
 var messages = {
-
     load: function(onLoaded) {
         protobuf.load("/protobuf/message.proto",  function(err, root) {
             if (err) throw err;
@@ -74,6 +73,11 @@ function init() {
 
     let controller = new AdminController(socket, source, view);
     document.getElementById("reset").addEventListener("click", controller.reset);
+
+    map.on('moveend', function(evt) {
+        let center = map.getView().getCenter();
+        controller.updatePosition(center[0], center[1]);
+    });
 
     controller.bindDrawGroupButton("geofences", map, "Polygon");
     controller.bindDrawGroupButton("checkpoint", map, "Point");
@@ -209,17 +213,19 @@ let Player = function (x, y, admin) {
 let AdminController = function (socket, sourceLayer, view) {
     let playerHTML = document.getElementById("player-template").innerText;
 
+    this.updatePosition = function(lon, lat) {
+        view.setCenter([lon, lat]);
+        socket.emit(
+            messages.Player.encode({eventName: 'admin:position:update', lat: lat, lon: lon, id: 0}).finish()
+        );
+    };
+
     this.centerByLocation = function () {
-        let updatePosition = function(pos) {
+        navigator.geolocation.getCurrentPosition(pos => {
             let lon = pos.coords.longitude;
             let lat = pos.coords.latitude;
-            view.setCenter([lon, lat]);
-            socket.emit(
-                messages.Player.encode({eventName: 'admin:position:update', lat: lat, lon: lon, id: 0}).finish()
-            );
-        };
-        navigator.geolocation.getCurrentPosition(updatePosition);
-        navigator.geolocation.watchPosition(updatePosition);
+            this.updatePosition(lon, lat);
+        });
     };
 
     this.reset = function () {
