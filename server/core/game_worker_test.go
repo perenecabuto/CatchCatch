@@ -390,7 +390,11 @@ func TestGameWorkerFinishTheGameWhenGameIsRunningWithoutPlayers(t *testing.T) {
 		playerMoveCallback(p.Player, service.GamePlayerMoveOutside)
 	}
 
-	rank := g.Rank()
+	rank := game.NewGameRank(g.ID).
+		ByPlayersDistanceToTarget(funk.Map(gamePlayers, func(p game.Player) game.Player {
+			p.Lose = true
+			return p
+		}).([]game.Player))
 
 	<-complete
 	for _, p := range gamePlayers {
