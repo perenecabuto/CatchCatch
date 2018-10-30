@@ -46,7 +46,8 @@ var messages = {
 function init() {
     let socket = new WSS(location.href.replace("http", "ws") + "admin", false);
     let source = new ol.source.Vector({ wrapX: false });
-    let raster = new ol.layer.Tile({ source: new ol.source.OSM() });
+    let mapSource = new ol.source.Stamen({layer:"toner"});
+    let raster = new ol.layer.Tile({ source: mapSource });
     let vector = new ol.layer.Vector({ source: source });
     let view = new ol.View({ center: [0, 0], zoom: 15, projection: "EPSG:4326" })
     let map = new ol.Map({ layers: [raster, vector], target: 'map', view: view });
