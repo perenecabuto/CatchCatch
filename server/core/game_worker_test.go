@@ -175,7 +175,7 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
 }
 
-func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
+func TestGameWorkerFinishWhenTimeIsOverAndTargetWinsTheStartedGame(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
 	gw := core.NewGameWorker(gs, m)
@@ -200,11 +200,10 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 		return true
 	})).Return(nil)
 
+	callbackReached := make(chan func(model.Player, service.GamePlayerMove) error)
 	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
 		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
-			for _, p := range examplePlayers {
-				cb(p.Player, service.GamePlayerMoveInside)
-			}
+			go func() { callbackReached <- cb }()
 			return true
 		}),
 	).Return(nil)
@@ -215,6 +214,11 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 		require.NoError(t, err)
 		complete <- nil
 	}()
+
+	playerMoveCallback := <-callbackReached
+	for _, p := range examplePlayers {
+		playerMoveCallback(p.Player, service.GamePlayerMoveInside)
+	}
 
 	<-gameStartedCH
 	gamePlayers := g.Players()
@@ -235,6 +239,51 @@ func TestGameWorkerFinishTheGameWhenTimeIsOver(t *testing.T) {
 			Event: core.GameFinished, Game: g.ID, Rank: rank}
 		smocks.AssertPublished(t, m, gameWorkerTopic, payload, time.Second)
 	}
+}
+
+func TestGameWorkerJustFinishWhenTimeIsOverAndTheGameWasNotStarted(t *testing.T) {
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
+	gw := core.NewGameWorker(gs, m)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	core.GameWorkerIdleTimeOut = time.Millisecond * 100
+
+	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
+
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("Update", mock.Anything).Return(nil)
+	gs.On("Remove", mock.Anything).Return(nil)
+	m.On("Publish", mock.Anything, mock.Anything).Return(nil)
+
+	callbackReached := make(
+		chan func(model.Player, service.GamePlayerMove) error)
+	gs.On("ObserveGamePlayers", mock.Anything, g.ID,
+		mock.MatchedBy(func(cb func(model.Player, service.GamePlayerMove) error) bool {
+			go func() { callbackReached <- cb }()
+			return true
+		}),
+	).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		err := gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		require.NoError(t, err)
+		complete <- nil
+	}()
+
+	playerMoveCallback := <-callbackReached
+	exP := examplePlayers["test-gameworker-player-1"]
+	playerMoveCallback(exP.Player, service.GamePlayerMoveInside)
+
+	time.Sleep(core.GameWorkerIdleTimeOut + (time.Millisecond * 100))
+	<-complete
+
+	assert.False(t, g.Started())
+	gs.AssertCalled(t, "Remove", g.ID)
+
+	m.AssertNotCalled(t, "Publish")
 }
 
 func TestGameWorkerStartsAsPlayersEnterAndNotifyThenThatTheGameStarted(t *testing.T) {

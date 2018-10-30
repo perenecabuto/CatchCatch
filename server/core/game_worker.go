@@ -32,7 +32,8 @@ const (
 var (
 	// GameTimeOut default 5 min
 	// TODO: move it to worker constructor!!!
-	GameTimeOut = 5 * time.Minute
+	GameTimeOut           = 5 * time.Minute
+	GameWorkerIdleTimeOut = time.Hour
 )
 
 // GameWatcherEvent represents game events for players
@@ -49,6 +50,8 @@ const (
 	GamePlayerLose         = GameWatcherEvent("game:player:lose")
 	GamePlayerWin          = GameWatcherEvent("game:player:win")
 	GameFinished           = GameWatcherEvent("game:finished")
+
+	GameAroundDetected = GameWatcherEvent("game:around")
 )
 
 // GameEventPayload ...
@@ -118,10 +121,10 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 
 	ctx, stop := context.WithCancel(ctx)
 	defer stop()
-
-	evtChan := gw.observeGameEvents(ctx, g.Game)
-	gameTimer := time.NewTimer(time.Hour)
+	gameTimer := time.NewTimer(GameWorkerIdleTimeOut)
 	defer gameTimer.Stop()
+	evtChan := gw.observeGameEvents(ctx, g.Game)
+
 	for {
 		select {
 		case evt, ok := <-evtChan:
@@ -143,38 +146,59 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				gameTimer = time.NewTimer(GameTimeOut)
 			}
 		case <-gameTimer.C:
-			if g.Started() {
-				for _, gp := range g.Players() {
-					if gp.Role != game.GameRoleTarget {
-						g.RemovePlayer(gp.Player.ID)
-					}
-				}
-				for _, gp := range g.Players() {
-					if gp.Role == game.GameRoleTarget {
-						gw.publish(GamePlayerWin, &gp, g.Game)
-					} else {
-						gw.publish(GamePlayerLose, &gp, g.Game)
-					}
-				}
-				log.Printf("GameWorker:watchGame:stop:game:%s", g.ID)
+			if !g.Started() {
+				err = gw.service.Remove(g.ID)
+				return errors.Wrapf(err, "can't remove game %s", g.ID)
+			}
+			log.Printf("GameWorker:watchGame:timeover:game:%s", g.ID)
+			err := gw.processGameTimeOver(g)
+			if err != nil {
+				return errors.Wrapf(err, "can't process game:%s time over", g.ID)
 			}
 			stop()
 		case <-ctx.Done():
 			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
-			players := g.Players()
-			for _, gp := range players {
-				gp.DistToTarget = 0
-				err := gw.publish(GameFinished, &gp, g.Game)
-				if err != nil {
-					return errors.Cause(err)
-				}
+			err := gw.processGameFinish(g)
+			if err != nil {
+				return errors.Wrapf(err, "can't process game:%s finish", g.ID)
 			}
 			g.Stop()
-			return errors.Wrapf(gw.service.Remove(g.ID),
-				"can't remove game %s", g.ID,
-			)
+			err = gw.service.Remove(g.ID)
+			return errors.Wrapf(err, "can't remove game %s", g.ID)
 		}
 	}
+}
+
+func (gw *GameWorker) processGameTimeOver(g *service.GameWithCoords) error {
+	for _, gp := range g.Players() {
+		if gp.Role != game.GameRoleTarget {
+			g.RemovePlayer(gp.Player.ID)
+		}
+	}
+	for _, gp := range g.Players() {
+		var err error
+		if gp.Role == game.GameRoleTarget {
+			err = gw.publish(GamePlayerWin, &gp, g.Game)
+		} else {
+			err = gw.publish(GamePlayerLose, &gp, g.Game)
+		}
+		if err != nil {
+			return errors.Cause(err)
+		}
+	}
+	return nil
+}
+
+func (gw *GameWorker) processGameFinish(g *service.GameWithCoords) error {
+	players := g.Players()
+	for _, gp := range players {
+		gp.DistToTarget = 0
+		err := gw.publish(GameFinished, &gp, g.Game)
+		if err != nil {
+			return errors.Cause(err)
+		}
+	}
+	return nil
 }
 
 func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, gevt game.Event) (
