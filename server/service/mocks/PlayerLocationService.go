@@ -122,8 +122,8 @@ func (_m *PlayerLocationService) ObservePlayerNearToCheckpoint(_a0 context.Conte
 	return r0
 }
 
-// ObservePlayersInsideGeofence provides a mock function with given fields: ctx, cb
-func (_m *PlayerLocationService) ObservePlayersInsideGeofence(ctx context.Context, cb func(string, model.Player) error) error {
+// ObservePlayersNearToGeofence provides a mock function with given fields: ctx, cb
+func (_m *PlayerLocationService) ObservePlayersNearToGeofence(ctx context.Context, cb func(string, model.Player) error) error {
 	ret := _m.Called(ctx, cb)
 
 	var r0 error

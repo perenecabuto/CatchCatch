@@ -16,7 +16,7 @@ func TestGeofenceWorkerNofityWorkerManagerToRunGameWorker(t *testing.T) {
 	manager := &wmocks.Manager{}
 	worker := core.NewGeofenceEventsWorker(service, manager)
 
-	service.On("ObservePlayersInsideGeofence", mock.Anything, mock.Anything).Return(nil)
+	service.On("ObservePlayersNearToGeofence", mock.Anything, mock.Anything).Return(nil)
 
 	worker.Run(context.Background(), nil)
 }

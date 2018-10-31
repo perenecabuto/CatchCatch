@@ -31,7 +31,7 @@ type PlayerLocationService interface {
 	SetCheckpoint(id, coordinates string) error
 
 	ObserveFeaturesEventsNearToAdmin(ctx context.Context, cb AdminNearToFeatureCallback) error
-	ObservePlayersInsideGeofence(ctx context.Context, cb func(string, model.Player) error) error
+	ObservePlayersNearToGeofence(ctx context.Context, cb func(string, model.Player) error) error
 	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
 
 	Clear() error
@@ -153,8 +153,8 @@ func (s *Tile38PlayerLocationService) ObservePlayerNearToCheckpoint(ctx context.
 	})
 }
 
-func (s *Tile38PlayerLocationService) ObservePlayersInsideGeofence(ctx context.Context, callback func(string, model.Player) error) error {
-	return s.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 1, func(d *repository.Detection) error {
+func (s *Tile38PlayerLocationService) ObservePlayersNearToGeofence(ctx context.Context, callback func(string, model.Player) error) error {
+	return s.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 100, func(d *repository.Detection) error {
 		gameID := d.NearByFeatID
 		if gameID == "" {
 			return nil

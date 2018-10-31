@@ -26,7 +26,7 @@ func (gw GeofenceEventsWorker) ID() string {
 
 // Run listen to player over geofences and start GameWorkers
 func (gw GeofenceEventsWorker) Run(ctx context.Context, _ worker.TaskParams) error {
-	return gw.service.ObservePlayersInsideGeofence(ctx, func(id string, _ model.Player) error {
+	return gw.service.ObservePlayersNearToGeofence(ctx, func(id string, _ model.Player) error {
 		f, err := gw.service.GeofenceByID(id)
 		if err != nil {
 			return err
