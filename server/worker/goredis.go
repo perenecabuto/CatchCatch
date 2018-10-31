@@ -21,7 +21,7 @@ const (
 
 // GoredisWorkerManager is a simple manager implentation over go-redis
 type GoredisWorkerManager struct {
-	redis *redis.Client
+	redis redis.Cmdable
 
 	workersLock sync.RWMutex
 	workers     map[string]Worker
@@ -32,7 +32,7 @@ type GoredisWorkerManager struct {
 }
 
 // NewGoredisWorkerManager create a new GoredisWorkerManager
-func NewGoredisWorkerManager(client *redis.Client) Manager {
+func NewGoredisWorkerManager(client redis.Cmdable) Manager {
 	return &GoredisWorkerManager{redis: client,
 		workers: make(map[string]Worker),
 		stop:    make(chan interface{}, 1)}
@@ -90,9 +90,9 @@ func (m *GoredisWorkerManager) processTask(ctx context.Context, encoded string) 
 
 	if task.Unique {
 		lock := task.LockName()
-		cmd := redis.NewStringCmd("SET", lock, task.WorkerID, "PX", 30000, "NX")
-		m.redis.Process(cmd)
-		if cmd.Val() != "OK" {
+		// TODO: implement heartbeat
+		cmd := m.redis.SetNX(lock, task.WorkerID, time.Second*30)
+		if !cmd.Val() {
 			log.Println("Unique task already running:", lock)
 			m.redis.LRem(processingQueue, -1, encoded).Err()
 			return

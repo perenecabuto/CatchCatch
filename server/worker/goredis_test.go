@@ -7,8 +7,9 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/onsi/gomega"
-	"github.com/perenecabuto/CatchCatch/server/worker"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
 var (
@@ -24,7 +25,7 @@ var (
 
 type GoRedisSuite struct {
 	suite.Suite
-	client *redis.Client
+	client redis.Cmdable
 }
 
 func TestGoRedis(t *testing.T) {
@@ -38,7 +39,6 @@ func (t *GoRedisSuite) SetupTest() {
 		t.T().Skip(err)
 		return
 	}
-
 	t.client.FlushAll()
 }
 
