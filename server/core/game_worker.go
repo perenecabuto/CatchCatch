@@ -109,7 +109,7 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 	// gw.service.Remove(gameID)
 	// notify game id to destroy
 	// listen to game destroy and exit if this message arrives here
-	log.Printf("GameWatcher:create:%s", gameID)
+	log.Printf("GameWorker:%s:Create", gameID)
 	g, err := gw.service.Create(gameID, coordinates)
 	if err != nil {
 		return err
@@ -146,14 +146,14 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 				err = gw.service.Remove(g.ID)
 				return errors.Wrapf(err, "can't remove game %s", g.ID)
 			}
-			log.Printf("GameWorker:watchGame:timeover:game:%s", g.ID)
+			log.Printf("GameWorker:%s:Timeover", g.ID)
 			err := gw.processGameTimeOver(g)
 			if err != nil {
 				return errors.Wrapf(err, "can't process game:%s time over", g.ID)
 			}
 			stop()
 		case <-ctx.Done():
-			log.Printf("GameWorker:watchGame:done:game:%s", g.ID)
+			log.Printf("GameWorker:%s:Done", g.ID)
 			err := gw.processGameFinish(g)
 			if err != nil {
 				return errors.Wrapf(err, "can't process game:%s finish", g.ID)
@@ -200,7 +200,7 @@ func (gw *GameWorker) processGameFinish(g *service.GameWithCoords) error {
 func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, gevt game.Event) (
 	started bool, finished bool, err error) {
 
-	log.Printf("GameWorker:%s:GameEvent:%-v", g.ID, gevt)
+	log.Printf("GameWorker:%s:Process:%-v", g.ID, gevt)
 	switch gevt.Name {
 	case game.GamePlayerNearToTarget:
 		err = gw.publish(GamePlayerNearToTarget, &gevt.Player, g.Game)
@@ -261,7 +261,8 @@ func (gw *GameWorker) publish(evt GameWorkerEvent, player *game.Player, g *game.
 	}
 	data, _ := json.Marshal(p)
 	err := gw.messages.Publish(gameChangeTopic, data)
-	return errors.Wrapf(err, "GameWorker:publish:game:%s:player:%+v", g.ID, p)
+	log.Printf("GameWorker:%s:Publish:%-v", g.ID, evt)
+	return errors.Wrapf(err, "GameWorker:%s:Publish:%-v", g.ID, p)
 }
 
 func (gw *GameWorker) observeGameEvents(ctx context.Context, g *game.Game) chan game.Event {
