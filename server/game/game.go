@@ -3,7 +3,6 @@ package game
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"sync/atomic"
 	"time"
@@ -97,7 +96,6 @@ func (g *Game) String() string {
 
 // Start the game
 func (g *Game) Start() {
-	log.Println("game:", g.ID, ":start!!!!!!")
 	g.setPlayersRoles()
 	atomic.StoreInt32(&g.started, 1)
 }
@@ -150,7 +148,6 @@ func (g *Game) SetPlayer(id string, lon, lat float64) Event {
 	if exists {
 		p.Lat, p.Lon = lat, lon
 	} else if !g.Started() {
-		log.Printf("game:%s:detect=enter:%s\n", g.ID, id)
 		g.players.Set(Player{
 			model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false})
 		return Event{Name: GamePlayerAdded}
