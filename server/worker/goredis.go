@@ -16,8 +16,9 @@ import (
 const (
 	tasksQueue      = "catchcatch:worker:queue"
 	processingQueue = "catchcatch:worker:processing"
-	queueInterval   = time.Microsecond * 100
 )
+
+var QueuePollInterval = time.Second / 4
 
 // GoredisWorkerManager is a simple manager implentation over go-redis
 type GoredisWorkerManager struct {
@@ -50,7 +51,8 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 		atomic.StoreInt32(&m.started, 1)
 
 		wCtx, cancel := context.WithCancel(ctx)
-		ticker := time.NewTicker(queueInterval)
+
+		timer := time.NewTimer(QueuePollInterval)
 		for {
 			select {
 			case <-wCtx.Done():
@@ -59,7 +61,9 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 				cancel()
 				atomic.StoreInt32(&m.started, 0)
 				return
-			case <-ticker.C:
+			case <-timer.C:
+
+				timer.Reset(QueuePollInterval)
 				cmd := m.redis.RPopLPush(tasksQueue, processingQueue)
 				err := cmd.Err()
 				if err == redis.Nil {
@@ -69,6 +73,7 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 					log.Println("Run job redis err:", err)
 					continue
 				}
+
 				go m.processTask(wCtx, cmd.Val())
 			}
 		}
@@ -138,7 +143,8 @@ func (m *GoredisWorkerManager) Stop() {
 }
 
 func (m *GoredisWorkerManager) waitForRemainingTasks(timeout *time.Timer) {
-	waitForTasksTicker := time.NewTicker(queueInterval * 2)
+
+	waitForTasksTicker := time.NewTicker(QueuePollInterval * 2)
 	defer waitForTasksTicker.Stop()
 	for {
 		runningTasks := atomic.LoadInt32(&m.runningTasks)

@@ -40,6 +40,8 @@ func (t *GoRedisSuite) SetupTest() {
 		return
 	}
 	t.client.FlushAll()
+
+	worker.QueuePollInterval = time.Millisecond
 }
 
 func (s *GoRedisSuite) TestGoredisWorkerManagerAddWorker() {
@@ -146,13 +148,13 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerRunTasks() {
 	manager3.Start(ctx)
 
 	gomega.RegisterTestingT(s.T())
-	gomega.Eventually(manager1.RunningTasks).Should(gomega.HaveLen(9))
+	gomega.Eventually(manager1.RunningTasks, time.Second).Should(gomega.HaveLen(9))
 
 	manager1.Stop()
 	manager2.Stop()
 	manager3.Stop()
 
-	gomega.Eventually(manager1.RunningTasks).Should(gomega.HaveLen(0))
+	gomega.Eventually(manager1.RunningTasks, time.Second).Should(gomega.HaveLen(0))
 }
 
 func (s *GoRedisSuite) TestGoredisWorkerManagerRunUniqueTasks() {
