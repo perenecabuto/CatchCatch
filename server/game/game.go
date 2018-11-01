@@ -187,6 +187,9 @@ func (g *Game) RemovePlayer(id string) Event {
 		g.players.DeleteByID(id)
 		return Event{Name: GamePlayerRemoved, Player: *p}
 	}
+	if p.Lose {
+		return GameEventNothing
+	}
 
 	g.players.SetLoserByID(id)
 	playersInGame := g.players.AllExceptLosers()

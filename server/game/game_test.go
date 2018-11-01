@@ -199,6 +199,21 @@ func TestGameReturnPlayerRanAwayWhenItIsRemovedFromAStartedGameWithOtherPlayers(
 	assert.Equal(t, expected, actual)
 }
 
+func TestGameReturnNothinWhenARemoveALoserFromARunningGame(t *testing.T) {
+	g := NewGame("test")
+	for i := 0; i < 6; i++ {
+		g.SetPlayer("player-"+strconv.Itoa(i), 0, 0)
+	}
+	g.Start()
+
+	loserID := "player-1"
+	g.RemovePlayer(loserID)
+
+	expected := GameEventNothing
+	actual := g.RemovePlayer(loserID)
+	assert.Equal(t, expected, actual)
+}
+
 func TestGameReturnLastPlayerDetectedWhenOnlyOnePlayerStillInRunningGame(t *testing.T) {
 	g := NewGame("test")
 	for i := 0; i < 6; i++ {
