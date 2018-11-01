@@ -36,22 +36,22 @@ var (
 	GameWorkerIdleTimeOut = time.Hour
 )
 
-// GameWatcherEvent represents game events for players
-type GameWatcherEvent string
+// GameWorkerEvent represents game events for players
+type GameWorkerEvent string
 
-func (e GameWatcherEvent) String() string {
+func (e GameWorkerEvent) String() string {
 	return string(e)
 }
 
-// GameWatcherEvent options
+// GameWorkerEvent options
 const (
-	GameStarted            = GameWatcherEvent("game:started")
-	GamePlayerNearToTarget = GameWatcherEvent("game:player:near")
-	GamePlayerLose         = GameWatcherEvent("game:player:lose")
-	GamePlayerWin          = GameWatcherEvent("game:player:win")
-	GameFinished           = GameWatcherEvent("game:finished")
+	GameStarted            = GameWorkerEvent("game:started")
+	GamePlayerNearToTarget = GameWorkerEvent("game:player:near")
+	GamePlayerLose         = GameWorkerEvent("game:player:lose")
+	GamePlayerWin          = GameWorkerEvent("game:player:win")
+	GameFinished           = GameWorkerEvent("game:finished")
 
-	GameAroundDetected = GameWatcherEvent("game:around")
+	GameAroundDetected = GameWorkerEvent("game:around")
 )
 
 // GameEventPayload ...
@@ -61,7 +61,7 @@ type GameEventPayload struct {
 	DistToTarget float64
 	Game         string
 	Rank         game.Rank
-	Event        GameWatcherEvent
+	Event        GameWorkerEvent
 }
 
 // GameWorker observe manage and run games
@@ -248,7 +248,7 @@ func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, gevt game.Even
 	return started, finished, errors.Wrapf(err, "can't process event %+v", gevt)
 }
 
-func (gw *GameWorker) publish(evt GameWatcherEvent, player *game.Player, g *game.Game) error {
+func (gw *GameWorker) publish(evt GameWorkerEvent, player *game.Player, g *game.Game) error {
 	p := &GameEventPayload{
 		Event:        evt,
 		PlayerID:     player.ID,

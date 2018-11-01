@@ -40,7 +40,7 @@ func (c *Client) ConnectAsPlayer(ctx context.Context, addr string) (*Player, err
 // Player
 type EventHandlerFunc func(...interface{}) error
 type EventHandler struct {
-	core.GameWatcherEvent
+	core.GameWorkerEvent
 	EventHandlerFunc
 }
 
@@ -48,7 +48,7 @@ type Player struct {
 	ws               WebSocket
 	state            game.Player
 	eventHandlerChan chan EventHandler
-	eventHandlers    map[core.GameWatcherEvent]EventHandlerFunc
+	eventHandlers    map[core.GameWorkerEvent]EventHandlerFunc
 }
 
 func NewPlayer(ws WebSocket) *Player {
@@ -56,7 +56,7 @@ func NewPlayer(ws WebSocket) *Player {
 		ws:               ws,
 		state:            game.Player{},
 		eventHandlerChan: make(chan EventHandler, 1),
-		eventHandlers:    make(map[core.GameWatcherEvent]EventHandlerFunc),
+		eventHandlers:    make(map[core.GameWorkerEvent]EventHandlerFunc),
 	}
 }
 
@@ -81,7 +81,7 @@ func (p *Player) listen(ctx context.Context) error {
 	for {
 		select {
 		case handler := <-p.eventHandlerChan:
-			p.eventHandlers[handler.GameWatcherEvent] = handler.EventHandlerFunc
+			p.eventHandlers[handler.GameWorkerEvent] = handler.EventHandlerFunc
 		case msg, ok := <-chann:
 			if !ok {
 				return nil
