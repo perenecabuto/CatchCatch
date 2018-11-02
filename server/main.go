@@ -96,8 +96,16 @@ func main() {
 	adminH := core.NewAdminHandler(playerService, featuresWatcher)
 	adminConnections := websocket.NewWSServer(wsdriver, adminH)
 
-	http.Handle("/admin", execfunc.RecoverWrapper(adminConnections.Listen(ctx)))
-	http.Handle("/player", execfunc.RecoverWrapper(playersConnections.Listen(ctx)))
+	adminHTTPHandler, err := adminConnections.Listen(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	playersHTTPHandler, err := playersConnections.Listen(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.Handle("/admin", execfunc.RecoverWrapper(adminHTTPHandler))
+	http.Handle("/player", execfunc.RecoverWrapper(playersHTTPHandler))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	execfunc.OnExit(func() {

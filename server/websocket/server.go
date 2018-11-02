@@ -2,12 +2,12 @@ package websocket
 
 import (
 	"context"
-	"errors"
 	"log"
 	"net/http"
 	"sync"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 )
@@ -47,12 +47,10 @@ type WSEventHandler interface {
 }
 
 // Listen to WS connections
-func (wss *WSServer) Listen(ctx context.Context) http.Handler {
+func (wss *WSServer) Listen(ctx context.Context) (http.Handler, error) {
 	err := wss.handler.OnStart(ctx, wss)
 	if err != nil {
-		// TODO: return this error
-		log.Panic(err)
-		return nil
+		return nil, errors.Cause(err)
 	}
 
 	return wss.driver.HTTPHandler(ctx, func(connctx context.Context, c WSConnection) {
@@ -72,7 +70,7 @@ func (wss *WSServer) Listen(ctx context.Context) http.Handler {
 		if err != nil {
 			log.Println("[WSServer] Listen: conn.listen error:", err)
 		}
-	})
+	}), nil
 }
 
 // Get Conn by session id
