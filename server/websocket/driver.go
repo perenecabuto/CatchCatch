@@ -21,7 +21,7 @@ func NewGobwasWSDriver() WSDriver {
 }
 
 // HTTPHandler implements WSDriver.Handler
-func (d GobwasWSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
+func (d *GobwasWSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
@@ -39,12 +39,12 @@ type GobwasWSConn struct {
 }
 
 // Send implements WSConnection.Send
-func (c GobwasWSConn) Send(payload []byte) error {
+func (c *GobwasWSConn) Send(payload []byte) error {
 	return wsutil.WriteServerBinary(c, payload)
 }
 
 // Read implements WSConnection.Read
-func (c GobwasWSConn) Read(buff *[]byte) (int, error) {
+func (c *GobwasWSConn) Read(buff *[]byte) (int, error) {
 	header, err := ws.ReadHeader(c.Conn)
 	if err != nil {
 		return 0, fmt.Errorf("readMessage(header): %s", err.Error())
