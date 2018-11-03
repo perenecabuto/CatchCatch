@@ -43,13 +43,13 @@ func TestCheckpointsWatcherWatcherPlayersNearToCheckpoints(t *testing.T) {
 
 	evtName := "checkpoint:detected"
 	expected, _ := proto.Marshal(&protobuf.Detection{
-		EventName:    proto.String(evtName),
-		Id:           &playerID,
-		FeatId:       &checkPoint.ID,
-		NearByFeatId: &playerID,
-		NearByMeters: &distToCheckPoint,
+		EventName:    evtName,
+		Id:           playerID,
+		FeatId:       checkPoint.ID,
+		NearByFeatId: playerID,
+		NearByMeters: distToCheckPoint,
 
-		Lon: proto.Float64(1), Lat: proto.Float64(2),
+		Lon: 1.0, Lat: 2.0,
 	})
 
 	dispatcher.AssertCalled(t, "Publish", evtName, mock.MatchedBy(func(data []byte) bool {
@@ -66,13 +66,13 @@ func TestCheckpointsWatcherNotifyThePlayersAroundCheckpoints(t *testing.T) {
 	ctx, finish := context.WithCancel(context.Background())
 
 	example := &protobuf.Detection{
-		EventName:    proto.String("checkpoint:detected"),
-		Id:           &playerID,
-		FeatId:       proto.String("checkpoint-test-1"),
-		NearByFeatId: &playerID,
-		NearByMeters: proto.Float64(100),
+		EventName:    "checkpoint:detected",
+		Id:           playerID,
+		FeatId:       "checkpoint-test-1",
+		NearByFeatId: playerID,
+		NearByMeters: 10,
 
-		Lon: proto.Float64(1), Lat: proto.Float64(2),
+		Lon: 1, Lat: 2,
 	}
 
 	dispatcher.On("Subscribe", ctx, example.GetEventName(),

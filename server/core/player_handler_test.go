@@ -30,9 +30,9 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 				Event: core.GameStarted, Game: "game-id", PlayerRole: game.GameRoleTarget,
 			},
 			&protobuf.GameInfo{
-				EventName: proto.String(core.GameStarted.String()),
-				Id:        proto.String("game-id"), Game: proto.String("game-id"),
-				Role: proto.String(game.GameRoleTarget.String()),
+				EventName: core.GameStarted.String(),
+				Id:        "game-id", Game: "game-id",
+				Role: game.GameRoleTarget.String(),
 			},
 		},
 		{
@@ -41,9 +41,9 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 				PlayerRole: game.GameRoleHunter, DistToTarget: 100,
 			},
 			&protobuf.Distance{
-				Id:        proto.String("game-id-2"),
-				EventName: proto.String(core.GamePlayerNearToTarget.String()),
-				Dist:      proto.Float64(100),
+				Id:        "game-id-2",
+				EventName: core.GamePlayerNearToTarget.String(),
+				Dist:      100,
 			},
 		},
 		{
@@ -52,9 +52,9 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 				PlayerRole: game.GameRoleTarget, DistToTarget: 0,
 			},
 			&protobuf.Distance{
-				Id:        proto.String("game-id-3"),
-				EventName: proto.String(core.GamePlayerWin.String()),
-				Dist:      proto.Float64(0),
+				Id:        "game-id-3",
+				EventName: core.GamePlayerWin.String(),
+				Dist:      0,
 			},
 		},
 		{
@@ -63,9 +63,9 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 				PlayerRole: game.GameRoleHunter, DistToTarget: 4.3,
 			},
 			&protobuf.Distance{
-				Id:        proto.String("game-id-4"),
-				EventName: proto.String(core.GamePlayerWin.String()),
-				Dist:      proto.Float64(4.3),
+				Id:        "game-id-4",
+				EventName: core.GamePlayerWin.String(),
+				Dist:      4.3,
 			},
 		},
 		{
@@ -74,8 +74,8 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 				PlayerRole: game.GameRoleHunter, DistToTarget: 67,
 			},
 			&protobuf.Simple{
-				Id:        proto.String("game-id-5"),
-				EventName: proto.String(core.GamePlayerLose.String()),
+				Id:        "game-id-5",
+				EventName: core.GamePlayerLose.String(),
 			},
 		},
 	}
@@ -161,11 +161,11 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 		playerRank := g.Rank().PlayerRank
 		rank := make([]*protobuf.PlayerRank, len(playerRank))
 		for i, pr := range playerRank {
-			rank[i] = &protobuf.PlayerRank{Player: proto.String(pr.Player.ID), Points: proto.Int32(int32(pr.Points))}
+			rank[i] = &protobuf.PlayerRank{Player: pr.Player.ID, Points: int32(pr.Points)}
 		}
 		expected, _ := proto.Marshal(&protobuf.GameRank{
-			EventName: proto.String(core.GameFinished.String()),
-			Id:        &gameID, Game: &gameID,
+			EventName: core.GameFinished.String(),
+			Id:        gameID, Game: gameID,
 			PlayersRank: rank,
 		})
 		c.AssertCalled(t, "Send", expected)

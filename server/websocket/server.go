@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
@@ -56,7 +55,7 @@ func (wss *WSServer) Listen(ctx context.Context) (http.Handler, error) {
 	return wss.driver.HTTPHandler(ctx, func(connctx context.Context, c WSConnection) {
 		conn := wss.Add(c)
 		defer wss.Remove(conn.ID)
-		err := conn.Emit(&protobuf.Simple{EventName: proto.String("connect"), Id: &conn.ID})
+		err := conn.Emit(&protobuf.Simple{EventName: "connect", Id: conn.ID})
 		if err != nil {
 			log.Println("[WSServer] Listen: error to notify connect event:", err)
 			return

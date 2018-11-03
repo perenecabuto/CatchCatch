@@ -83,7 +83,7 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 	if err := h.players.Set(player); err != nil {
 		return nil, errors.Wrapf(err, "could not register player:%s", player.ID)
 	}
-	c.Emit(&protobuf.Player{EventName: proto.String(EventPlayerRegistered), Id: &player.ID, Lon: &player.Lon, Lat: &player.Lat})
+	c.Emit(&protobuf.Player{EventName: EventPlayerRegistered, Id: player.ID, Lon: player.Lon, Lat: player.Lat})
 	return player, nil
 }
 
@@ -102,31 +102,31 @@ func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServe
 	return h.games.OnGameEvent(ctx, func(p *GameEventPayload) error {
 		switch p.Event {
 		case GameStarted:
-			wss.Emit(p.PlayerID, &protobuf.GameInfo{Id: &p.Game,
-				EventName: proto.String(GameStarted.String()), Game: &p.Game,
-				Role: proto.String(p.PlayerRole.String())})
+			wss.Emit(p.PlayerID, &protobuf.GameInfo{Id: p.Game,
+				EventName: GameStarted.String(), Game: p.Game,
+				Role: p.PlayerRole.String()})
 
 		case GamePlayerNearToTarget:
-			wss.Emit(p.PlayerID, &protobuf.Distance{Id: &p.Game,
-				EventName: proto.String(GamePlayerNearToTarget.String()), Dist: &p.DistToTarget})
+			wss.Emit(p.PlayerID, &protobuf.Distance{Id: p.Game,
+				EventName: GamePlayerNearToTarget.String(), Dist: p.DistToTarget})
 
 		case GamePlayerLose:
-			wss.Emit(p.PlayerID, &protobuf.Simple{Id: &p.Game,
-				EventName: proto.String(GamePlayerLose.String())})
+			wss.Emit(p.PlayerID, &protobuf.Simple{Id: p.Game,
+				EventName: GamePlayerLose.String()})
 
 		case GamePlayerWin:
-			wss.Emit(p.PlayerID, &protobuf.Distance{Id: &p.Game,
-				EventName: proto.String(GamePlayerWin.String()), Dist: &p.DistToTarget})
+			wss.Emit(p.PlayerID, &protobuf.Distance{Id: p.Game,
+				EventName: GamePlayerWin.String(), Dist: p.DistToTarget})
 
 		case GameFinished:
 			rank := p.Rank
 			playersRank := make([]*protobuf.PlayerRank, len(rank.PlayerRank))
 			for i, pr := range rank.PlayerRank {
-				playersRank[i] = &protobuf.PlayerRank{Player: proto.String(pr.Player.ID), Points: proto.Int32(int32(pr.Points))}
+				playersRank[i] = &protobuf.PlayerRank{Player: pr.Player.ID, Points: int32(pr.Points)}
 			}
 			wss.Emit(p.PlayerID, &protobuf.GameRank{
-				EventName: proto.String(GameFinished.String()),
-				Id:        &rank.Game, Game: &rank.Game,
+				EventName: GameFinished.String(),
+				Id:        rank.Game, Game: rank.Game,
 				PlayersRank: playersRank,
 			})
 		}

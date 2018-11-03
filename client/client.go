@@ -168,8 +168,8 @@ func (p *Player) listen(ctx context.Context) error {
 
 func (p *Player) UpdatePlayer(lat, lon float64) error {
 	p.state.Lat, p.state.Lon = lat, lon
-	payload := protobuf.Player{Id: &p.state.ID, Lat: &p.state.Lat, Lon: &p.state.Lon,
-		EventName: proto.String(core.EventPlayerUpdate)}
+	payload := protobuf.Player{Id: p.state.ID, Lat: p.state.Lat, Lon: p.state.Lon,
+		EventName: core.EventPlayerUpdate}
 	data, _ := proto.Marshal(&payload)
 	err := p.ws.Send(data)
 	return errors.Wrapf(err, "can't update player:%+v", p.state.ID)

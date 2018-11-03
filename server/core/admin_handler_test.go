@@ -32,10 +32,10 @@ func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
 
 	action := "added"
 	example := &protobuf.Feature{
-		Id:        proto.String("test-geofence-1"),
-		Group:     proto.String("geofences"),
-		Coords:    proto.String("[[1,2,3], [1,2,3]]"),
-		EventName: proto.String("admin:feature:" + action),
+		Id:        "test-geofence-1",
+		Group:     "geofences",
+		Coords:    "[[1,2,3], [1,2,3]]",
+		EventName: "admin:feature:" + action,
 	}
 
 	w.On("OnFeatureEventNearToAdmin", ctx,

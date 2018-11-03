@@ -34,13 +34,13 @@ func (w *CheckpointWatcher) Run(ctx context.Context, _ worker.TaskParams) error 
 	return w.service.ObservePlayerNearToCheckpoint(ctx, func(playerID string, distTo float64, f model.Feature) error {
 		lonlat := gjson.Get(f.Coordinates, "coordinates").Array()
 		payload := &protobuf.Detection{
-			EventName:    proto.String("checkpoint:detected"),
-			Id:           &playerID,
-			FeatId:       &f.ID,
-			NearByFeatId: &playerID,
-			NearByMeters: &distTo,
-			Lon:          proto.Float64(lonlat[0].Float()),
-			Lat:          proto.Float64(lonlat[1].Float()),
+			EventName:    "checkpoint:detected",
+			Id:           playerID,
+			FeatId:       f.ID,
+			NearByFeatId: playerID,
+			NearByMeters: distTo,
+			Lon:          lonlat[0].Float(),
+			Lat:          lonlat[1].Float(),
 		}
 		data, _ := proto.Marshal(payload)
 		err := w.messages.Publish("checkpoint:detected", data)

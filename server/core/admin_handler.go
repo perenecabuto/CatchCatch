@@ -41,8 +41,8 @@ func (h *AdminHandler) OnStart(ctx context.Context, wss *websocket.WSServer) err
 	return h.watcher.OnFeatureEventNearToAdmin(ctx,
 		func(adminID string, feat model.Feature, action string) error {
 			msg := &protobuf.Feature{
-				EventName: proto.String("admin:feature:" + action),
-				Group:     &feat.Group, Id: &feat.ID, Coords: &feat.Coordinates}
+				EventName: "admin:feature:" + action,
+				Group:     feat.Group, Id: feat.ID, Coords: feat.Coordinates}
 			var err error
 			if adminID == "" {
 				err = wss.Broadcast(msg)
@@ -104,7 +104,7 @@ func (h *AdminHandler) onRequestPlayers(so *websocket.WSConnectionHandler) func(
 			if p == nil {
 				continue
 			}
-			err := so.Emit(&protobuf.Player{EventName: &event, Id: &p.ID, Lon: &p.Lon, Lat: &p.Lat})
+			err := so.Emit(&protobuf.Player{EventName: event, Id: p.ID, Lon: p.Lon, Lat: p.Lat})
 			if err != nil {
 				log.Println("[AdminHandler] player:request-remotes event error: " + err.Error())
 			}
@@ -122,7 +122,7 @@ func (h *AdminHandler) onDisconnectPlayer(c *websocket.WSConnectionHandler) func
 		if err == service.ErrFeatureNotFound {
 			log.Println("[AdminHandler] admin:players:disconnect: player not found - ", playerID)
 		}
-		h.wss.Broadcast(&protobuf.Simple{EventName: proto.String("admin:players:disconnected"), Id: &playerID})
+		h.wss.Broadcast(&protobuf.Simple{EventName: "admin:players:disconnected", Id: playerID})
 	}
 }
 
@@ -164,7 +164,7 @@ func (h *AdminHandler) onRequestFeatures(c *websocket.WSConnectionHandler) func(
 		}
 		event := "admin:feature:added"
 		for _, f := range features {
-			c.Emit(&protobuf.Feature{EventName: &event, Id: &f.ID, Group: &f.Group, Coords: &f.Coordinates})
+			c.Emit(&protobuf.Feature{EventName: event, Id: f.ID, Group: f.Group, Coords: f.Coordinates})
 		}
 	}
 }
