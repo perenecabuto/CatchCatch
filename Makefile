@@ -37,6 +37,11 @@ coverage:
 	$(SERVER_SRC) roveralls
 	$(SERVER_SRC) go tool cover -html=roveralls.coverprofile
 
+gen-proto:
+	#https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
+	-go get -v -u github.com/gogo/protobuf/protoc-gen-gogofaster
+	protoc --gogofaster_out=server/protobuf protobuf/message.proto
+
 gen-mocks:
 	-go get github.com/vektra/mockery/...
 	for x in `find $(PWD)/server/* -type d -prune | grep -v vendor`; do \
