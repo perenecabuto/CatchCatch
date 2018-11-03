@@ -39,10 +39,10 @@ coverage:
 
 gen-mocks:
 	-go get github.com/vektra/mockery/...
-	$(SERVER_SRC) cd service ; mockery -all
-	$(SERVER_SRC) cd worker ; mockery -all
-	$(SERVER_SRC) cd core ; mockery -all
-	$(SERVER_SRC) cd metrics ; mockery -all
+	for x in `find $(PWD)/server/* -type d -prune | grep -v vendor`; do \
+		cd $$x; \
+		mockery -all; \
+	done
 
 build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
