@@ -20,32 +20,32 @@ const (
 
 var QueuePollInterval = time.Second / 4
 
-// GoredisWorkerManager is a simple manager implentation over go-redis
-type GoredisWorkerManager struct {
+// GoredisTaskManager is a simple manager implentation over go-redis
+type GoredisTaskManager struct {
 	redis redis.Cmdable
 
-	workersLock sync.RWMutex
-	workers     map[string]Worker
+	tasksLock sync.RWMutex
+	tasks     map[string]Task
 
-	started      int32
-	runningTasks int32
-	stop         chan interface{}
+	started     int32
+	runningJobs int32
+	stop        chan interface{}
 }
 
-// NewGoredisWorkerManager create a new GoredisWorkerManager
-func NewGoredisWorkerManager(client redis.Cmdable) Manager {
-	return &GoredisWorkerManager{redis: client,
-		workers: make(map[string]Worker),
-		stop:    make(chan interface{}, 1)}
+// NewGoredisTaskManager create a new GoredisTaskManager
+func NewGoredisTaskManager(client redis.Cmdable) Manager {
+	return &GoredisTaskManager{redis: client,
+		tasks: make(map[string]Task),
+		stop:  make(chan interface{}, 1)}
 }
 
 // Started return if worker is started
-func (m *GoredisWorkerManager) Started() bool {
+func (m *GoredisTaskManager) Started() bool {
 	return atomic.LoadInt32(&m.started) == 1
 }
 
 // Start listening tasks events
-func (m *GoredisWorkerManager) Start(ctx context.Context) {
+func (m *GoredisTaskManager) Start(ctx context.Context) {
 	go func() {
 		log.Println("Starting.... with redis:", m.redis)
 		atomic.StoreInt32(&m.started, 1)
@@ -74,19 +74,19 @@ func (m *GoredisWorkerManager) Start(ctx context.Context) {
 					continue
 				}
 
-				go m.processTask(wCtx, cmd.Val())
+				go m.processJob(wCtx, cmd.Val())
 			}
 		}
 	}()
 }
 
-func (m *GoredisWorkerManager) processTask(ctx context.Context, encoded string) {
-	task := &Task{}
+func (m *GoredisTaskManager) processJob(ctx context.Context, encoded string) {
+	task := &Job{}
 	json.Unmarshal([]byte(encoded), task)
-	w, exists := m.workers[task.WorkerID]
+	w, exists := m.tasks[task.TaskID]
 	if !exists {
 		// FIXME: requeue better
-		log.Println("Ignoring task: worker not found", task.WorkerID, m.workers)
+		log.Println("Ignoring task: worker not found", task.TaskID, m.tasks)
 		m.redis.LRem(processingQueue, -1, encoded).Err()
 		m.redis.LPush(tasksQueue, encoded)
 		time.Sleep(time.Second)
@@ -96,7 +96,7 @@ func (m *GoredisWorkerManager) processTask(ctx context.Context, encoded string) 
 	if task.Unique {
 		lock := task.LockName()
 		// TODO: implement heartbeat
-		cmd := m.redis.SetNX(lock, task.WorkerID, time.Second*30)
+		cmd := m.redis.SetNX(lock, task.TaskID, time.Second*30)
 		if !cmd.Val() {
 			log.Println("Unique task already running:", lock)
 			m.redis.LRem(processingQueue, -1, encoded).Err()
@@ -106,7 +106,7 @@ func (m *GoredisWorkerManager) processTask(ctx context.Context, encoded string) 
 		defer m.redis.Del(lock)
 	}
 
-	atomic.AddInt32(&m.runningTasks, 1)
+	atomic.AddInt32(&m.runningJobs, 1)
 
 	err := w.Run(ctx, task.Params)
 	if err != nil {
@@ -115,71 +115,71 @@ func (m *GoredisWorkerManager) processTask(ctx context.Context, encoded string) 
 	}
 	err = m.redis.LRem(processingQueue, -1, encoded).Err()
 	if err != nil {
-		log.Printf("Run <%s> processTask - err: %s", task.WorkerID, err.Error())
+		log.Printf("Run <%s> processJob - err: %s", task.TaskID, err.Error())
 	}
-	atomic.AddInt32(&m.runningTasks, -1)
-	log.Printf("Run <%s> done", task.WorkerID)
+	atomic.AddInt32(&m.runningJobs, -1)
+	log.Printf("Run <%s> done", task.TaskID)
 }
 
 // Stop processing worker events
-func (m *GoredisWorkerManager) Stop() {
-	m.workersLock.Lock()
-	defer m.workersLock.Unlock()
+func (m *GoredisTaskManager) Stop() {
+	m.tasksLock.Lock()
+	defer m.tasksLock.Unlock()
 	if !m.Started() {
 		return
 	}
 	timeout := time.NewTimer(time.Second * 20)
 	defer timeout.Stop()
 
-	m.waitForRemainingTasks(timeout)
+	m.waitForRemainingJobs(timeout)
 
 	select {
 	case m.stop <- true:
 		return
 	case <-timeout.C:
-		log.Println("GoredisWorkerManager.Stop(): timeout")
+		log.Println("GoredisTaskManager.Stop(): timeout")
 		return
 	}
 }
 
-func (m *GoredisWorkerManager) waitForRemainingTasks(timeout *time.Timer) {
+func (m *GoredisTaskManager) waitForRemainingJobs(timeout *time.Timer) {
 
-	waitForTasksTicker := time.NewTicker(QueuePollInterval * 2)
-	defer waitForTasksTicker.Stop()
+	waitForJobsTicker := time.NewTicker(QueuePollInterval * 2)
+	defer waitForJobsTicker.Stop()
 	for {
-		runningTasks := atomic.LoadInt32(&m.runningTasks)
+		runningJobs := atomic.LoadInt32(&m.runningJobs)
 		select {
-		case <-waitForTasksTicker.C:
-			if runningTasks == int32(0) {
+		case <-waitForJobsTicker.C:
+			if runningJobs == int32(0) {
 				return
 			}
 		case <-timeout.C:
-			log.Printf("GoredisWorkerManager.Stop(): timed out with %d remaining tasks", m.runningTasks)
+			log.Printf("GoredisTaskManager.Stop(): timed out with %d remaining tasks", m.runningJobs)
 			return
 		}
 	}
 }
 
 // Add add worker to this manager
-func (m *GoredisWorkerManager) Add(w Worker) {
-	m.workersLock.Lock()
-	m.workers[w.ID()] = w
-	m.workersLock.Unlock()
+func (m *GoredisTaskManager) Add(w Task) {
+	m.tasksLock.Lock()
+	m.tasks[w.ID()] = w
+	m.tasksLock.Unlock()
 }
 
 // Run a task the worker
-func (m *GoredisWorkerManager) Run(w Worker, params TaskParams) error {
+func (m *GoredisTaskManager) Run(w Task, params TaskParams) error {
 	return m.run(w, params, false)
 }
 
 // RunUnique send a task the worker
 // but it will be ignored if the worker is already running a task with the same parameters
-func (m *GoredisWorkerManager) RunUnique(w Worker, params TaskParams) error {
+func (m *GoredisTaskManager) RunUnique(w Task, params TaskParams) error {
 	return m.run(w, params, true)
 }
 
-func (m *GoredisWorkerManager) run(w Worker, params TaskParams, unique bool) error {
-	task := &Task{ID: uuid.New().String(), WorkerID: w.ID(), Unique: unique, Params: params}
+func (m *GoredisTaskManager) run(w Task, params TaskParams, unique bool) error {
+	task := &Job{ID: uuid.New().String(), TaskID: w.ID(), Unique: unique, Params: params}
 	cmd := m.redis.Exists(task.LockName())
 	exists, err := cmd.Val() == 1, cmd.Err()
 	if err != nil {
@@ -194,49 +194,49 @@ func (m *GoredisWorkerManager) run(w Worker, params TaskParams, unique bool) err
 	return m.redis.LPush(tasksQueue, encoded).Err()
 }
 
-// WorkersIDs return managed workers ids
-func (m *GoredisWorkerManager) WorkersIDs() []string {
-	ids := make([]string, len(m.workers))
-	m.workersLock.RLock()
+// TasksIDs return managed tasks ids
+func (m *GoredisTaskManager) TasksIDs() []string {
+	ids := make([]string, len(m.tasks))
+	m.tasksLock.RLock()
 	count := 0
-	for _, w := range m.workers {
+	for _, w := range m.tasks {
 		ids[count] = w.ID()
 		count++
 	}
-	m.workersLock.RUnlock()
+	m.tasksLock.RUnlock()
 	return ids
 }
 
-// BusyWorkers ...
-func (m *GoredisWorkerManager) BusyWorkers() ([]string, error) {
-	tasks, err := m.RunningTasks()
+// BusyTasks ...
+func (m *GoredisTaskManager) BusyTasks() ([]string, error) {
+	tasks, err := m.RunningJobs()
 	if err != nil {
 		return nil, err
 	}
 	ids := make(map[string]interface{})
 	for _, t := range tasks {
-		ids[t.WorkerID] = nil
+		ids[t.TaskID] = nil
 	}
 	return funk.Keys(ids).([]string), nil
 }
 
-// RunningTasks return all running tasks
-func (m *GoredisWorkerManager) RunningTasks() ([]Task, error) {
+// RunningJobs return all running tasks
+func (m *GoredisTaskManager) RunningJobs() ([]Job, error) {
 	cmd := m.redis.LRange(processingQueue, 0, 100)
-	encTasks, err := cmd.Result()
+	encJobs, err := cmd.Result()
 	if err != nil {
 		return nil, err
 	}
-	tasks := make([]Task, len(encTasks))
-	for i, encoded := range encTasks {
-		task := &Task{}
+	tasks := make([]Job, len(encJobs))
+	for i, encoded := range encJobs {
+		task := &Job{}
 		json.Unmarshal([]byte(encoded), task)
 		tasks[i] = *task
 	}
 	return tasks, nil
 }
 
-// Flush workers task queue
-func (m *GoredisWorkerManager) Flush() error {
+// Flush tasks task queue
+func (m *GoredisTaskManager) Flush() error {
 	return m.redis.Del(tasksQueue).Err()
 }

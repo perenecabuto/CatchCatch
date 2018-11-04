@@ -16,19 +16,19 @@ import (
 	wmocks "github.com/perenecabuto/CatchCatch/server/worker/mocks"
 )
 
-func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
+func TestTaskWithMetricsSendRunMetrics(t *testing.T) {
 	m := &mmocks.Collector{}
-	w := &wmocks.Worker{}
+	w := &wmocks.Task{}
 	opts := worker.MetricsOptions{
 		Host:   "testhost",
 		Origin: "test",
 		Params: []string{"key1", "key3"},
 	}
-	wm := worker.NewWorkerWithMetrics(w, m, opts)
+	wm := worker.NewTaskWithMetrics(w, m, opts)
 
 	ctx := context.Background()
-	err := errors.New("MockWorkerError")
-	id := "MockWorker"
+	err := errors.New("MockTaskError")
+	id := "MockTask"
 	w.On("ID").Return(id)
 	w.On("Run", ctx, mock.MatchedBy(func(worker.TaskParams) bool {
 		time.Sleep(time.Millisecond * 100)
@@ -57,15 +57,15 @@ func TestWorkerWithMetricsSendRunMetrics(t *testing.T) {
 	)
 }
 
-func TestWorkerWithMetricsSendStartMetrics(t *testing.T) {
+func TestTaskWithMetricsSendStartMetrics(t *testing.T) {
 	m := &mmocks.Collector{}
-	w := &wmocks.Worker{}
+	w := &wmocks.Task{}
 	opts := worker.MetricsOptions{Host: "testhost", Origin: "test", Params: []string{"param2"}}
-	wm := worker.NewWorkerWithMetrics(w, m, opts)
+	wm := worker.NewTaskWithMetrics(w, m, opts)
 
 	ctx := context.Background()
-	err := errors.New("MockWorkerError")
-	id := "MockWorker"
+	err := errors.New("MockTaskError")
+	id := "MockTask"
 	w.On("ID").Return(id)
 	w.On("Run", ctx, mock.Anything).Return(err)
 	m.On("Notify", mock.Anything, mock.Anything, mock.Anything).Return(nil)

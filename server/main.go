@@ -70,7 +70,7 @@ func main() {
 
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
 	workersCli.FlushAll()
-	workers := worker.NewGoredisWorkerManager(workersCli)
+	workers := worker.NewGoredisTaskManager(workersCli)
 
 	gameWorker := core.NewGameWorker(gameService, dispatcher)
 	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
@@ -78,12 +78,12 @@ func main() {
 	featuresWatcher := core.NewFeaturesEventsWatcher(dispatcher, playerService)
 
 	opts := worker.MetricsOptions{Host: *serverID, Origin: "initialization"}
-	workers.Add(worker.NewWorkerWithMetrics(gameWorker, metrics,
+	workers.Add(worker.NewTaskWithMetrics(gameWorker, metrics,
 		worker.MetricsOptions{Host: *serverID, Origin: "initialization", Params: []string{"gameID"}},
 	))
-	workers.Add(worker.NewWorkerWithMetrics(geofenceEventsWorker, metrics, opts))
-	workers.Add(worker.NewWorkerWithMetrics(checkpointWatcher, metrics, opts))
-	workers.Add(worker.NewWorkerWithMetrics(featuresWatcher, metrics, opts))
+	workers.Add(worker.NewTaskWithMetrics(geofenceEventsWorker, metrics, opts))
+	workers.Add(worker.NewTaskWithMetrics(checkpointWatcher, metrics, opts))
+	workers.Add(worker.NewTaskWithMetrics(featuresWatcher, metrics, opts))
 
 	workers.Start(ctx)
 	// TODO: verify server id on these workers

@@ -15,7 +15,7 @@ type GeofenceEventsWorker struct {
 }
 
 // NewGeofenceEventsWorker creates Geo
-func NewGeofenceEventsWorker(s service.PlayerLocationService, m worker.Manager) worker.Worker {
+func NewGeofenceEventsWorker(s service.PlayerLocationService, m worker.Manager) worker.Task {
 	return &GeofenceEventsWorker{s, m}
 }
 

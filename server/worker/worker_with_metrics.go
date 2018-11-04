@@ -14,8 +14,8 @@ const (
 	StartMetricsName = "catchcatch.worker.start.metrics"
 )
 
-type WorkerWithMetrics struct {
-	Worker
+type TaskWithMetrics struct {
+	Task
 	collector metrics.Collector
 	options   MetricsOptions
 }
@@ -26,11 +26,11 @@ type MetricsOptions struct {
 	Params []string
 }
 
-func NewWorkerWithMetrics(w Worker, m metrics.Collector, opt MetricsOptions) Worker {
-	return &WorkerWithMetrics{w, m, opt}
+func NewTaskWithMetrics(w Task, m metrics.Collector, opt MetricsOptions) Task {
+	return &TaskWithMetrics{w, m, opt}
 }
 
-func (w WorkerWithMetrics) Run(ctx context.Context, params TaskParams) error {
+func (w TaskWithMetrics) Run(ctx context.Context, params TaskParams) error {
 	var paramsValue string
 	for _, p := range w.options.Params {
 		if v, ok := params[p]; ok {
@@ -44,18 +44,18 @@ func (w WorkerWithMetrics) Run(ctx context.Context, params TaskParams) error {
 	values := metrics.Values{"params": params}
 
 	if err := w.collector.Notify(StartMetricsName, tags, values); err != nil {
-		log.Println("[WorkerWithMetrics] metrics error:", err)
+		log.Println("[TaskWithMetrics] metrics error:", err)
 	}
 
 	start := time.Now()
-	err := w.Worker.Run(ctx, params)
+	err := w.Task.Run(ctx, params)
 	values["elapsed"] = int(time.Since(start) / time.Millisecond)
 	if err != nil {
 		values["error"] = err.Error()
 	}
-	log.Println("[WorkerWithMetrics]", RunMetricsName, tags, values)
+	log.Println("[TaskWithMetrics]", RunMetricsName, tags, values)
 	if err := w.collector.Notify(RunMetricsName, tags, values); err != nil {
-		log.Println("[WorkerWithMetrics] metrics error:", err)
+		log.Println("[TaskWithMetrics] metrics error:", err)
 	}
 	return nil
 }

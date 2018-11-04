@@ -15,12 +15,12 @@ import (
 var (
 	opts = &redis.Options{Addr: "redis:6379"}
 
-	worker1    = &mockWorker{id: "worker1"}
-	dupWorker1 = &mockWorker{id: "worker1"}
-	worker2    = &mockWorker{id: "worker2"}
-	dupWorker2 = &mockWorker{id: "worker1"}
-	worker3    = &mockWorker{id: "worker3"}
-	dupWorker3 = &mockWorker{id: "worker1"}
+	worker1  = &mockTask{id: "worker1"}
+	dupTask1 = &mockTask{id: "worker1"}
+	worker2  = &mockTask{id: "worker2"}
+	dupTask2 = &mockTask{id: "worker1"}
+	worker3  = &mockTask{id: "worker3"}
+	dupTask3 = &mockTask{id: "worker1"}
 )
 
 type GoRedisSuite struct {
@@ -44,35 +44,35 @@ func (t *GoRedisSuite) SetupTest() {
 	worker.QueuePollInterval = time.Millisecond
 }
 
-func (s *GoRedisSuite) TestGoredisWorkerManagerAddWorker() {
-	manager := worker.NewGoredisWorkerManager(s.client)
+func (s *GoRedisSuite) TestGoredisTaskManagerAddTask() {
+	manager := worker.NewGoredisTaskManager(s.client)
 
 	manager.Add(worker1)
-	manager.Add(dupWorker1)
+	manager.Add(dupTask1)
 
 	manager.Add(worker2)
-	manager.Add(dupWorker2)
+	manager.Add(dupTask2)
 
 	manager.Add(worker3)
-	manager.Add(dupWorker3)
+	manager.Add(dupTask3)
 
-	grManager := manager.(*worker.GoredisWorkerManager)
+	grManager := manager.(*worker.GoredisTaskManager)
 
-	actualWorkers := grManager.WorkersIDs()
+	actualTasks := grManager.TasksIDs()
 
-	s.Assert().Len(actualWorkers, 3)
-	s.Assert().Contains(actualWorkers, worker1.ID())
-	s.Assert().Contains(actualWorkers, worker2.ID())
-	s.Assert().Contains(actualWorkers, worker3.ID())
-	s.Assert().NotContains(actualWorkers, "worker4")
+	s.Assert().Len(actualTasks, 3)
+	s.Assert().Contains(actualTasks, worker1.ID())
+	s.Assert().Contains(actualTasks, worker2.ID())
+	s.Assert().Contains(actualTasks, worker3.ID())
+	s.Assert().NotContains(actualTasks, "worker4")
 }
 
-func (s *GoRedisSuite) TestGoredisWorkerManagerRunItsWorkerTasks() {
-	manager := worker.NewGoredisWorkerManager(s.client)
+func (s *GoRedisSuite) TestGoredisTaskManagerRunItsTaskJobs() {
+	manager := worker.NewGoredisTaskManager(s.client)
 	manager.Flush()
 
 	runChan := make(chan worker.TaskParams)
-	w := &mockWorker{id: "worker1", run: func(params worker.TaskParams) error {
+	w := &mockTask{id: "worker1", run: func(params worker.TaskParams) error {
 		runChan <- params
 		return nil
 	}}
@@ -94,10 +94,10 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerRunItsWorkerTasks() {
 	s.Assert().Equal(expected, actual)
 }
 
-func (s *GoRedisSuite) TestGoredisWorkerManagerStopWhenContextDone() {
+func (s *GoRedisSuite) TestGoredisTaskManagerStopWhenContextDone() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	manager := worker.NewGoredisWorkerManager(s.client)
+	manager := worker.NewGoredisTaskManager(s.client)
 	manager.Start(ctx)
 	time.Sleep(time.Millisecond * 100)
 	s.Assert().True(manager.Started())
@@ -107,14 +107,14 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerStopWhenContextDone() {
 	s.Assert().False(manager.Started())
 }
 
-func (s *GoRedisSuite) TestGoredisWorkerManagerRunTasks() {
+func (s *GoRedisSuite) TestGoredisTaskManagerRunJobs() {
 	client1 := redis.NewClient(opts)
 	client2 := redis.NewClient(opts)
 	client3 := redis.NewClient(opts)
 
-	manager1 := worker.NewGoredisWorkerManager(client1)
-	manager2 := worker.NewGoredisWorkerManager(client2)
-	manager3 := worker.NewGoredisWorkerManager(client3)
+	manager1 := worker.NewGoredisTaskManager(client1)
+	manager2 := worker.NewGoredisTaskManager(client2)
+	manager3 := worker.NewGoredisTaskManager(client3)
 
 	manager1.Add(worker1)
 	manager1.Add(worker2)
@@ -138,9 +138,9 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerRunTasks() {
 	manager3.Run(worker2, nil)
 	manager3.Run(worker3, nil)
 
-	runningTasks, err := manager1.RunningTasks()
+	runningJobs, err := manager1.RunningJobs()
 	s.Require().NoError(err)
-	s.Assert().Equal(0, len(runningTasks))
+	s.Assert().Equal(0, len(runningJobs))
 
 	ctx := context.Background()
 	manager1.Start(ctx)
@@ -148,21 +148,21 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerRunTasks() {
 	manager3.Start(ctx)
 
 	gomega.RegisterTestingT(s.T())
-	gomega.Eventually(manager1.RunningTasks, time.Second).Should(gomega.HaveLen(9))
+	gomega.Eventually(manager1.RunningJobs, time.Second).Should(gomega.HaveLen(9))
 
 	manager1.Stop()
 	manager2.Stop()
 	manager3.Stop()
 
-	gomega.Eventually(manager1.RunningTasks, time.Second).Should(gomega.HaveLen(0))
+	gomega.Eventually(manager1.RunningJobs, time.Second).Should(gomega.HaveLen(0))
 }
 
-func (s *GoRedisSuite) TestGoredisWorkerManagerRunUniqueTasks() {
+func (s *GoRedisSuite) TestGoredisTaskManagerRunUniqueJobs() {
 	client1 := redis.NewClient(opts)
 	client2 := redis.NewClient(opts)
 
-	manager1 := worker.NewGoredisWorkerManager(client1)
-	manager2 := worker.NewGoredisWorkerManager(client2)
+	manager1 := worker.NewGoredisTaskManager(client1)
+	manager2 := worker.NewGoredisTaskManager(client2)
 
 	ctx := context.Background()
 	manager1.Start(ctx)
@@ -180,14 +180,14 @@ func (s *GoRedisSuite) TestGoredisWorkerManagerRunUniqueTasks() {
 
 	time.Sleep(time.Millisecond * 100)
 
-	runningTasks, err := manager1.RunningTasks()
+	runningJobs, err := manager1.RunningJobs()
 	s.Require().NoError(err)
-	s.Assert().Equal(1, len(runningTasks))
+	s.Assert().Equal(1, len(runningJobs))
 
 	manager1.Stop()
 	manager2.Stop()
 
-	runningTasks, err = manager1.RunningTasks()
+	runningJobs, err = manager1.RunningJobs()
 	s.Require().NoError(err)
-	s.Assert().Equal(0, len(runningTasks))
+	s.Assert().Equal(0, len(runningJobs))
 }

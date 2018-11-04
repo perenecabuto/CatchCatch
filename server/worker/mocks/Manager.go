@@ -11,12 +11,12 @@ type Manager struct {
 }
 
 // Add provides a mock function with given fields: w
-func (_m *Manager) Add(w worker.Worker) {
+func (_m *Manager) Add(w worker.Task) {
 	_m.Called(w)
 }
 
-// BusyWorkers provides a mock function with given fields:
-func (_m *Manager) BusyWorkers() ([]string, error) {
+// BusyTasks provides a mock function with given fields:
+func (_m *Manager) BusyTasks() ([]string, error) {
 	ret := _m.Called()
 
 	var r0 []string
@@ -53,11 +53,11 @@ func (_m *Manager) Flush() error {
 }
 
 // Run provides a mock function with given fields: w, params
-func (_m *Manager) Run(w worker.Worker, params worker.TaskParams) error {
+func (_m *Manager) Run(w worker.Task, params worker.TaskParams) error {
 	ret := _m.Called(w, params)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(worker.Worker, worker.TaskParams) error); ok {
+	if rf, ok := ret.Get(0).(func(worker.Task, worker.TaskParams) error); ok {
 		r0 = rf(w, params)
 	} else {
 		r0 = ret.Error(0)
@@ -67,11 +67,11 @@ func (_m *Manager) Run(w worker.Worker, params worker.TaskParams) error {
 }
 
 // RunUnique provides a mock function with given fields: w, params
-func (_m *Manager) RunUnique(w worker.Worker, params worker.TaskParams) error {
+func (_m *Manager) RunUnique(w worker.Task, params worker.TaskParams) error {
 	ret := _m.Called(w, params)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(worker.Worker, worker.TaskParams) error); ok {
+	if rf, ok := ret.Get(0).(func(worker.Task, worker.TaskParams) error); ok {
 		r0 = rf(w, params)
 	} else {
 		r0 = ret.Error(0)
@@ -80,16 +80,16 @@ func (_m *Manager) RunUnique(w worker.Worker, params worker.TaskParams) error {
 	return r0
 }
 
-// RunningTasks provides a mock function with given fields:
-func (_m *Manager) RunningTasks() ([]worker.Task, error) {
+// RunningJobs provides a mock function with given fields:
+func (_m *Manager) RunningJobs() ([]worker.Job, error) {
 	ret := _m.Called()
 
-	var r0 []worker.Task
-	if rf, ok := ret.Get(0).(func() []worker.Task); ok {
+	var r0 []worker.Job
+	if rf, ok := ret.Get(0).(func() []worker.Job); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]worker.Task)
+			r0 = ret.Get(0).([]worker.Job)
 		}
 	}
 

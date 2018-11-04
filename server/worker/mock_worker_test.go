@@ -8,16 +8,16 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
-type mockWorker struct {
+type mockTask struct {
 	id  string
 	run func(params worker.TaskParams) error
 }
 
-func (w *mockWorker) ID() string {
+func (w *mockTask) ID() string {
 	return w.id
 }
 
-func (w mockWorker) Run(_ context.Context, params worker.TaskParams) error {
+func (w mockTask) Run(_ context.Context, params worker.TaskParams) error {
 	if w.run != nil {
 		return w.run(params)
 	}
