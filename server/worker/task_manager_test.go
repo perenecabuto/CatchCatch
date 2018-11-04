@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/thoas/go-funk"
@@ -14,6 +15,46 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/worker"
 	"github.com/perenecabuto/CatchCatch/server/worker/mocks"
 )
+
+func TestTaskManagerRegisterTasks(t *testing.T) {
+	queue := &mocks.TaskManagerQueue{}
+	manager := worker.NewTaskManager(queue)
+
+	task1 := &mocks.Task{}
+	task1.On("ID").Return("task-1")
+	task2 := &mocks.Task{}
+	task2.On("ID").Return("task-2")
+
+	manager.Add(task1)
+	manager.Add(task2)
+
+	actual := manager.TaskIDs()
+	assert.Contains(t, actual, "task-1")
+	assert.Contains(t, actual, "task-2")
+}
+
+func TestTaskManagerGetTasksByID(t *testing.T) {
+	queue := &mocks.TaskManagerQueue{}
+	manager := worker.NewTaskManager(queue)
+
+	task1 := &mocks.Task{}
+	task1.On("ID").Return("task-1")
+
+	manager.Add(task1)
+
+	actual, err := manager.GetTaskByID("task-1")
+	require.NoError(t, err)
+	assert.Equal(t, actual, task1)
+}
+
+func TestTaskManagerGetTasksByIDReturnAnErrorWhenTaskIsNotRegistered(t *testing.T) {
+	queue := &mocks.TaskManagerQueue{}
+	manager := worker.NewTaskManager(queue)
+
+	task, err := manager.GetTaskByID("task-1")
+	assert.Nil(t, task)
+	assert.Error(t, err)
+}
 
 func TestTaskManagerStart(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}

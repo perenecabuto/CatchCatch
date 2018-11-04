@@ -62,7 +62,6 @@ func (m *GoredisTaskManager) Start(ctx context.Context) {
 				atomic.StoreInt32(&m.started, 0)
 				return
 			case <-timer.C:
-
 				timer.Reset(QueuePollInterval)
 				cmd := m.redis.RPopLPush(tasksQueue, processingQueue)
 				err := cmd.Err()

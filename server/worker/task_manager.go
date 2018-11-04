@@ -113,7 +113,8 @@ func (m *TaskManager) Start(ctx context.Context) {
 	}()
 }
 
-func (m *TaskManager) getTaskByID(id string) (Task, error) {
+// GetTaskByID returns a registered task. When no task is found it return an error
+func (m *TaskManager) GetTaskByID(id string) (Task, error) {
 	m.RLock()
 	task, ok := m.tasks[id]
 	m.RUnlock()
@@ -127,7 +128,7 @@ func (m *TaskManager) processJob(ctx context.Context, job *Job) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	task, err := m.getTaskByID(job.TaskID)
+	task, err := m.GetTaskByID(job.TaskID)
 	if err != nil {
 		m.queue.EnqueuePending(job)
 		return errors.Wrapf(err, "can't get task:%s", job.TaskID)
@@ -222,19 +223,19 @@ func (m *TaskManager) run(t Task, params TaskParams, unique bool) error {
 	return errors.Cause(err)
 }
 
-// // TasksIDs return managed tasks ids
-// func (m *TaskManager) task() []string {
-// 	ids := make([]string, len(m.tasks))
-// 	count task:= 0
+// TaskIDs return managed tasks ids
+func (m *TaskManager) TaskIDs() []string {
+	ids := make([]string, len(m.tasks))
+	count := 0
 
-// 	m.RLock()
-// 	for _, w := range m.tasks {
-// 		ids[count] = w.task()
-// 		count++
-// 	}
-// 	m.RUnlock()
-// 	return ids
-// }
+	m.RLock()
+	for id := range m.tasks {
+		ids[count] = id
+		count++
+	}
+	m.RUnlock()
+	return ids
+}
 
 // // BusyTasks ...
 // func (m *TaskManager) BusyTasks() ([]string, error) {
