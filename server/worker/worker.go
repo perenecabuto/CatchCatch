@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/tidwall/sjson"
 )
@@ -31,13 +32,14 @@ type Task interface {
 	Run(ctx context.Context, params TaskParams) error
 }
 
-
 // Job represents a worker job
 type Job struct {
-	ID     string
-	TaskID string
-	Unique bool
-	Params TaskParams
+	ID         string
+	TaskID     string
+	Unique     bool
+	Params     TaskParams
+	Host       string
+	LastUpdate time.Time
 }
 
 // LockName return a unique lock name for this task
