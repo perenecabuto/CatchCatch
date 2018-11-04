@@ -25,9 +25,9 @@ services:
         - "4222:4222"
 
     redis:
-        image: redis
+        image: redis:alpine
         ports:
         - "6379:6379"
 
     influxdb:
-        image: influxdb
+        image: influxdb:1.6-alpine

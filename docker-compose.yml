@@ -47,21 +47,21 @@ services:
         - internal
 
     redis:
-        image: redis
+        image: redis:alpine
         ports:
         - "6379:6379"
         networks:
         - internal
 
     influxdb:
-        image: influxdb
+        image: influxdb:1.6-alpine
         ports:
         - "8086:8086"
         networks:
         - internal
 
     grafana:
-        image: grafana/grafana
+        image: grafana/grafana:latest
         ports:
         - "3000:3000"
         depends_on:
