@@ -51,7 +51,7 @@ func TestTaskWithMetricsSendRunMetrics(t *testing.T) {
 		}),
 		mock.MatchedBy(func(actual metrics.Values) bool {
 			return assert.Equal(t, params, actual["params"]) &&
-				assert.Equal(t, 100, actual["elapsed"]) &&
+				assert.InEpsilon(t, 100, actual["elapsed"], 300) &&
 				assert.Contains(t, err.Error(), actual["error"])
 		}),
 	)
