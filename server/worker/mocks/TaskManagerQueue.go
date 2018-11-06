@@ -38,29 +38,6 @@ func (_m *TaskManagerQueue) EnqueueToProcess(_a0 *worker.Job) error {
 	return r0
 }
 
-// GetJobByID provides a mock function with given fields: _a0
-func (_m *TaskManagerQueue) GetJobByID(_a0 string) (*worker.Job, error) {
-	ret := _m.Called(_a0)
-
-	var r0 *worker.Job
-	if rf, ok := ret.Get(0).(func(string) *worker.Job); ok {
-		r0 = rf(_a0)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*worker.Job)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(_a0)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // HeartbeatJob provides a mock function with given fields: _a0, _a1
 func (_m *TaskManagerQueue) HeartbeatJob(_a0 *worker.Job, _a1 time.Duration) error {
 	ret := _m.Called(_a0, _a1)
@@ -73,6 +50,27 @@ func (_m *TaskManagerQueue) HeartbeatJob(_a0 *worker.Job, _a1 time.Duration) err
 	}
 
 	return r0
+}
+
+// IsJobAlreadyRunning provides a mock function with given fields: _a0
+func (_m *TaskManagerQueue) IsJobAlreadyRunning(_a0 *worker.Job) (bool, error) {
+	ret := _m.Called(_a0)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(*worker.Job) bool); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*worker.Job) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // JobsOnProcessQueue provides a mock function with given fields:
@@ -158,8 +156,8 @@ func (_m *TaskManagerQueue) RemoveFromProcessingQueue(_a0 *worker.Job) error {
 	return r0
 }
 
-// RemoveJob provides a mock function with given fields: _a0
-func (_m *TaskManagerQueue) RemoveJob(_a0 *worker.Job) error {
+// SetJobDone provides a mock function with given fields: _a0
+func (_m *TaskManagerQueue) SetJobDone(_a0 *worker.Job) error {
 	ret := _m.Called(_a0)
 
 	var r0 error
@@ -172,43 +170,8 @@ func (_m *TaskManagerQueue) RemoveJob(_a0 *worker.Job) error {
 	return r0
 }
 
-// SetJob provides a mock function with given fields: _a0
-func (_m *TaskManagerQueue) SetJob(_a0 *worker.Job) error {
-	ret := _m.Called(_a0)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*worker.Job) error); ok {
-		r0 = rf(_a0)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// SetJobLock provides a mock function with given fields: _a0, _a1
-func (_m *TaskManagerQueue) SetJobLock(_a0 *worker.Job, _a1 time.Duration) (bool, error) {
-	ret := _m.Called(_a0, _a1)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(*worker.Job, time.Duration) bool); ok {
-		r0 = rf(_a0, _a1)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*worker.Job, time.Duration) error); ok {
-		r1 = rf(_a0, _a1)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// UpdateJobLock provides a mock function with given fields: _a0, _a1
-func (_m *TaskManagerQueue) UpdateJobLock(_a0 *worker.Job, _a1 time.Duration) (bool, error) {
+// SetJobRunning provides a mock function with given fields: _a0, _a1
+func (_m *TaskManagerQueue) SetJobRunning(_a0 *worker.Job, _a1 time.Duration) (bool, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 bool

@@ -2,10 +2,6 @@ package worker
 
 import (
 	"context"
-	"strings"
-	"time"
-
-	"github.com/tidwall/sjson"
 )
 
 // Manager for workers and its tasks
@@ -34,22 +30,8 @@ type Task interface {
 
 // Job represents a worker job
 type Job struct {
-	ID         string
-	TaskID     string
-	Unique     bool
-	Params     TaskParams
-	Host       string
-	LastUpdate time.Time
-}
-
-// IsUpdatedToInterval check if the job was update in a given interval
-func (j *Job) IsUpdatedToInterval(interval time.Duration) bool {
-	deadline := time.Now().Add(-interval)
-	return j.LastUpdate.After(deadline)
-}
-
-// LockName return a unique lock name for this task
-func (j *Job) LockName() string {
-	params, _ := sjson.Set("", "params", j.Params)
-	return strings.Join([]string{tasksQueue, j.TaskID, params, "lock"}, ":")
+	ID     string
+	TaskID string
+	Params TaskParams
+	Host   string
 }

@@ -14,6 +14,7 @@ import (
 
 var (
 	JobHeartbeatInterval = time.Second * 5
+	QueuePollInterval    = time.Second / 4
 
 	ErrJobAlreadySet = errors.New("job already set")
 )
@@ -26,11 +27,9 @@ type TaskManagerQueue interface {
 	RemoveFromProcessingQueue(*Job) error
 	JobsOnProcessQueue() ([]*Job, error)
 
-	SetJob(*Job) error
-	GetJobByID(string) (*Job, error)
-	RemoveJob(*Job) error
-	SetJobLock(*Job, time.Duration) (bool, error)
-	UpdateJobLock(*Job, time.Duration) (bool, error)
+	IsJobAlreadyRunning(*Job) (bool, error)
+	SetJobRunning(*Job, time.Duration) (bool, error)
+	SetJobDone(*Job) error
 	HeartbeatJob(*Job, time.Duration) error
 }
 
@@ -95,21 +94,16 @@ func (m *TaskManager) Start(ctx context.Context) {
 				if job == nil {
 					continue
 				}
-				processingJob, err := m.queue.GetJobByID(job.ID)
-				if err != nil {
-					log.Println("[TaskManager]Start - can't get job by id, reenqueing", err)
-					continue
-				}
-				if processingJob != nil && processingJob.IsUpdatedToInterval(JobHeartbeatInterval+time.Second) {
-					continue
-				}
 				job.Host = host
-				err = m.queue.SetJob(job)
+				aquired, err := m.queue.SetJobRunning(job, JobHeartbeatInterval)
 				if err != nil {
-					log.Println("[TaskManager]Start - can't set job on processing queue, reenqueing", err)
+					log.Println("[TaskManager]Start - can't set job running from processing queue, reenqueing", err)
 					continue
 				}
-
+				if !aquired {
+					log.Println("[TaskManager]Start - job is already running on processing queue - skipping")
+					continue
+				}
 				go m.processJob(wCtx, job)
 
 			case <-pendingQueueInterval.C:
@@ -122,16 +116,15 @@ func (m *TaskManager) Start(ctx context.Context) {
 				if job == nil {
 					continue
 				}
-				if job.Unique {
-					aquired, err := m.queue.SetJobLock(job, JobHeartbeatInterval*2)
-					if err != nil {
-						log.Println("[TaskManager]Start - can't check if job is already processing, reenqueing", err)
-						m.queue.EnqueuePending(job)
-						continue
-					}
-					if !aquired {
-						continue
-					}
+				running, err := m.queue.IsJobAlreadyRunning(job)
+				if err != nil {
+					log.Println("[TaskManager]Start - can't check if job is already running, reenqueing", err)
+					m.queue.EnqueuePending(job)
+					continue
+				}
+				if running {
+					log.Println("[TaskManager]Start - job is already running, skipping")
+					continue
 				}
 				err = m.queue.EnqueueToProcess(job)
 				if err != nil {
