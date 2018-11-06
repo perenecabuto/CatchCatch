@@ -213,23 +213,6 @@ func (m *TaskManager) Add(t Task) {
 	m.Unlock()
 }
 
-// Run a task the worker
-func (m *TaskManager) Run(t Task, params TaskParams) error {
-	return m.run(t, params, false)
-}
-
-// RunUnique send a task the worker
-// but it will be ignored if the worker is already running a task with the same parameters
-func (m *TaskManager) RunUnique(t Task, params TaskParams) error {
-	return m.run(t, params, true)
-}
-
-func (m *TaskManager) run(t Task, params TaskParams, unique bool) error {
-	job := &Job{ID: uuid.New().String(), TaskID: t.ID(), Unique: unique, Params: params}
-	err := m.queue.EnqueuePending(job)
-	return errors.Cause(err)
-}
-
 // TaskIDs return managed tasks ids
 func (m *TaskManager) TaskIDs() []string {
 	ids := make([]string, len(m.tasks))
@@ -244,23 +227,8 @@ func (m *TaskManager) TaskIDs() []string {
 	return ids
 }
 
-// // BusyTasks ...
-// func (m *TaskManager) BusyTasks() ([]string, error) {
-// 	tasks, err := m.RunningJobs()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	ids := make(map[string]interface{})
-// 	for _, t := range tasks {
-// 		ids[t.TaskID] = nil
-// 	}
-// 	return funk.Keys(ids).([]string), nil
-// }
 // RunningJobs return total of jobs running on this manager
 func (m *TaskManager) RunningJobs() int {
 	runningJobs := atomic.LoadInt32(&m.runningJobs)
 	return int(runningJobs)
-}
-
-
 }
