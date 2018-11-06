@@ -49,6 +49,17 @@ func (m *TaskManager) Started() bool {
 	return atomic.LoadInt32(&m.started) == 1
 }
 
+// GetTaskByID returns a registered task. When no task is found it return an error
+func (m *TaskManager) GetTaskByID(id string) (Task, error) {
+	m.RLock()
+	task, ok := m.tasks[id]
+	m.RUnlock()
+	if !ok {
+		return nil, errors.Cause(fmt.Errorf("task:%s is not registered", id))
+	}
+	return task, nil
+}
+
 // Start listening tasks events
 func (m *TaskManager) Start(ctx context.Context) {
 	go func() {
