@@ -261,14 +261,7 @@ func (m *TaskManager) TaskIDs() []string {
 // 	return funk.Keys(ids).([]string), nil
 // }
 
-// // RunningJobs return all running tasks
-// func (m *TaskManager) RunningJobs() ([]Job, error) {
-// 	encJobs := m.queue.ProcessingJobs()
-// 	tasks := make([]Job, len(encJobs))
-// 	for i, encoded := range encJobs {
-// 		task := &Job{}
-// 		json.Unmarshal([]byte(encoded), task)
-// 		tasks[i] = *task
-// 	}
-// 	return tasks, nil
-// }
+
+func (m *TaskManager) RunningJobs() int {
+	return int(m.runningJobs)
+}
