@@ -194,14 +194,13 @@ func (m *TaskManager) waitForRemainingJobs(timeout *time.Timer) {
 	waitForJobsTicker := time.NewTicker(QueuePollInterval * 2)
 	defer waitForJobsTicker.Stop()
 	for {
-		runningJobs := atomic.LoadInt32(&m.runningJobs)
 		select {
 		case <-waitForJobsTicker.C:
-			if runningJobs == int32(0) {
+			if m.RunningJobs() == 0 {
 				return
 			}
 		case <-timeout.C:
-			log.Printf("TaskManager.Stop(): timed out with %d remaining tasks", m.runningJobs)
+			log.Printf("TaskManager.Stop(): timed out with %d remaining tasks", m.RunningJobs())
 			return
 		}
 	}
@@ -257,8 +256,11 @@ func (m *TaskManager) TaskIDs() []string {
 // 	}
 // 	return funk.Keys(ids).([]string), nil
 // }
-
-
+// RunningJobs return total of jobs running on this manager
 func (m *TaskManager) RunningJobs() int {
-	return int(m.runningJobs)
+	runningJobs := atomic.LoadInt32(&m.runningJobs)
+	return int(runningJobs)
+}
+
+
 }

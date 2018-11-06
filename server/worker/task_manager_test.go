@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/thoas/go-funk"
 
 	"github.com/perenecabuto/CatchCatch/server/worker"
 	"github.com/perenecabuto/CatchCatch/server/worker/mocks"
@@ -108,9 +107,9 @@ func TestTaskManagerDoNotAddJobToProcessQueueWhenItFailsToPoll(t *testing.T) {
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("PollPending"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "PollPending")
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 
@@ -138,9 +137,9 @@ func TestTaskManagerReenqueueUniqueJobWhenItFailsToCheckIfItIsLocked(t *testing.
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("SetJobLock"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "SetJobLock", mock.Anything, mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 
@@ -167,9 +166,9 @@ func TestTaskManagerDiscardUniqueJobWhenLockIsAlreadyAquired(t *testing.T) {
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("SetJobLock"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "SetJobLock", mock.Anything, mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	queue.AssertNotCalled(t, "EnqueueToProcess", mock.Anything)
@@ -194,9 +193,9 @@ func TestTaskManagerEnqueueJobsToProcess(t *testing.T) {
 		manager.Start(ctx)
 
 		gomega.RegisterTestingT(t)
-		gomega.Eventually(func() []string {
-			return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-		}).Should(gomega.ContainElement("PollPending"))
+		gomega.Eventually(func() bool {
+			return queue.AssertCalled(&testing.T{}, "PollPending")
+		}).Should(gomega.BeTrue())
 
 		time.Sleep(time.Millisecond * 10)
 		queue.AssertCalled(t, "EnqueueToProcess", job)
@@ -223,9 +222,9 @@ func TestTaskManagerReenqueueToPendingWhenFailToEnqueueToProcess(t *testing.T) {
 		manager.Start(ctx)
 
 		gomega.RegisterTestingT(t)
-		gomega.Eventually(func() []string {
-			return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-		}).Should(gomega.ContainElement("PollPending"))
+		gomega.Eventually(func() bool {
+			return queue.AssertCalled(&testing.T{}, "PollPending")
+		}).Should(gomega.BeTrue())
 
 		time.Sleep(time.Millisecond * 10)
 		queue.AssertCalled(t, "EnqueuePending", job)
@@ -247,9 +246,9 @@ func TestTaskManagerDoNotSetJobRunningWhenFailToGetAnProcessingJob(t *testing.T)
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("GetJobByID"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "GetJobByID", mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	queue.AssertNotCalled(t, "SetJob", job)
@@ -270,9 +269,9 @@ func TestTaskManagerDoNotSetJobRunningWhenItIsAlreadyRunning(t *testing.T) {
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("GetJobByID"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "GetJobByID", mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	queue.AssertNotCalled(t, "SetJob", job)
@@ -297,9 +296,9 @@ func TestTaskManagerSetJobRunningWhenItsLastUpdateIsGreaterThanHeartbeatInterval
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("GetJobByID"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "GetJobByID", mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	queue.AssertCalled(t, "SetJob", job)
@@ -321,9 +320,9 @@ func TestTaskManagerDoNotProcessWhenTaskWhenItFailsToSetJobRunning(t *testing.T)
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("SetJob"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "SetJob", mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	gomega.Consistently(func() int {
@@ -348,9 +347,9 @@ func TestTaskManagerDoNotReenqueueAJobWithAnUnregisteredTaskWhenItFailsToRemoveF
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("EnqueuePending"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "EnqueuePending", mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	queue.AssertNotCalled(t, "RemoveFromProcessingQueue", job)
@@ -374,9 +373,9 @@ func TestTaskManagerReenqueueAJobWithAnUnregisteredTaskAndRemoveItFromProcessing
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("SetJob"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "SetJob", mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	queue.AssertCalled(t, "EnqueuePending", job)
@@ -408,9 +407,9 @@ func TestTaskManagerRunJobsOnProcessingQueue(t *testing.T) {
 	manager.Start(ctx)
 
 	gomega.RegisterTestingT(t)
-	gomega.Eventually(func() []string {
-		return funk.Map(queue.Calls, func(c mock.Call) string { return c.Method }).([]string)
-	}).Should(gomega.ContainElement("SetJob"))
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "SetJob", mock.Anything)
+	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
 	queue.AssertNotCalled(t, "EnqueuePending", job)
