@@ -8,12 +8,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
 var (
 	JobHeartbeatInterval = time.Second * 5
+
+	ErrJobAlreadySet = errors.New("job already set")
 )
 
 type TaskManagerQueue interface {
@@ -21,9 +22,15 @@ type TaskManagerQueue interface {
 	PollProcess() (*Job, error)
 	EnqueuePending(*Job) error
 	EnqueueToProcess(*Job) error
-	GetProcessingJobByTaskAndParams(string, TaskParams) (*Job, error)
 	RemoveFromProcessingQueue(*Job) error
-	UpdateJobStatus(*Job)
+	JobsOnProcessQueue() ([]*Job, error)
+
+	SetJob(*Job) error
+	GetJobByID(string) (*Job, error)
+	RemoveJob(*Job) error
+	SetJobLock(*Job, time.Duration) (bool, error)
+	UpdateJobLock(*Job, time.Duration) (bool, error)
+	HeartbeatJob(*Job, time.Duration) error
 }
 
 type TaskManager struct {
@@ -86,6 +93,19 @@ func (m *TaskManager) Start(ctx context.Context) {
 				if job == nil {
 					continue
 				}
+				processingJob, err := m.queue.GetJobByID(job.ID)
+				if err != nil {
+					log.Println("[TaskManager]Start - can't get job by id, reenqueing", err)
+					continue
+				}
+				if processingJob != nil && processingJob.IsUpdatedToInterval(JobHeartbeatInterval+time.Second) {
+					continue
+				}
+				err = m.queue.SetJob(job)
+				if err != nil {
+					log.Println("[TaskManager]Start - can't set job on processing queue, reenqueing", err)
+					continue
+				}
 
 				go m.processJob(wCtx, job)
 
@@ -100,17 +120,14 @@ func (m *TaskManager) Start(ctx context.Context) {
 					continue
 				}
 				if job.Unique {
-					processingJob, err := m.queue.GetProcessingJobByTaskAndParams(job.TaskID, job.Params)
+					aquired, err := m.queue.SetJobLock(job, JobHeartbeatInterval*2)
 					if err != nil {
 						log.Println("[TaskManager]Start - can't check if job is already processing, reenqueing", err)
 						m.queue.EnqueuePending(job)
 						continue
 					}
-					if processingJob != nil {
-						updateTimeout := time.Now().Add(JobHeartbeatInterval + time.Second)
-						if processingJob.LastUpdate.Before(updateTimeout) {
-							continue
-						}
+					if !aquired {
+						continue
 					}
 				}
 				err = m.queue.EnqueueToProcess(job)
@@ -124,39 +141,19 @@ func (m *TaskManager) Start(ctx context.Context) {
 	}()
 }
 
-// GetTaskByID returns a registered task. When no task is found it return an error
-func (m *TaskManager) GetTaskByID(id string) (Task, error) {
-	m.RLock()
-	task, ok := m.tasks[id]
-	m.RUnlock()
-	if !ok {
-		return nil, errors.Cause(fmt.Errorf("Task:%s is not registered", id))
-	}
-	return task, nil
-}
-
 func (m *TaskManager) processJob(ctx context.Context, job *Job) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	task, err := m.GetTaskByID(job.TaskID)
 	if err != nil {
-		m.queue.EnqueuePending(job)
+		err := m.queue.EnqueuePending(job)
+		if err != nil {
+			return errors.Wrapf(err, "can't reenqueue job:%s, skipping", job.ID)
+		}
+		m.queue.RemoveFromProcessingQueue(job)
 		return errors.Wrapf(err, "can't get task:%s", job.TaskID)
 	}
-
-	go func() {
-		ticker := time.NewTicker(JobHeartbeatInterval - (time.Millisecond * 10))
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-			case <-ticker.C:
-				m.queue.UpdateJobStatus(job)
-			}
-		}
-	}()
 
 	atomic.AddInt32(&m.runningJobs, 1)
 
