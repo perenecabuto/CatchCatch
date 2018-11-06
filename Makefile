@@ -80,7 +80,7 @@ run-influxdb:
 		--name influxdb-local \
 		-v $(PWD)/:/etc/influxdb/:ro \
 		-e INFLUXDB_ADMIN_ENABLED=true \
-		-d influxdb -config /etc/influxdb/influxdb.conf
+		-d influxdb:1.6-alpine -config /etc/influxdb/influxdb.conf
 
 run-grafana:
 	@-docker rm -f grafana-local
