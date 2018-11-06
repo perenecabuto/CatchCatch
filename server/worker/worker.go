@@ -43,7 +43,7 @@ type Job struct {
 }
 
 // LockName return a unique lock name for this task
-func (t Job) LockName() string {
+func (t *Job) LockName() string {
 	params, _ := sjson.Set("", "params", t.Params)
 	return strings.Join([]string{tasksQueue, t.TaskID, params, "lock"}, ":")
 }
