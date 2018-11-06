@@ -49,7 +49,7 @@ func (j *Job) IsUpdatedToInterval(interval time.Duration) bool {
 }
 
 // LockName return a unique lock name for this task
-func (t *Job) LockName() string {
-	params, _ := sjson.Set("", "params", t.Params)
-	return strings.Join([]string{tasksQueue, t.TaskID, params, "lock"}, ":")
+func (j *Job) LockName() string {
+	params, _ := sjson.Set("", "params", j.Params)
+	return strings.Join([]string{tasksQueue, j.TaskID, params, "lock"}, ":")
 }
