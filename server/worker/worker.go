@@ -42,6 +42,12 @@ type Job struct {
 	LastUpdate time.Time
 }
 
+// IsUpdatedToInterval check if the job was update in a given interval
+func (j *Job) IsUpdatedToInterval(interval time.Duration) bool {
+	deadline := time.Now().Add(-interval)
+	return j.LastUpdate.After(deadline)
+}
+
 // LockName return a unique lock name for this task
 func (t *Job) LockName() string {
 	params, _ := sjson.Set("", "params", t.Params)
