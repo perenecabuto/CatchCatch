@@ -3,6 +3,7 @@ package worker_test
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -412,6 +413,12 @@ func TestTaskManagerRunJobsOnProcessingQueue(t *testing.T) {
 	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
+
+	hostname, _ := os.Hostname()
+	queue.AssertCalled(t, "SetJob", mock.MatchedBy(func(j *worker.Job) bool {
+		return assert.Equal(t, hostname, job.Host,
+			"hostname must be set for running job")
+	}))
 	queue.AssertNotCalled(t, "EnqueuePending", job)
 	gomega.Eventually(manager.RunningJobs).
 		Should(gomega.BeNumerically(">=", 1))

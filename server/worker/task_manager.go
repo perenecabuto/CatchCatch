@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -70,7 +71,8 @@ func (m *TaskManager) GetTaskByID(id string) (Task, error) {
 // Start listening tasks events
 func (m *TaskManager) Start(ctx context.Context) {
 	go func() {
-		log.Println("Starting.... with worker manager")
+		host, _ := os.Hostname()
+		log.Println("Starting worker manager on:", host)
 		atomic.StoreInt32(&m.started, 1)
 
 		wCtx, cancel := context.WithCancel(ctx)
@@ -101,6 +103,7 @@ func (m *TaskManager) Start(ctx context.Context) {
 				if processingJob != nil && processingJob.IsUpdatedToInterval(JobHeartbeatInterval+time.Second) {
 					continue
 				}
+				job.Host = host
 				err = m.queue.SetJob(job)
 				if err != nil {
 					log.Println("[TaskManager]Start - can't set job on processing queue, reenqueing", err)
