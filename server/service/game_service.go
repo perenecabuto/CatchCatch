@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 
 	"github.com/perenecabuto/CatchCatch/server/game"
@@ -20,6 +21,10 @@ type GamePlayerMove int
 const (
 	GamePlayerMoveInside GamePlayerMove = iota
 	GamePlayerMoveOutside
+)
+
+var (
+	ErrGameAlreadyExists = errors.New("game already exists")
 )
 
 type GameService interface {
@@ -47,7 +52,14 @@ func NewGameService(r repository.Repository, s repository.EventStream) GameServi
 }
 
 func (gs *Tile38GameService) Create(gameID, coordinates string) (*GameWithCoords, error) {
-	_, err := gs.repo.SetFeature("game", gameID, coordinates)
+	exits, err := gs.repo.Exists("game", gameID)
+	if err != nil {
+		return nil, err
+	}
+	if exits {
+		return nil, ErrGameAlreadyExists
+	}
+	_, err = gs.repo.SetFeature("game", gameID, coordinates)
 	if err != nil {
 		return nil, err
 	}

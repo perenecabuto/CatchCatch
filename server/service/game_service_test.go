@@ -26,10 +26,9 @@ func TestGameServiceCreate(t *testing.T) {
 	gService := service.NewGameService(repo, stream)
 
 	f := &model.Feature{ID: "new-game-test-1", Coordinates: "fake-coords-1"}
-	repo.On("SetFeature", "game", f.ID, f.Coordinates).
-		Return(f, nil)
-	repo.On("SetFeatureExtraData", "game", f.ID, mock.Anything).
-		Return(nil)
+	repo.On("Exists", "game", f.ID).Return(false, nil)
+	repo.On("SetFeature", "game", f.ID, f.Coordinates).Return(f, nil)
+	repo.On("SetFeatureExtraData", "game", f.ID, mock.Anything).Return(nil)
 
 	_, err := gService.Create(f.ID, f.Coordinates)
 	require.NoError(t, err)
@@ -43,6 +42,18 @@ func TestGameServiceCreate(t *testing.T) {
 			json.Unmarshal([]byte(data), actual)
 			return assert.Equal(t, example, actual)
 		}))
+}
+
+func TestGameServiceCreateReturnErrorWhenItAlreadyExists(t *testing.T) {
+	repo := &smocks.Repository{}
+	stream := &smocks.EventStream{}
+	gService := service.NewGameService(repo, stream)
+
+	f := &model.Feature{ID: "new-game-test-1", Coordinates: "fake-coords-1"}
+	repo.On("Exists", "game", f.ID).Return(true, nil)
+
+	_, err := gService.Create(f.ID, f.Coordinates)
+	assert.EqualError(t, err, service.ErrGameAlreadyExists.Error())
 }
 
 func TestGameServiceUpdate(t *testing.T) {
