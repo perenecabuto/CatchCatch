@@ -18,7 +18,7 @@ import (
 
 func TestTaskManagerRegisterTasks(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 
 	task1 := &mocks.Task{}
 	task1.On("ID").Return("task-1")
@@ -28,14 +28,14 @@ func TestTaskManagerRegisterTasks(t *testing.T) {
 	manager.Add(task1)
 	manager.Add(task2)
 
-	actual := manager.TaskIDs()
+	actual := manager.TasksID()
 	assert.Contains(t, actual, "task-1")
 	assert.Contains(t, actual, "task-2")
 }
 
 func TestTaskManagerGetTasksByID(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 
 	task1 := &mocks.Task{}
 	task1.On("ID").Return("task-1")
@@ -49,7 +49,7 @@ func TestTaskManagerGetTasksByID(t *testing.T) {
 
 func TestTaskManagerGetTasksByIDReturnAnErrorWhenTaskIsNotRegistered(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 
 	task, err := manager.GetTaskByID("task-1")
 	assert.Nil(t, task)
@@ -59,8 +59,8 @@ func TestTaskManagerGetTasksByIDReturnAnErrorWhenTaskIsNotRegistered(t *testing.
 func TestTaskManagerStart(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
-	queue.On("PollProcess").Return(nil, nil)
-	manager := worker.NewTaskManager(queue)
+	queue.On("PollProcess", mock.Anything).Return(nil, nil)
+	manager := worker.NewTaskManager(queue, "localhost")
 	require.False(t, manager.Started())
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -77,9 +77,9 @@ func TestTaskManagerStart(t *testing.T) {
 func TestTaskManagerStopWhenContextIsDone(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
-	queue.On("PollProcess").Return(nil, nil)
+	queue.On("PollProcess", mock.Anything).Return(nil, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 
 	manager.Start(ctx)
@@ -95,13 +95,13 @@ func TestTaskManagerStopWhenContextIsDone(t *testing.T) {
 	}).Should(gomega.BeFalse())
 }
 
-func TestTaskManagerDoNotAddJobToProcessQueueWhenItFailsToPoll(t *testing.T) {
+func TestTaskManagerDoNotAddJobToProcessQueueWhenItFailsToPollPending(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
 
 	queue.On("PollPending").Return(nil, errors.New("an error"))
-	queue.On("PollProcess").Return(nil, nil)
+	queue.On("PollProcess", mock.Anything).Return(nil, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -117,7 +117,7 @@ func TestTaskManagerDoNotAddJobToProcessQueueWhenItFailsToPoll(t *testing.T) {
 	queue.AssertNotCalled(t, "EnqueueToProcess", mock.Anything)
 }
 
-func TestTaskManagerReenqueueUniqueJobWhenItFailsToCheckIfItIsLocked(t *testing.T) {
+func TestTaskManagerReenqueueJobWhenItFailsToCheckIfItIsOnProcessQueue(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
 
 	job := &worker.Job{
@@ -125,11 +125,11 @@ func TestTaskManagerReenqueueUniqueJobWhenItFailsToCheckIfItIsLocked(t *testing.
 		TaskID: "task",
 	}
 	queue.On("PollPending").Return(job, nil)
-	queue.On("PollProcess").Return(nil, nil)
-	queue.On("IsJobAlreadyRunning", job).Return(false, errors.New("fail"))
+	queue.On("PollProcess", mock.Anything).Return(nil, nil)
+	queue.On("IsJobOnProcessQueue", job).Return(false, errors.New("fail"))
 	queue.On("EnqueuePending", mock.Anything).Return(nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -137,7 +137,7 @@ func TestTaskManagerReenqueueUniqueJobWhenItFailsToCheckIfItIsLocked(t *testing.
 
 	gomega.RegisterTestingT(t)
 	gomega.Eventually(func() bool {
-		return queue.AssertCalled(&testing.T{}, "IsJobAlreadyRunning", mock.Anything)
+		return queue.AssertCalled(&testing.T{}, "IsJobOnProcessQueue", mock.Anything)
 	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
@@ -145,7 +145,7 @@ func TestTaskManagerReenqueueUniqueJobWhenItFailsToCheckIfItIsLocked(t *testing.
 	queue.AssertCalled(t, "EnqueuePending", job)
 }
 
-func TestTaskManagerDiscardJobWithSpecificIDWhenItIsAlreadyRunning(t *testing.T) {
+func TestTaskManagerDiscardJobWithSpecificIDWhenItIsOnProcessQueue(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
 
 	job := &worker.Job{
@@ -153,10 +153,10 @@ func TestTaskManagerDiscardJobWithSpecificIDWhenItIsAlreadyRunning(t *testing.T)
 		TaskID: "task",
 	}
 	queue.On("PollPending").Return(job, nil)
-	queue.On("PollProcess").Return(nil, nil)
-	queue.On("IsJobAlreadyRunning", job).Return(true, nil)
+	queue.On("PollProcess", mock.Anything).Return(nil, nil)
+	queue.On("IsJobOnProcessQueue", job).Return(true, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -164,7 +164,7 @@ func TestTaskManagerDiscardJobWithSpecificIDWhenItIsAlreadyRunning(t *testing.T)
 
 	gomega.RegisterTestingT(t)
 	gomega.Eventually(func() bool {
-		return queue.AssertCalled(&testing.T{}, "IsJobAlreadyRunning", mock.Anything)
+		return queue.AssertCalled(&testing.T{}, "IsJobOnProcessQueue", mock.Anything)
 	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
@@ -178,12 +178,12 @@ func TestTaskManagerEnqueueJobsToProcess(t *testing.T) {
 	}
 	for _, job := range jobs {
 		queue := &mocks.TaskManagerQueue{}
-		queue.On("PollProcess").Return(nil, nil)
+		queue.On("PollProcess", mock.Anything).Return(nil, nil)
 		queue.On("PollPending").Return(job, nil)
-		queue.On("IsJobAlreadyRunning", job).Return(false, nil)
+		queue.On("IsJobOnProcessQueue", job).Return(false, nil)
 		queue.On("EnqueueToProcess", mock.Anything).Return(nil)
 
-		manager := worker.NewTaskManager(queue)
+		manager := worker.NewTaskManager(queue, "localhost")
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -206,13 +206,13 @@ func TestTaskManagerReenqueueToPendingWhenFailToEnqueueToProcess(t *testing.T) {
 	}
 	for _, job := range jobs {
 		queue := &mocks.TaskManagerQueue{}
-		queue.On("PollProcess").Return(nil, nil)
+		queue.On("PollProcess", mock.Anything).Return(nil, nil)
 		queue.On("PollPending").Return(job, nil)
-		queue.On("IsJobAlreadyRunning", job).Return(false, nil)
+		queue.On("IsJobOnProcessQueue", job).Return(false, nil)
 		queue.On("EnqueueToProcess", mock.Anything).Return(errors.New("fail"))
 		queue.On("EnqueuePending", mock.Anything).Return(nil)
 
-		manager := worker.NewTaskManager(queue)
+		manager := worker.NewTaskManager(queue, "localhost")
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -233,10 +233,10 @@ func TestTaskManagerDoNotProcessJobWhenItFailsToSetJobRunning(t *testing.T) {
 
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
-	queue.On("PollProcess").Return(job, nil)
-	queue.On("SetJobRunning", job, mock.Anything).Return(false, errors.New("fail"))
+	queue.On("PollProcess", mock.Anything).Return(job, nil)
+	queue.On("SetJobRunning", job, mock.Anything, mock.Anything).Return(false, errors.New("fail"))
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -249,20 +249,20 @@ func TestTaskManagerDoNotProcessJobWhenItFailsToSetJobRunning(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 10)
 
-	gomega.Consistently(func() int {
+	gomega.Consistently(func() []string {
 		return manager.RunningJobs()
-	}).Should(gomega.Equal(0))
+	}).Should(gomega.HaveLen(0))
 }
 
-func TestTaskManagerDoNotSetJobRunningWhenItIsAlreadyRunning(t *testing.T) {
+func TestTaskManagerDoNotSetJobRunningWhenItIsOnProcessQueue(t *testing.T) {
 	job := &worker.Job{ID: "job", TaskID: "task"}
 
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
-	queue.On("PollProcess").Return(job, nil)
-	queue.On("SetJobRunning", job, mock.Anything).Return(false, nil)
+	queue.On("PollProcess", mock.Anything).Return(job, nil)
+	queue.On("SetJobRunning", job, mock.Anything, mock.Anything).Return(false, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -274,9 +274,9 @@ func TestTaskManagerDoNotSetJobRunningWhenItIsAlreadyRunning(t *testing.T) {
 	}).Should(gomega.BeTrue())
 
 	time.Sleep(time.Millisecond * 10)
-	gomega.Consistently(func() int {
+	gomega.Consistently(func() []string {
 		return manager.RunningJobs()
-	}).Should(gomega.Equal(0))
+	}).Should(gomega.HaveLen(0))
 }
 
 func TestTaskManagerDoNotReenqueueAJobWithAnUnregisteredTaskWhenItFailsToRemoveFromProcessingQueue(t *testing.T) {
@@ -284,11 +284,11 @@ func TestTaskManagerDoNotReenqueueAJobWithAnUnregisteredTaskWhenItFailsToRemoveF
 
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
-	queue.On("PollProcess").Return(job, nil)
-	queue.On("SetJobRunning", job, mock.Anything).Return(true, nil)
+	queue.On("PollProcess", mock.Anything).Return(job, nil)
+	queue.On("SetJobRunning", job, mock.Anything, mock.Anything).Return(true, nil)
 	queue.On("EnqueuePending", mock.Anything).Return(errors.New("fail"))
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -308,12 +308,12 @@ func TestTaskManagerReenqueueAJobWithAnUnregisteredTaskAndRemoveItFromProcessing
 
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
-	queue.On("PollProcess").Return(job, nil)
-	queue.On("SetJobRunning", job, mock.Anything).Return(true, nil)
+	queue.On("PollProcess", mock.Anything).Return(job, nil)
+	queue.On("SetJobRunning", job, mock.Anything, mock.Anything).Return(true, nil)
 	queue.On("EnqueuePending", mock.Anything).Return(nil)
 	queue.On("RemoveFromProcessingQueue", mock.Anything).Return(nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -334,14 +334,14 @@ func TestTaskManagerRunJobsOnProcessingQueue(t *testing.T) {
 
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
-	queue.On("PollProcess").Return(job, nil)
-	queue.On("SetJobRunning", job, mock.Anything).Return(true, nil)
+	queue.On("PollProcess", mock.Anything).Return(job, nil)
+	queue.On("SetJobRunning", job, mock.Anything, mock.Anything).Return(true, nil)
 	queue.On("EnqueuePending", mock.Anything).Return(nil)
 	queue.On("RemoveFromProcessingQueue", mock.Anything).Return(nil)
 	queue.On("HeartbeatJob", mock.Anything, mock.Anything).Return(nil)
 	queue.On("SetJobDone", mock.Anything).Return(nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	task := &mocks.Task{}
 	task.On("ID").Return(job.TaskID)
 	task.On("Run", mock.Anything, mock.Anything).Return(nil).

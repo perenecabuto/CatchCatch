@@ -5,13 +5,16 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
+
+	_ "net/http/pprof"
 
 	redis "github.com/go-redis/redis"
 	zconf "github.com/grandcat/zeroconf"
 	nats "github.com/nats-io/go-nats"
-	uuid "github.com/satori/go.uuid"
+	"github.com/tidwall/sjson"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/execfunc"
@@ -24,7 +27,7 @@ import (
 )
 
 var (
-	serverID       = flag.String("id", uuid.NewV4().String(), "server id")
+	serverID       = flag.String("server-id", "", "server id")
 	tile38Addr     = flag.String("tile38-addr", "localhost:9851", "redis address")
 	maxConnections = flag.Int("tile38-connections", 100, "tile38 address")
 	port           = flag.Int("port", 5000, "server port")
@@ -69,11 +72,16 @@ func main() {
 	wsdriver := selectWsDriver(*wsdriver)
 
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
-	workersCli.FlushAll()
-	workers := worker.NewGoredisTaskManager(workersCli)
+	if *serverID == "" {
+		host, _ := os.Hostname()
+		*serverID = host
+	}
+	workers := worker.NewGoredisTaskManager(workersCli, *serverID)
 
 	gameWorker := core.NewGameWorker(gameService, dispatcher)
-	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
+
+	// TODO: add a callback to geofences worker do not need to have an manager instance
+	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers, dispatcher)
 	checkpointWatcher := core.NewCheckpointWatcher(dispatcher, playerService)
 	featuresWatcher := core.NewFeaturesEventsWatcher(dispatcher, playerService)
 
@@ -87,11 +95,12 @@ func main() {
 
 	workers.Start(ctx)
 	// TODO: verify server id on these workers
-	workers.RunUnique(geofenceEventsWorker, worker.TaskParams{"serverID": serverID})
-	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
-	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID})
+	err = workers.RunUnique(geofenceEventsWorker, worker.TaskParams{"serverID": serverID}, "geofences-worker")
+	log.Println("geofence worker", err)
+	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID}, "checkpoint-watcher")
+	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID}, "features-watcher")
 
-	playerH := core.NewPlayerHandler(playerService, gameWorker)
+	playerH := core.NewPlayerHandler(playerService, gameWorker, geofenceEventsWorker)
 	playersConnections := websocket.NewWSServer(wsdriver, playerH)
 	adminH := core.NewAdminHandler(playerService, featuresWatcher)
 	adminConnections := websocket.NewWSServer(wsdriver, adminH)
@@ -107,6 +116,10 @@ func main() {
 	http.Handle("/admin", execfunc.RecoverWrapper(adminHTTPHandler))
 	http.Handle("/player", execfunc.RecoverWrapper(playersHTTPHandler))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
+	http.HandleFunc("/running-jobs", func(w http.ResponseWriter, r *http.Request) {
+		payload, _ := sjson.SetBytes([]byte{}, "jobs", workers.RunningJobs())
+		w.Write(payload)
+	})
 
 	execfunc.OnExit(func() {
 		cancel()

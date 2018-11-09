@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
@@ -13,10 +14,12 @@ import (
 
 func TestGeofenceWorkerNofityWorkerManagerToRunGameWorker(t *testing.T) {
 	service := &smocks.PlayerLocationService{}
+	messages := &smocks.Dispatcher{}
 	manager := &wmocks.Manager{}
-	worker := core.NewGeofenceEventsWorker(service, manager)
+	worker := core.NewGeofenceEventsWorker(service, manager, messages)
 
 	service.On("ObservePlayersNearToGeofence", mock.Anything, mock.Anything).Return(nil)
 
-	worker.Run(context.Background(), nil)
+	err := worker.Run(context.Background(), nil)
+	require.NoError(t, err)
 }

@@ -1,0 +1,7 @@
+organization=perenecabuto-github
+projectKey=perenecabuto_CatchCatch
+serverUrl=https://sonarcloud.io
+serverVersion=7.4.0.18669
+dashboardUrl=https://sonarcloud.io/dashboard?id=perenecabuto_CatchCatch
+ceTaskId=AWbbmH3npAwoMVoOE1nE
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AWbbmH3npAwoMVoOE1nE

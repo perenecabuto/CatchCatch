@@ -153,6 +153,7 @@ func (s *Tile38PlayerLocationService) ObservePlayerNearToCheckpoint(ctx context.
 	})
 }
 
+// TODO: send player action (move, exit)
 func (s *Tile38PlayerLocationService) ObservePlayersNearToGeofence(ctx context.Context, callback func(string, model.Player) error) error {
 	return s.stream.StreamNearByEvents(ctx, "player", "geofences", "*", 100, func(d *repository.Detection) error {
 		gameID := d.NearByFeatID

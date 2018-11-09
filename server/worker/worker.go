@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"time"
 )
 
 // Manager for workers and its tasks
@@ -12,10 +13,13 @@ type Manager interface {
 	Add(w Task)
 
 	Run(w Task, params TaskParams) error
-	RunUnique(w Task, params TaskParams) error
+	RunUnique(w Task, params TaskParams, uniqueID string) error
+
+	TasksID() []string
+	RunningJobs() []string
 
 	BusyTasks() ([]string, error)
-	RunningJobs() ([]Job, error)
+	ProcessingJobs() ([]*Job, error)
 	Flush() error
 }
 
@@ -30,8 +34,9 @@ type Task interface {
 
 // Job represents a worker job
 type Job struct {
-	ID     string
-	TaskID string
-	Params TaskParams
-	Host   string
+	ID         string
+	TaskID     string
+	Params     TaskParams
+	Host       string
+	LastUpdate time.Time
 }

@@ -45,7 +45,7 @@ func (t *GoRedisSuite) SetupTest() {
 }
 
 func (s *GoRedisSuite) TestGoredisTaskManagerAddTask() {
-	manager := worker.NewGoredisTaskManager(s.client)
+	manager := worker.NewGoredisTaskManager(s.client, "server-1")
 
 	manager.Add(worker1)
 	manager.Add(dupTask1)
@@ -58,7 +58,7 @@ func (s *GoRedisSuite) TestGoredisTaskManagerAddTask() {
 
 	grManager := manager.(*worker.GoredisTaskManager)
 
-	actualTasks := grManager.TasksIDs()
+	actualTasks := grManager.TasksID()
 
 	s.Assert().Len(actualTasks, 3)
 	s.Assert().Contains(actualTasks, worker1.ID())
@@ -68,7 +68,7 @@ func (s *GoRedisSuite) TestGoredisTaskManagerAddTask() {
 }
 
 func (s *GoRedisSuite) TestGoredisTaskManagerRunItsTaskJobs() {
-	manager := worker.NewGoredisTaskManager(s.client)
+	manager := worker.NewGoredisTaskManager(s.client, "server-1")
 	manager.Flush()
 
 	runChan := make(chan worker.TaskParams)
@@ -97,7 +97,7 @@ func (s *GoRedisSuite) TestGoredisTaskManagerRunItsTaskJobs() {
 func (s *GoRedisSuite) TestGoredisTaskManagerStopWhenContextDone() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	manager := worker.NewGoredisTaskManager(s.client)
+	manager := worker.NewGoredisTaskManager(s.client, "server-1")
 	manager.Start(ctx)
 	time.Sleep(time.Millisecond * 100)
 	s.Assert().True(manager.Started())
@@ -112,9 +112,9 @@ func (s *GoRedisSuite) TestGoredisTaskManagerRunJobs() {
 	client2 := redis.NewClient(opts)
 	client3 := redis.NewClient(opts)
 
-	manager1 := worker.NewGoredisTaskManager(client1)
-	manager2 := worker.NewGoredisTaskManager(client2)
-	manager3 := worker.NewGoredisTaskManager(client3)
+	manager1 := worker.NewGoredisTaskManager(client1, "server-1")
+	manager2 := worker.NewGoredisTaskManager(client2, "server-2")
+	manager3 := worker.NewGoredisTaskManager(client3, "server-3")
 
 	manager1.Add(worker1)
 	manager1.Add(worker2)
@@ -128,6 +128,10 @@ func (s *GoRedisSuite) TestGoredisTaskManagerRunJobs() {
 	manager3.Add(worker2)
 	manager3.Add(worker3)
 
+	runningJobs, err := manager1.ProcessingJobs()
+	s.Require().NoError(err)
+	s.Assert().Equal(0, len(runningJobs))
+
 	manager1.Run(worker1, nil)
 	manager1.Run(worker2, nil)
 	manager1.Run(worker3, nil)
@@ -138,31 +142,27 @@ func (s *GoRedisSuite) TestGoredisTaskManagerRunJobs() {
 	manager3.Run(worker2, nil)
 	manager3.Run(worker3, nil)
 
-	runningJobs, err := manager1.RunningJobs()
-	s.Require().NoError(err)
-	s.Assert().Equal(0, len(runningJobs))
-
 	ctx := context.Background()
 	manager1.Start(ctx)
 	manager2.Start(ctx)
 	manager3.Start(ctx)
 
 	gomega.RegisterTestingT(s.T())
-	gomega.Eventually(manager1.RunningJobs, time.Second).Should(gomega.HaveLen(9))
+	gomega.Eventually(manager1.ProcessingJobs, time.Second).Should(gomega.HaveLen(9))
 
 	manager1.Stop()
 	manager2.Stop()
 	manager3.Stop()
 
-	gomega.Eventually(manager1.RunningJobs, time.Second).Should(gomega.HaveLen(0))
+	gomega.Eventually(manager1.ProcessingJobs, time.Second).Should(gomega.HaveLen(0))
 }
 
 func (s *GoRedisSuite) TestGoredisTaskManagerRunUniqueJobs() {
 	client1 := redis.NewClient(opts)
 	client2 := redis.NewClient(opts)
 
-	manager1 := worker.NewGoredisTaskManager(client1)
-	manager2 := worker.NewGoredisTaskManager(client2)
+	manager1 := worker.NewGoredisTaskManager(client1, "server-1")
+	manager2 := worker.NewGoredisTaskManager(client2, "server-2")
 
 	ctx := context.Background()
 	manager1.Start(ctx)
@@ -173,21 +173,21 @@ func (s *GoRedisSuite) TestGoredisTaskManagerRunUniqueJobs() {
 	manager2.Add(worker1)
 	manager2.Add(worker1)
 
-	manager1.RunUnique(worker1, nil)
-	manager1.RunUnique(worker1, nil)
-	manager2.RunUnique(worker1, nil)
-	manager2.RunUnique(worker1, nil)
+	manager1.RunUnique(worker1, nil, "unique-1")
+	manager1.RunUnique(worker1, nil, "unique-2")
+	manager2.RunUnique(worker1, nil, "unique-3")
+	manager2.RunUnique(worker1, nil, "unique-4")
 
 	time.Sleep(time.Millisecond * 100)
 
-	runningJobs, err := manager1.RunningJobs()
+	processingJobs, err := manager1.ProcessingJobs()
 	s.Require().NoError(err)
-	s.Assert().Equal(1, len(runningJobs))
+	s.Assert().Equal(1, len(processingJobs))
 
 	manager1.Stop()
 	manager2.Stop()
 
-	runningJobs, err = manager1.RunningJobs()
+	processingJobs, err = manager1.ProcessingJobs()
 	s.Require().NoError(err)
-	s.Assert().Equal(0, len(runningJobs))
+	s.Assert().Equal(0, len(processingJobs))
 }

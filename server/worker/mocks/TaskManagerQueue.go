@@ -38,13 +38,13 @@ func (_m *TaskManagerQueue) EnqueueToProcess(_a0 *worker.Job) error {
 	return r0
 }
 
-// HeartbeatJob provides a mock function with given fields: _a0, _a1
-func (_m *TaskManagerQueue) HeartbeatJob(_a0 *worker.Job, _a1 time.Duration) error {
-	ret := _m.Called(_a0, _a1)
+// Flush provides a mock function with given fields:
+func (_m *TaskManagerQueue) Flush() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*worker.Job, time.Duration) error); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -52,20 +52,34 @@ func (_m *TaskManagerQueue) HeartbeatJob(_a0 *worker.Job, _a1 time.Duration) err
 	return r0
 }
 
-// IsJobAlreadyRunning provides a mock function with given fields: _a0
-func (_m *TaskManagerQueue) IsJobAlreadyRunning(_a0 *worker.Job) (bool, error) {
-	ret := _m.Called(_a0)
+// HeartbeatJob provides a mock function with given fields: job
+func (_m *TaskManagerQueue) HeartbeatJob(job *worker.Job) error {
+	ret := _m.Called(job)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*worker.Job) error); ok {
+		r0 = rf(job)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IsJobOnProcessQueue provides a mock function with given fields: job
+func (_m *TaskManagerQueue) IsJobOnProcessQueue(job *worker.Job) (bool, error) {
+	ret := _m.Called(job)
 
 	var r0 bool
 	if rf, ok := ret.Get(0).(func(*worker.Job) bool); ok {
-		r0 = rf(_a0)
+		r0 = rf(job)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(*worker.Job) error); ok {
-		r1 = rf(_a0)
+		r1 = rf(job)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -119,13 +133,13 @@ func (_m *TaskManagerQueue) PollPending() (*worker.Job, error) {
 	return r0, r1
 }
 
-// PollProcess provides a mock function with given fields:
-func (_m *TaskManagerQueue) PollProcess() (*worker.Job, error) {
-	ret := _m.Called()
+// PollProcess provides a mock function with given fields: updatedOn
+func (_m *TaskManagerQueue) PollProcess(updatedOn time.Time) (*worker.Job, error) {
+	ret := _m.Called(updatedOn)
 
 	var r0 *worker.Job
-	if rf, ok := ret.Get(0).(func() *worker.Job); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(time.Time) *worker.Job); ok {
+		r0 = rf(updatedOn)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*worker.Job)
@@ -133,8 +147,8 @@ func (_m *TaskManagerQueue) PollProcess() (*worker.Job, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(time.Time) error); ok {
+		r1 = rf(updatedOn)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -156,34 +170,20 @@ func (_m *TaskManagerQueue) RemoveFromProcessingQueue(_a0 *worker.Job) error {
 	return r0
 }
 
-// SetJobDone provides a mock function with given fields: _a0
-func (_m *TaskManagerQueue) SetJobDone(_a0 *worker.Job) error {
-	ret := _m.Called(_a0)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*worker.Job) error); ok {
-		r0 = rf(_a0)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// SetJobRunning provides a mock function with given fields: _a0, _a1
-func (_m *TaskManagerQueue) SetJobRunning(_a0 *worker.Job, _a1 time.Duration) (bool, error) {
-	ret := _m.Called(_a0, _a1)
+// SetJobRunning provides a mock function with given fields: job, host, lockDuration
+func (_m *TaskManagerQueue) SetJobRunning(job *worker.Job, host string, lockDuration time.Duration) (bool, error) {
+	ret := _m.Called(job, host, lockDuration)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(*worker.Job, time.Duration) bool); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(*worker.Job, string, time.Duration) bool); ok {
+		r0 = rf(job, host, lockDuration)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*worker.Job, time.Duration) error); ok {
-		r1 = rf(_a0, _a1)
+	if rf, ok := ret.Get(1).(func(*worker.Job, string, time.Duration) error); ok {
+		r1 = rf(job, host, lockDuration)
 	} else {
 		r1 = ret.Error(1)
 	}

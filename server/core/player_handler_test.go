@@ -15,6 +15,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
+	wmocks "github.com/perenecabuto/CatchCatch/server/worker/mocks"
 
 	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
 	wsmocks "github.com/perenecabuto/CatchCatch/server/websocket/mocks"
@@ -82,11 +83,14 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 
 	for _, tt := range tests {
 		wsDriver := &wsmocks.WSDriver{}
+		pls := &smocks.PlayerLocationService{}
 		gs := &smocks.GameService{}
-		m := &smocks.Dispatcher{}
-		w := core.NewGameWorker(gs, m)
+		d := &smocks.Dispatcher{}
+		manager := &wmocks.Manager{}
 
-		playerH := core.NewPlayerHandler(nil, w)
+		geofences := core.NewGeofenceEventsWorker(pls, manager, d)
+		gameworker := core.NewGameWorker(gs, d)
+		playerH := core.NewPlayerHandler(pls, gameworker, geofences)
 		wss := websocket.NewWSServer(wsDriver, playerH)
 		c := &wsmocks.WSConnection{}
 
@@ -100,7 +104,7 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 		})).Return(nil)
 
 		tt.payload.PlayerID = wss.Add(c).ID
-		m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
+		d.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
 			data, _ := json.Marshal(tt.payload)
 			cb(data)
 			return true
@@ -118,10 +122,14 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 
 func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	wsDriver := &wsmocks.WSDriver{}
+	pls := &smocks.PlayerLocationService{}
 	gs := &smocks.GameService{}
-	m := &smocks.Dispatcher{}
-	w := core.NewGameWorker(gs, m)
-	playerH := core.NewPlayerHandler(nil, w)
+	d := &smocks.Dispatcher{}
+	manager := &wmocks.Manager{}
+
+	geofences := core.NewGeofenceEventsWorker(pls, manager, d)
+	gameworker := core.NewGameWorker(gs, d)
+	playerH := core.NewPlayerHandler(pls, gameworker, geofences)
 	wss := websocket.NewWSServer(wsDriver, playerH)
 
 	c1 := &wsmocks.WSConnection{}
@@ -142,7 +150,7 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	}
 	g := game.NewGameWithParams(gameID, true, players, player3ID)
 
-	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
+	d.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
 		for _, p := range players {
 			data, _ := json.Marshal(&core.GameEventPayload{
 				Event: core.GameFinished, PlayerID: p.ID, PlayerRole: p.Role,

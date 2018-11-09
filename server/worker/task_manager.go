@@ -4,50 +4,55 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
 var (
 	JobHeartbeatInterval = time.Second * 5
-	QueuePollInterval    = time.Second / 4
+	QueuePollInterval    = time.Second / 2
 
 	ErrJobAlreadySet = errors.New("job already set")
 )
 
 type TaskManagerQueue interface {
 	PollPending() (*Job, error)
-	PollProcess() (*Job, error)
+	PollProcess(updatedOn time.Time) (*Job, error)
 	EnqueuePending(*Job) error
 	EnqueueToProcess(*Job) error
 	RemoveFromProcessingQueue(*Job) error
+	SetJobRunning(job *Job, host string, lockDuration time.Duration) (bool, error)
+	HeartbeatJob(job *Job) error
+
+	IsJobOnProcessQueue(job *Job) (bool, error)
 	JobsOnProcessQueue() ([]*Job, error)
 
-	IsJobAlreadyRunning(*Job) (bool, error)
-	SetJobRunning(*Job, time.Duration) (bool, error)
-	SetJobDone(*Job) error
-	HeartbeatJob(*Job, time.Duration) error
+	Flush() error
 }
 
 type TaskManager struct {
+	host        string
 	queue       TaskManagerQueue
-	tasks       map[string]Task
 	started     int32
-	runningJobs int32
+	tasks       map[string]Task
+	runningJobs map[string]string
 	stop        chan interface{}
 
 	sync.RWMutex
 }
 
+var _ Manager = (*TaskManager)(nil)
+
 // NewTaskManager creates a TaskManager
-func NewTaskManager(e TaskManagerQueue) *TaskManager {
-	return &TaskManager{queue: e,
-		tasks: make(map[string]Task),
-		stop:  make(chan interface{}, 1),
+func NewTaskManager(e TaskManagerQueue, host string) *TaskManager {
+	return &TaskManager{host: host, queue: e,
+		runningJobs: make(map[string]string),
+		tasks:       make(map[string]Task),
+		stop:        make(chan interface{}, 1),
 	}
 }
 
@@ -70,8 +75,7 @@ func (m *TaskManager) GetTaskByID(id string) (Task, error) {
 // Start listening tasks events
 func (m *TaskManager) Start(ctx context.Context) {
 	go func() {
-		host, _ := os.Hostname()
-		log.Println("Starting worker manager on:", host)
+		log.Println("Starting worker manager on:", m.host)
 		atomic.StoreInt32(&m.started, 1)
 
 		wCtx, cancel := context.WithCancel(ctx)
@@ -86,7 +90,8 @@ func (m *TaskManager) Start(ctx context.Context) {
 				return
 			case <-processingQueueInterval.C:
 				processingQueueInterval.Reset(QueuePollInterval)
-				job, err := m.queue.PollProcess()
+				updatedBefore := time.Now().Add(-(JobHeartbeatInterval * 2))
+				job, err := m.queue.PollProcess(updatedBefore)
 				if err != nil {
 					log.Println("[TaskManager]Start - can't poll", err)
 					continue
@@ -94,17 +99,17 @@ func (m *TaskManager) Start(ctx context.Context) {
 				if job == nil {
 					continue
 				}
-				job.Host = host
-				aquired, err := m.queue.SetJobRunning(job, JobHeartbeatInterval)
+				aquired, err := m.queue.SetJobRunning(job, m.host, JobHeartbeatInterval*2)
 				if err != nil {
-					log.Println("[TaskManager]Start - can't set job running from processing queue, reenqueing", err)
+					log.Println(errors.Wrapf(err, "can't set job:%s:task:%s running", job.ID, job.TaskID))
 					continue
 				}
 				if !aquired {
-					log.Println("[TaskManager]Start - job is already running on processing queue - skipping")
+					log.Println(errors.New("skipping, job already running"))
 					continue
 				}
 				go m.processJob(wCtx, job)
+				processingQueueInterval.Reset(time.Second)
 
 			case <-pendingQueueInterval.C:
 				pendingQueueInterval.Reset(QueuePollInterval)
@@ -116,14 +121,13 @@ func (m *TaskManager) Start(ctx context.Context) {
 				if job == nil {
 					continue
 				}
-				running, err := m.queue.IsJobAlreadyRunning(job)
+				skip, err := m.queue.IsJobOnProcessQueue(job)
 				if err != nil {
-					log.Println("[TaskManager]Start - can't check if job is already running, reenqueing", err)
+					log.Println("[TaskManager]Start - can't check job on processing queue, reenqueing", err)
 					m.queue.EnqueuePending(job)
 					continue
 				}
-				if running {
-					log.Println("[TaskManager]Start - job is already running, skipping")
+				if skip {
 					continue
 				}
 				err = m.queue.EnqueueToProcess(job)
@@ -151,7 +155,24 @@ func (m *TaskManager) processJob(ctx context.Context, job *Job) error {
 		return errors.Wrapf(err, "can't get task:%s", job.TaskID)
 	}
 
-	atomic.AddInt32(&m.runningJobs, 1)
+	m.Lock()
+	m.runningJobs[job.ID] = job.TaskID
+	m.Unlock()
+	log.Println("Starting JOB!!!", job.ID, m.RunningJobs())
+
+	go func() {
+		ticker := time.NewTicker(JobHeartbeatInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				m.queue.RemoveFromProcessingQueue(job)
+				return
+			case <-ticker.C:
+				m.queue.HeartbeatJob(job)
+			}
+		}
+	}()
 
 	err = task.Run(ctx, job.Params)
 	err = errors.Wrapf(err, "error running job:%s", job.ID)
@@ -159,7 +180,9 @@ func (m *TaskManager) processJob(ctx context.Context, job *Job) error {
 	removeErr := m.queue.RemoveFromProcessingQueue(job)
 	errors.Wrapf(removeErr, "can't set DONE to job:%s", job.ID)
 
-	atomic.AddInt32(&m.runningJobs, -1)
+	m.Lock()
+	delete(m.runningJobs, job.ID)
+	m.Unlock()
 	log.Printf("task:%s:job:%s:done", job.TaskID, job.ID)
 
 	return err
@@ -192,7 +215,7 @@ func (m *TaskManager) waitForRemainingJobs(timeout *time.Timer) {
 	for {
 		select {
 		case <-waitForJobsTicker.C:
-			if m.RunningJobs() == 0 {
+			if len(m.RunningJobs()) == 0 {
 				return
 			}
 		case <-timeout.C:
@@ -209,8 +232,33 @@ func (m *TaskManager) Add(t Task) {
 	m.Unlock()
 }
 
-// TaskIDs return managed tasks ids
-func (m *TaskManager) TaskIDs() []string {
+// Run a task the worker
+func (m *TaskManager) Run(t Task, params TaskParams) error {
+	jobID := uuid.New().String()
+	return m.run(jobID, t, params)
+}
+
+// RunUnique send a task the worker
+// but it will be ignored if the worker is already running a task with the same parameters
+func (m *TaskManager) RunUnique(t Task, params TaskParams, lock string) error {
+	return m.run(lock, t, params)
+}
+
+func (m *TaskManager) run(jobID string, t Task, params TaskParams) error {
+	job := &Job{ID: fmt.Sprintf("%s:%s", t.ID(), jobID), TaskID: t.ID(), Params: params}
+	skip, err := m.queue.IsJobOnProcessQueue(job)
+	if err != nil {
+		return errors.Cause(err)
+	}
+	if skip {
+		return nil
+	}
+	err = m.queue.EnqueuePending(job)
+	return errors.Cause(err)
+}
+
+// TasksID return managed tasks ids
+func (m *TaskManager) TasksID() []string {
 	ids := make([]string, len(m.tasks))
 	count := 0
 
@@ -224,7 +272,43 @@ func (m *TaskManager) TaskIDs() []string {
 }
 
 // RunningJobs return total of jobs running on this manager
-func (m *TaskManager) RunningJobs() int {
-	runningJobs := atomic.LoadInt32(&m.runningJobs)
-	return int(runningJobs)
+func (m *TaskManager) RunningJobs() []string {
+	jobIDs := make([]string, 0)
+	m.RLock()
+	for id := range m.runningJobs {
+		jobIDs = append(jobIDs, id)
+	}
+	m.RUnlock()
+	return jobIDs
+}
+
+func (m *TaskManager) BusyTasks() ([]string, error) {
+	jobs, err := m.ProcessingJobs()
+	if err != nil {
+		return nil, errors.Cause(err)
+	}
+	taskIDMap := make(map[string]interface{})
+	for _, t := range jobs {
+		taskIDMap[t.TaskID] = nil
+	}
+	ids := make([]string, 0)
+	for id := range taskIDMap {
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+// ProcessingJobs return all running jobs
+func (m *TaskManager) ProcessingJobs() ([]*Job, error) {
+	jobs, err := m.queue.JobsOnProcessQueue()
+	if err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
+// Flush tasks task queue
+func (m *TaskManager) Flush() error {
+	err := m.queue.Flush()
+	return errors.Cause(err)
 }

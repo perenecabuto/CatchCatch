@@ -105,10 +105,10 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 		return ErrGameCoordsCantBeEmpty
 	}
 
-	// FIXME: avoid duplicated games
-	// gw.service.Remove(gameID)
-	// notify game id to destroy
-	// listen to game destroy and exit if this message arrives here
+	gw.service.Remove(gameID)
+	// TODO: save game time
+	// TODO: recover running game
+	// TODO: check players position when game recover
 	log.Printf("GameWorker:%s:Create", gameID)
 	g, err := gw.service.Create(gameID, coordinates)
 	if err != nil {
@@ -154,9 +154,11 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			stop()
 		case <-ctx.Done():
 			log.Printf("GameWorker:%s:Done", g.ID)
-			err := gw.processGameFinish(g)
-			if err != nil {
-				return errors.Wrapf(err, "can't process game:%s finish", g.ID)
+			if g.Started() {
+				err := gw.processGameFinish(g)
+				if err != nil {
+					return errors.Wrapf(err, "can't process game:%s finish", g.ID)
+				}
 			}
 			g.Stop()
 			err = gw.service.Remove(g.ID)

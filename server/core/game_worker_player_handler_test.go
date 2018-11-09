@@ -12,6 +12,7 @@ import (
 
 	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
 	wsmocks "github.com/perenecabuto/CatchCatch/server/websocket/mocks"
+	wmocks "github.com/perenecabuto/CatchCatch/server/worker/mocks"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/game"
@@ -23,10 +24,12 @@ import (
 func TestObjectsGraph(t *testing.T) {
 	pls := &smocks.PlayerLocationService{}
 	gs := &smocks.GameService{}
-	m := &smocks.Dispatcher{}
-	w := core.NewGameWorker(gs, m)
+	d := &smocks.Dispatcher{}
+	manager := &wmocks.Manager{}
 
-	playerH := core.NewPlayerHandler(pls, w)
+	gameworker := core.NewGameWorker(gs, d)
+	geofences := core.NewGeofenceEventsWorker(pls, manager, d)
+	playerH := core.NewPlayerHandler(pls, gameworker, geofences)
 	wsDriver := &wsmocks.WSDriver{}
 
 	wss := websocket.NewWSServer(wsDriver, playerH)
@@ -41,7 +44,7 @@ func TestObjectsGraph(t *testing.T) {
 	ws := wss.Add(c)
 	playerH.OnConnection(ctx, ws)
 
-	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
+	d.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
 		data, err := json.Marshal(&core.GameEventPayload{
 			PlayerID: ws.ID,
 			Event:    core.GamePlayerLose, Game: "game-id-5",
