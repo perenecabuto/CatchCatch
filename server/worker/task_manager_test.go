@@ -363,3 +363,39 @@ func TestTaskManagerRunJobsOnProcessingQueue(t *testing.T) {
 	gomega.Eventually(manager.RunningJobs).
 		Should(gomega.HaveLen(1))
 }
+
+func TestTaskManagerRunningJobsAreHeartbeated(t *testing.T) {
+	job := &worker.Job{ID: "job", TaskID: "task"}
+
+	queue := &mocks.TaskManagerQueue{}
+	queue.On("PollPending").Return(nil, nil)
+	queue.On("PollProcess", mock.Anything).Return(job, nil)
+	queue.On("SetJobRunning", job, mock.Anything, mock.Anything).Return(true, nil)
+	queue.On("EnqueuePending", mock.Anything).Return(nil)
+	queue.On("RemoveFromProcessingQueue", mock.Anything).Return(nil)
+	queue.On("HeartbeatJob", mock.Anything, mock.Anything).Return(nil)
+
+	manager := worker.NewTaskManager(queue, "localhost")
+	task := &mocks.Task{}
+	task.On("ID").Return(job.TaskID)
+	task.On("Run", mock.Anything, mock.Anything).Return(nil).
+		WaitUntil(time.After(time.Millisecond * 100))
+	manager.Add(task)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	worker.JobHeartbeatInterval = time.Millisecond
+	manager.Start(ctx)
+
+	gomega.RegisterTestingT(t)
+	gomega.Eventually(func() bool {
+		return queue.AssertCalled(&testing.T{}, "RemoveFromProcessingQueue", mock.Anything)
+	}).Should(gomega.BeTrue())
+
+	time.Sleep(time.Millisecond * 10)
+
+	manager.Stop()
+
+	queue.AssertCalled(t, "HeartbeatJob", job)
+}

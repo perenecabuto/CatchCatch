@@ -158,6 +158,18 @@ func (m *TaskManager) processJob(ctx context.Context, job *Job) error {
 	m.Unlock()
 	log.Println("Starting JOB!!!", job.ID, m.RunningJobs())
 
+	go func() {
+		ticker := time.NewTicker(JobHeartbeatInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				m.queue.HeartbeatJob(job)
+			}
+		}
+	}()
 
 	err = task.Run(ctx, job.Params)
 	err = errors.Wrapf(err, "error running job:%s", job.ID)
