@@ -280,3 +280,18 @@ func (m *TaskManager) RunningJobs() []string {
 	m.RUnlock()
 	return jobIDs
 }
+
+// ProcessingJobs return all running jobs
+func (m *TaskManager) ProcessingJobs() ([]*Job, error) {
+	jobs, err := m.queue.JobsOnProcessQueue()
+	if err != nil {
+		return nil, errors.Cause(err)
+	}
+	return jobs, nil
+}
+
+// Flush tasks task queue
+func (m *TaskManager) Flush() error {
+	err := m.queue.Flush()
+	return errors.Cause(err)
+}
