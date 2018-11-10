@@ -18,7 +18,7 @@ import (
 
 func TestTaskManagerRegisterTasks(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 
 	task1 := &mocks.Task{}
 	task1.On("ID").Return("task-1")
@@ -28,14 +28,14 @@ func TestTaskManagerRegisterTasks(t *testing.T) {
 	manager.Add(task1)
 	manager.Add(task2)
 
-	actual := manager.TaskIDs()
+	actual := manager.TasksID()
 	assert.Contains(t, actual, "task-1")
 	assert.Contains(t, actual, "task-2")
 }
 
 func TestTaskManagerGetTasksByID(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 
 	task1 := &mocks.Task{}
 	task1.On("ID").Return("task-1")
@@ -49,7 +49,7 @@ func TestTaskManagerGetTasksByID(t *testing.T) {
 
 func TestTaskManagerGetTasksByIDReturnAnErrorWhenTaskIsNotRegistered(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 
 	task, err := manager.GetTaskByID("task-1")
 	assert.Nil(t, task)
@@ -60,7 +60,7 @@ func TestTaskManagerStart(t *testing.T) {
 	queue := &mocks.TaskManagerQueue{}
 	queue.On("PollPending").Return(nil, nil)
 	queue.On("PollProcess").Return(nil, nil)
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	require.False(t, manager.Started())
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -79,7 +79,7 @@ func TestTaskManagerStopWhenContextIsDone(t *testing.T) {
 	queue.On("PollPending").Return(nil, nil)
 	queue.On("PollProcess").Return(nil, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 
 	manager.Start(ctx)
@@ -101,7 +101,7 @@ func TestTaskManagerDoNotAddJobToProcessQueueWhenItFailsToPoll(t *testing.T) {
 	queue.On("PollPending").Return(nil, errors.New("an error"))
 	queue.On("PollProcess").Return(nil, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -129,7 +129,7 @@ func TestTaskManagerReenqueueUniqueJobWhenItFailsToCheckIfItIsLocked(t *testing.
 	queue.On("IsJobAlreadyRunning", job).Return(false, errors.New("fail"))
 	queue.On("EnqueuePending", mock.Anything).Return(nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -156,7 +156,7 @@ func TestTaskManagerDiscardJobWithSpecificIDWhenItIsAlreadyRunning(t *testing.T)
 	queue.On("PollProcess").Return(nil, nil)
 	queue.On("IsJobAlreadyRunning", job).Return(true, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -183,7 +183,7 @@ func TestTaskManagerEnqueueJobsToProcess(t *testing.T) {
 		queue.On("IsJobAlreadyRunning", job).Return(false, nil)
 		queue.On("EnqueueToProcess", mock.Anything).Return(nil)
 
-		manager := worker.NewTaskManager(queue)
+		manager := worker.NewTaskManager(queue, "localhost")
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -212,7 +212,7 @@ func TestTaskManagerReenqueueToPendingWhenFailToEnqueueToProcess(t *testing.T) {
 		queue.On("EnqueueToProcess", mock.Anything).Return(errors.New("fail"))
 		queue.On("EnqueuePending", mock.Anything).Return(nil)
 
-		manager := worker.NewTaskManager(queue)
+		manager := worker.NewTaskManager(queue, "localhost")
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -236,7 +236,7 @@ func TestTaskManagerDoNotProcessJobWhenItFailsToSetJobRunning(t *testing.T) {
 	queue.On("PollProcess").Return(job, nil)
 	queue.On("SetJobRunning", job, mock.Anything).Return(false, errors.New("fail"))
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -262,7 +262,7 @@ func TestTaskManagerDoNotSetJobRunningWhenItIsAlreadyRunning(t *testing.T) {
 	queue.On("PollProcess").Return(job, nil)
 	queue.On("SetJobRunning", job, mock.Anything).Return(false, nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -288,7 +288,7 @@ func TestTaskManagerDoNotReenqueueAJobWithAnUnregisteredTaskWhenItFailsToRemoveF
 	queue.On("SetJobRunning", job, mock.Anything).Return(true, nil)
 	queue.On("EnqueuePending", mock.Anything).Return(errors.New("fail"))
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -313,7 +313,7 @@ func TestTaskManagerReenqueueAJobWithAnUnregisteredTaskAndRemoveItFromProcessing
 	queue.On("EnqueuePending", mock.Anything).Return(nil)
 	queue.On("RemoveFromProcessingQueue", mock.Anything).Return(nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -341,7 +341,7 @@ func TestTaskManagerRunJobsOnProcessingQueue(t *testing.T) {
 	queue.On("HeartbeatJob", mock.Anything, mock.Anything).Return(nil)
 	queue.On("SetJobDone", mock.Anything).Return(nil)
 
-	manager := worker.NewTaskManager(queue)
+	manager := worker.NewTaskManager(queue, "localhost")
 	task := &mocks.Task{}
 	task.On("ID").Return(job.TaskID)
 	task.On("Run", mock.Anything, mock.Anything).Return(nil).

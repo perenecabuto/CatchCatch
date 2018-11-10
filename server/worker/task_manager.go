@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,18 +12,21 @@ import (
 )
 
 var (
+	// JobHeartbeatInterval is the interval to notify job running
 	JobHeartbeatInterval = time.Second * 5
 	QueuePollInterval    = time.Second / 4
 
 	ErrJobAlreadySet = errors.New("job already set")
 )
 
+// TaskManagerQueue manager jobs queue
 type TaskManagerQueue interface {
 	PollPending() (*Job, error)
 	PollProcess() (*Job, error)
 	EnqueuePending(*Job) error
 	EnqueueToProcess(*Job) error
 	RemoveFromProcessingQueue(*Job) error
+
 	JobsOnProcessQueue() ([]*Job, error)
 
 	IsJobAlreadyRunning(*Job) (bool, error)
@@ -34,6 +36,7 @@ type TaskManagerQueue interface {
 }
 
 type TaskManager struct {
+	host        string
 	queue       TaskManagerQueue
 	tasks       map[string]Task
 	started     int32
@@ -48,6 +51,10 @@ func NewTaskManager(e TaskManagerQueue) *TaskManager {
 	return &TaskManager{queue: e,
 		tasks: make(map[string]Task),
 		stop:  make(chan interface{}, 1),
+func NewTaskManager(e TaskManagerQueue, host string) *TaskManager {
+	return &TaskManager{host: host, queue: e,
+		tasks:       make(map[string]Task),
+		stop:        make(chan interface{}, 1),
 	}
 }
 
@@ -70,8 +77,7 @@ func (m *TaskManager) GetTaskByID(id string) (Task, error) {
 // Start listening tasks events
 func (m *TaskManager) Start(ctx context.Context) {
 	go func() {
-		host, _ := os.Hostname()
-		log.Println("Starting worker manager on:", host)
+		log.Println("Starting worker manager on:", m.host)
 		atomic.StoreInt32(&m.started, 1)
 
 		wCtx, cancel := context.WithCancel(ctx)
