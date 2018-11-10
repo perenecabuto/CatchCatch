@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"time"
 )
 
 // Manager for workers and its tasks
@@ -30,8 +31,9 @@ type Task interface {
 
 // Job represents a worker job
 type Job struct {
-	ID     string
-	TaskID string
-	Params TaskParams
-	Host   string
+	ID         string
+	TaskID     string
+	Params     TaskParams
+	Host       string
+	LastUpdate time.Time
 }
