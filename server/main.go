@@ -12,6 +12,7 @@ import (
 	redis "github.com/go-redis/redis"
 	zconf "github.com/grandcat/zeroconf"
 	nats "github.com/nats-io/go-nats"
+	"github.com/tidwall/sjson"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/execfunc"
@@ -110,6 +111,10 @@ func main() {
 	http.Handle("/admin", execfunc.RecoverWrapper(adminHTTPHandler))
 	http.Handle("/player", execfunc.RecoverWrapper(playersHTTPHandler))
 	http.Handle("/", http.FileServer(http.Dir(*webDir)))
+	http.HandleFunc("/running-jobs", func(w http.ResponseWriter, r *http.Request) {
+		payload, _ := sjson.SetBytes([]byte{}, "jobs", workers.RunningJobs())
+		w.Write(payload)
+	})
 
 	execfunc.OnExit(func() {
 		cancel()
