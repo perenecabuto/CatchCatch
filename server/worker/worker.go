@@ -15,8 +15,6 @@ type Manager interface {
 	Run(w Task, params TaskParams) error
 	RunUnique(w Task, params TaskParams) error
 
-	BusyTasks() ([]string, error)
-	RunningJobs() ([]Job, error)
 	Flush() error
 }
 
