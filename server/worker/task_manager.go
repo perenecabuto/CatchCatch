@@ -15,9 +15,8 @@ import (
 var (
 	// JobHeartbeatInterval is the interval to notify job running
 	JobHeartbeatInterval = time.Second * 5
-	QueuePollInterval    = time.Second / 4
-
-	ErrJobAlreadySet = errors.New("job already set")
+	// QueuePollInterval is the interval to poll pending and processing tasks
+	QueuePollInterval = time.Second / 2
 )
 
 // TaskManagerQueue manager jobs queue
@@ -36,6 +35,7 @@ type TaskManagerQueue interface {
 	Flush() error
 }
 
+// TaskManager is a reliable job manager
 type TaskManager struct {
 	host        string
 	queue       TaskManagerQueue
