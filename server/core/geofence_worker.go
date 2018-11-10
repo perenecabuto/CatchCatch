@@ -2,6 +2,9 @@ package core
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/service"
@@ -31,6 +34,9 @@ func (gw GeofenceEventsWorker) Run(ctx context.Context, _ worker.TaskParams) err
 		if err != nil {
 			return err
 		}
-		return gw.workers.RunUnique(GameWorker{}, worker.TaskParams{"gameID": id, "coordinates": f.Coordinates})
+		err = gw.workers.RunUnique(GameWorker{},
+			worker.TaskParams{"gameID": id, "coordinates": f.Coordinates},
+			fmt.Sprintf("game:%s", id))
+		return errors.Wrapf(err, "can't start game worker")
 	})
 }

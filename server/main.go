@@ -5,13 +5,13 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	redis "github.com/go-redis/redis"
 	zconf "github.com/grandcat/zeroconf"
 	nats "github.com/nats-io/go-nats"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/execfunc"
@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	serverID       = flag.String("id", uuid.NewV4().String(), "server id")
+	serverID       = flag.String("server-id", "", "server id")
 	tile38Addr     = flag.String("tile38-addr", "localhost:9851", "redis address")
 	maxConnections = flag.Int("tile38-connections", 100, "tile38 address")
 	port           = flag.Int("port", 5000, "server port")
@@ -70,7 +70,11 @@ func main() {
 
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
 	workersCli.FlushAll()
-	workers := worker.NewGoredisTaskManager(workersCli)
+	if *serverID == "" {
+		host, _ := os.Hostname()
+		*serverID = host
+	}
+	workers := worker.NewGoredisTaskManager(workersCli, *serverID)
 
 	gameWorker := core.NewGameWorker(gameService, dispatcher)
 	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
@@ -86,10 +90,9 @@ func main() {
 	workers.Add(worker.NewTaskWithMetrics(featuresWatcher, metrics, opts))
 
 	workers.Start(ctx)
-	// TODO: verify server id on these workers
-	workers.RunUnique(geofenceEventsWorker, worker.TaskParams{"serverID": serverID})
-	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID})
-	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID})
+	workers.RunUnique(geofenceEventsWorker, worker.TaskParams{"serverID": serverID}, "geofences-worker")
+	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID}, "checkpoint-watcher")
+	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID}, "features-watcher")
 
 	playerH := core.NewPlayerHandler(playerService, gameWorker)
 	playersConnections := websocket.NewWSServer(wsdriver, playerH)
