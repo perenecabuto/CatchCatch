@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -228,6 +229,31 @@ func (m *TaskManager) Add(t Task) {
 	m.Lock()
 	m.tasks[t.ID()] = t
 	m.Unlock()
+}
+
+// Run a task the worker
+func (m *TaskManager) Run(t Task, params TaskParams) error {
+	jobID := uuid.New().String()
+	return m.run(jobID, t, params)
+}
+
+// RunUnique send a task the worker
+// but it will be ignored if the worker is already running a task with the same parameters
+func (m *TaskManager) RunUnique(t Task, params TaskParams, lock string) error {
+	return m.run(lock, t, params)
+}
+
+func (m *TaskManager) run(jobID string, t Task, params TaskParams) error {
+	job := &Job{ID: fmt.Sprintf("%s:%s", t.ID(), jobID), TaskID: t.ID(), Params: params}
+	skip, err := m.queue.IsJobOnProcessQueue(job)
+	if err != nil {
+		return errors.Cause(err)
+	}
+	if skip {
+		return nil
+	}
+	err = m.queue.EnqueuePending(job)
+	return errors.Cause(err)
 }
 
 // TasksID return managed tasks ids

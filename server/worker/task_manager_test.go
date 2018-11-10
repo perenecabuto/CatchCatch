@@ -399,3 +399,73 @@ func TestTaskManagerRunningJobsAreHeartbeated(t *testing.T) {
 
 	queue.AssertCalled(t, "HeartbeatJob", job)
 }
+
+func TestRunAddAJobToQueueWithTaskID(t *testing.T) {
+	queue := &mocks.TaskManagerQueue{}
+	queue.On("IsJobOnProcessQueue", mock.Anything).Return(false, nil)
+	queue.On("EnqueuePending", mock.Anything).Return(nil)
+
+	manager := worker.NewTaskManager(queue, "localhost")
+
+	task := &mocks.Task{}
+	task.On("ID").Return("task-1")
+
+	params := worker.TaskParams{"param1": "val1"}
+	manager.Run(task, params)
+
+	queue.AssertCalled(t, "EnqueuePending", mock.MatchedBy(func(job *worker.Job) bool {
+		return assert.Equal(t, task.ID(), job.TaskID)
+	}))
+}
+
+func TestRunUniqueCreatesJobUsingLockString(t *testing.T) {
+	queue := &mocks.TaskManagerQueue{}
+	queue.On("IsJobOnProcessQueue", mock.Anything).Return(false, nil)
+	queue.On("EnqueuePending", mock.Anything).Return(nil)
+
+	manager := worker.NewTaskManager(queue, "localhost")
+
+	task := &mocks.Task{}
+	task.On("ID").Return("task-1")
+
+	params := worker.TaskParams{"param1": "val1"}
+	err := manager.RunUnique(task, params, "lock")
+
+	assert.NoError(t, err)
+	queue.AssertCalled(t, "EnqueuePending", mock.MatchedBy(func(job *worker.Job) bool {
+		return assert.Equal(t, task.ID()+":lock", job.ID) &&
+			assert.Equal(t, task.ID(), job.TaskID)
+	}))
+}
+
+func TestRunReturnErrorWhenCantCheckIfJobIsRunning(t *testing.T) {
+	queue := &mocks.TaskManagerQueue{}
+	queue.On("IsJobOnProcessQueue", mock.Anything).Return(false, errors.New("fail"))
+
+	manager := worker.NewTaskManager(queue, "localhost")
+
+	task := &mocks.Task{}
+	task.On("ID").Return("task-1")
+
+	params := worker.TaskParams{"param1": "val1"}
+	err := manager.Run(task, params)
+
+	assert.Error(t, err)
+	queue.AssertNotCalled(t, "EnqueuePending", mock.Anything)
+}
+
+func TestRunSkipWhenJobIsAlreadyProcessing(t *testing.T) {
+	queue := &mocks.TaskManagerQueue{}
+	queue.On("IsJobOnProcessQueue", mock.Anything).Return(true, nil)
+
+	manager := worker.NewTaskManager(queue, "localhost")
+
+	task := &mocks.Task{}
+	task.On("ID").Return("task-1")
+
+	params := worker.TaskParams{"param1": "val1"}
+	err := manager.Run(task, params)
+
+	assert.NoError(t, err)
+	queue.AssertNotCalled(t, "EnqueuePending", mock.Anything)
+}
