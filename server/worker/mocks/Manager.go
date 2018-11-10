@@ -126,3 +126,19 @@ func (_m *Manager) Started() bool {
 func (_m *Manager) Stop() {
 	_m.Called()
 }
+
+// TasksID provides a mock function with given fields:
+func (_m *Manager) TasksID() []string {
+	ret := _m.Called()
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func() []string); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}

@@ -58,7 +58,7 @@ func (s *GoRedisSuite) TestGoredisTaskManagerAddTask() {
 
 	grManager := manager.(*worker.GoredisTaskManager)
 
-	actualTasks := grManager.TasksIDs()
+	actualTasks := grManager.TasksID()
 
 	s.Assert().Len(actualTasks, 3)
 	s.Assert().Contains(actualTasks, worker1.ID())

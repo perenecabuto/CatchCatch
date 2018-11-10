@@ -218,8 +218,8 @@ func (m *TaskManager) Add(t Task) {
 	m.Unlock()
 }
 
-// TaskIDs return managed tasks ids
-func (m *TaskManager) TaskIDs() []string {
+// TasksID return managed tasks ids
+func (m *TaskManager) TasksID() []string {
 	ids := make([]string, len(m.tasks))
 	count := 0
 
