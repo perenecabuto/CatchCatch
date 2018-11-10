@@ -15,29 +15,6 @@ func (_m *Manager) Add(w worker.Task) {
 	_m.Called(w)
 }
 
-// BusyTasks provides a mock function with given fields:
-func (_m *Manager) BusyTasks() ([]string, error) {
-	ret := _m.Called()
-
-	var r0 []string
-	if rf, ok := ret.Get(0).(func() []string); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Flush provides a mock function with given fields:
 func (_m *Manager) Flush() error {
 	ret := _m.Called()
@@ -50,6 +27,29 @@ func (_m *Manager) Flush() error {
 	}
 
 	return r0
+}
+
+// ProcessingJobs provides a mock function with given fields:
+func (_m *Manager) ProcessingJobs() ([]*worker.Job, error) {
+	ret := _m.Called()
+
+	var r0 []*worker.Job
+	if rf, ok := ret.Get(0).(func() []*worker.Job); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*worker.Job)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Run provides a mock function with given fields: w, params
@@ -66,13 +66,13 @@ func (_m *Manager) Run(w worker.Task, params worker.TaskParams) error {
 	return r0
 }
 
-// RunUnique provides a mock function with given fields: w, params
-func (_m *Manager) RunUnique(w worker.Task, params worker.TaskParams) error {
-	ret := _m.Called(w, params)
+// RunUnique provides a mock function with given fields: w, params, uniqueID
+func (_m *Manager) RunUnique(w worker.Task, params worker.TaskParams, uniqueID string) error {
+	ret := _m.Called(w, params, uniqueID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(worker.Task, worker.TaskParams) error); ok {
-		r0 = rf(w, params)
+	if rf, ok := ret.Get(0).(func(worker.Task, worker.TaskParams, string) error); ok {
+		r0 = rf(w, params, uniqueID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -81,26 +81,19 @@ func (_m *Manager) RunUnique(w worker.Task, params worker.TaskParams) error {
 }
 
 // RunningJobs provides a mock function with given fields:
-func (_m *Manager) RunningJobs() ([]worker.Job, error) {
+func (_m *Manager) RunningJobs() []string {
 	ret := _m.Called()
 
-	var r0 []worker.Job
-	if rf, ok := ret.Get(0).(func() []worker.Job); ok {
+	var r0 []string
+	if rf, ok := ret.Get(0).(func() []string); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]worker.Job)
+			r0 = ret.Get(0).([]string)
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // Start provides a mock function with given fields: ctx

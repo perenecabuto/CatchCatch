@@ -47,6 +47,8 @@ type TaskManager struct {
 	sync.RWMutex
 }
 
+var _ Manager = (*TaskManager)(nil)
+
 // NewTaskManager creates a TaskManager
 func NewTaskManager(e TaskManagerQueue, host string) *TaskManager {
 	return &TaskManager{host: host, queue: e,
