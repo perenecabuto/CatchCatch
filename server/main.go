@@ -70,7 +70,6 @@ func main() {
 	wsdriver := selectWsDriver(*wsdriver)
 
 	workersCli := mustConnectRedis(*workerRedisAddr, *debugMode)
-	workersCli.FlushAll()
 	if *serverID == "" {
 		host, _ := os.Hostname()
 		*serverID = host
