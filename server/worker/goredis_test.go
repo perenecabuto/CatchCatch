@@ -128,6 +128,10 @@ func (s *GoRedisSuite) TestGoredisTaskManagerRunJobs() {
 	manager3.Add(worker2)
 	manager3.Add(worker3)
 
+	runningJobs, err := manager1.ProcessingJobs()
+	s.Require().NoError(err)
+	s.Assert().Equal(0, len(runningJobs))
+
 	manager1.Run(worker1, nil)
 	manager1.Run(worker2, nil)
 	manager1.Run(worker3, nil)
@@ -176,14 +180,14 @@ func (s *GoRedisSuite) TestGoredisTaskManagerRunUniqueJobs() {
 
 	time.Sleep(time.Millisecond * 100)
 
-	runningJobs, err := manager1.RunningJobs()
+	processingJobs, err := manager1.ProcessingJobs()
 	s.Require().NoError(err)
-	s.Assert().Equal(1, len(runningJobs))
+	s.Assert().Equal(1, len(processingJobs))
 
 	manager1.Stop()
 	manager2.Stop()
 
-	runningJobs, err = manager1.RunningJobs()
+	processingJobs, err = manager1.ProcessingJobs()
 	s.Require().NoError(err)
-	s.Assert().Equal(0, len(runningJobs))
+	s.Assert().Equal(0, len(processingJobs))
 }

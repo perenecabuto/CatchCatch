@@ -38,21 +38,18 @@ type TaskManagerQueue interface {
 type TaskManager struct {
 	host        string
 	queue       TaskManagerQueue
-	tasks       map[string]Task
 	started     int32
-	runningJobs int32
+	tasks       map[string]Task
+	runningJobs map[string]string
 	stop        chan interface{}
 
 	sync.RWMutex
 }
 
 // NewTaskManager creates a TaskManager
-func NewTaskManager(e TaskManagerQueue) *TaskManager {
-	return &TaskManager{queue: e,
-		tasks: make(map[string]Task),
-		stop:  make(chan interface{}, 1),
 func NewTaskManager(e TaskManagerQueue, host string) *TaskManager {
 	return &TaskManager{host: host, queue: e,
+		runningJobs: make(map[string]string),
 		tasks:       make(map[string]Task),
 		stop:        make(chan interface{}, 1),
 	}
@@ -157,7 +154,11 @@ func (m *TaskManager) processJob(ctx context.Context, job *Job) error {
 		return errors.Wrapf(err, "can't get task:%s", job.TaskID)
 	}
 
-	atomic.AddInt32(&m.runningJobs, 1)
+	m.Lock()
+	m.runningJobs[job.ID] = job.TaskID
+	m.Unlock()
+	log.Println("Starting JOB!!!", job.ID, m.RunningJobs())
+
 
 	err = task.Run(ctx, job.Params)
 	err = errors.Wrapf(err, "error running job:%s", job.ID)
@@ -165,7 +166,9 @@ func (m *TaskManager) processJob(ctx context.Context, job *Job) error {
 	removeErr := m.queue.RemoveFromProcessingQueue(job)
 	errors.Wrapf(removeErr, "can't set DONE to job:%s", job.ID)
 
-	atomic.AddInt32(&m.runningJobs, -1)
+	m.Lock()
+	delete(m.runningJobs, job.ID)
+	m.Unlock()
 	log.Printf("task:%s:job:%s:done", job.TaskID, job.ID)
 
 	return err
@@ -198,7 +201,7 @@ func (m *TaskManager) waitForRemainingJobs(timeout *time.Timer) {
 	for {
 		select {
 		case <-waitForJobsTicker.C:
-			if m.RunningJobs() == 0 {
+			if len(m.RunningJobs()) == 0 {
 				return
 			}
 		case <-timeout.C:
@@ -230,7 +233,12 @@ func (m *TaskManager) TaskIDs() []string {
 }
 
 // RunningJobs return total of jobs running on this manager
-func (m *TaskManager) RunningJobs() int {
-	runningJobs := atomic.LoadInt32(&m.runningJobs)
-	return int(runningJobs)
+func (m *TaskManager) RunningJobs() []string {
+	jobIDs := make([]string, 0)
+	m.RLock()
+	for id := range m.runningJobs {
+		jobIDs = append(jobIDs, id)
+	}
+	m.RUnlock()
+	return jobIDs
 }
