@@ -108,6 +108,7 @@ func (m *TaskManager) Start(ctx context.Context) {
 					continue
 				}
 				go m.processJob(wCtx, job)
+				processingQueueInterval.Reset(time.Second)
 
 			case <-pendingQueueInterval.C:
 				pendingQueueInterval.Reset(QueuePollInterval)
