@@ -153,8 +153,8 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 			}
 			stop()
 		case <-ctx.Done():
+			log.Printf("GameWorker:%s:Done", g.ID)
 			if g.Started() {
-				log.Printf("GameWorker:%s:Done", g.ID)
 				err := gw.processGameFinish(g)
 				if err != nil {
 					return errors.Wrapf(err, "can't process game:%s finish", g.ID)

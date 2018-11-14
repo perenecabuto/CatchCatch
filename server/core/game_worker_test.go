@@ -175,6 +175,32 @@ func TestGameWorkerFinishTheGameWhenContextIsDone(t *testing.T) {
 	smocks.AssertPublished(t, m, gameWorkerTopic, p, time.Second)
 }
 
+func TestGameWorkerDoNotSendFinishMessageWhenItStopWithAnNotStartedGame(t *testing.T) {
+	m := &smocks.Dispatcher{}
+	gs := &smocks.GameService{}
+	gw := core.NewGameWorker(gs, m)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	g := &service.GameWithCoords{Game: game.NewGame("game-test-1")}
+	gs.On("Remove", mock.Anything).Return(nil)
+	gs.On("Create", mock.Anything, mock.Anything).Return(g, nil)
+	gs.On("ObserveGamePlayers", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	complete := make(chan interface{})
+	go func() {
+		gw.Run(ctx, worker.TaskParams{"gameID": g.ID, "coordinates": g.Coords})
+		complete <- nil
+	}()
+
+	cancel()
+	<-complete
+
+	assert.False(t, g.Started())
+	gs.AssertCalled(t, "Remove", g.ID)
+
+	m.AssertNotCalled(t, "Publish", mock.Anything, mock.Anything)
+}
+
 func TestGameWorkerFinishWhenTimeIsOverAndTargetWinsTheStartedGame(t *testing.T) {
 	m := &smocks.Dispatcher{}
 	gs := &smocks.GameService{}
