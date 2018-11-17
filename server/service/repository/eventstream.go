@@ -50,27 +50,27 @@ func overrideNearByFeatIDWrapper(nearByFeatID string, handler DetectionHandler) 
 	}
 }
 
-// IntersectsEvent ...
-type IntersectsEvent string
+// DetectEvent ...
+type DetectEvent string
 
-// IntersectsEvent none,inside,enter,exit,outside
+// DetectEvent none,inside,enter,exit,outside
 const (
-	None    IntersectsEvent = ""
-	Inside  IntersectsEvent = "inside"
-	Enter   IntersectsEvent = "enter"
-	Exit    IntersectsEvent = "exit"
-	Outside IntersectsEvent = "outside"
+	None    DetectEvent  = ""
+	Inside  DetectEvent  = "inside"
+	Enter   DetectEvent  = "enter"
+	Exit    DetectEvent  = "exit"
+	Outside DetectEvent  = "outside"
 )
 
 // Detection represents an detected event
 type Detection struct {
-	FeatID       string          `json:"feat_id"`
-	Lat          float64         `json:"lat"`
-	Lon          float64         `json:"lon"`
-	NearByFeatID string          `json:"near_by_feat_id"`
-	NearByMeters float64         `json:"near_by_meters"`
-	Intersects   IntersectsEvent `json:"intersects"`
-	Coordinates  string          `json:"coordinates"`
+	FeatID       string      `json:"feat_id"`
+	Lat          float64     `json:"lat"`
+	Lon          float64     `json:"lon"`
+	NearByFeatID string      `json:"near_by_feat_id"`
+	NearByMeters float64     `json:"near_by_meters"`
+	Intersects   DetectEvent `json:"intersects"`
+	Coordinates  string      `json:"coordinates"`
 }
 
 func (d Detection) String() string {
@@ -145,7 +145,7 @@ func handleDetection(msg string) (*Detection, error) {
 		if detect == "roam" {
 			intersects = Inside
 		} else {
-			intersects = IntersectsEvent(detect)
+			intersects = DetectEvent(detect)
 		}
 	}
 	coords := fmt.Sprintf(`{"type":"%s","coordinates":%s}`,
