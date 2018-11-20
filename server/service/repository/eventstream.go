@@ -83,7 +83,7 @@ func (es *Tile38EventStream) StreamIntersects(ctx context.Context, intersectKey,
 }
 
 func (es *Tile38EventStream) StreamDetection(ctx context.Context, q query, callback DetectionHandler) error {
-	interval := 300 * time.Microsecond
+	interval := 50 * time.Millisecond
 	conn, err := listenTo(es.addr, q)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (es *Tile38EventStream) StreamDetection(ctx context.Context, q query, callb
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("eventscream:query:stop:%s", q.String())
+			log.Printf("eventstream:query:stop:%s", q.String())
 			return nil
 		case <-t.C:
 			conn.SetReadDeadline(time.Now().Add(interval))
