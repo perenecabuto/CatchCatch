@@ -94,13 +94,13 @@ func (_m *PlayerLocationService) GeofenceByID(id string) (*model.Feature, error)
 	return r0, r1
 }
 
-// ObserveFeaturesEventsNearToAdmin provides a mock function with given fields: ctx, cb
-func (_m *PlayerLocationService) ObserveFeaturesEventsNearToAdmin(ctx context.Context, cb service.AdminNearToFeatureCallback) error {
-	ret := _m.Called(ctx, cb)
+// ObserveFeaturesEventsNearToAdmin provides a mock function with given fields: _a0, _a1
+func (_m *PlayerLocationService) ObserveFeaturesEventsNearToAdmin(_a0 context.Context, _a1 service.AdminNearToFeatureCallback) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, service.AdminNearToFeatureCallback) error); ok {
-		r0 = rf(ctx, cb)
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -122,13 +122,13 @@ func (_m *PlayerLocationService) ObservePlayerNearToCheckpoint(_a0 context.Conte
 	return r0
 }
 
-// ObservePlayersNearToGeofence provides a mock function with given fields: ctx, cb
-func (_m *PlayerLocationService) ObservePlayersNearToGeofence(ctx context.Context, cb func(string, model.Player) error) error {
-	ret := _m.Called(ctx, cb)
+// ObservePlayersNearToGeofence provides a mock function with given fields: _a0, _a1
+func (_m *PlayerLocationService) ObservePlayersNearToGeofence(_a0 context.Context, _a1 func(string, model.Player) error) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, func(string, model.Player) error) error); ok {
-		r0 = rf(ctx, cb)
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}

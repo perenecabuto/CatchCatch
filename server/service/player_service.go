@@ -30,8 +30,8 @@ type PlayerLocationService interface {
 	SetGeofence(id, coordinates string) error
 	SetCheckpoint(id, coordinates string) error
 
-	ObserveFeaturesEventsNearToAdmin(ctx context.Context, cb AdminNearToFeatureCallback) error
-	ObservePlayersNearToGeofence(ctx context.Context, cb func(string, model.Player) error) error
+	ObserveFeaturesEventsNearToAdmin(context.Context, AdminNearToFeatureCallback) error
+	ObservePlayersNearToGeofence(context.Context, func(string, model.Player) error) error
 	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
 
 	Clear() error
