@@ -33,14 +33,14 @@ func NewEventStream(addr string) EventStream {
 // StreamNearByEvents stream proximation events
 func (es *Tile38EventStream) StreamNearByEvents(ctx context.Context, nearByKey, roamKey string, roamID string, meters int, callback DetectionHandler) error {
 	cmd := query{"NEARBY", nearByKey, "FENCE", "ROAM", roamKey, roamID, meters}
-	return streamDetection(ctx, es.addr, cmd, callback)
+	return es.StreamDetection(ctx, cmd, callback)
 }
 
 // StreamIntersects stream events of the objects (of type intersectKey) moving inside object (onKey + onKeyID)
 func (es *Tile38EventStream) StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
 	cmd := query{"INTERSECTS", intersectKey, "FENCE", "DETECT", "inside,enter,exit", "GET", onKey, onKeyID}
 	callback = overrideNearByFeatIDWrapper(onKeyID, callback)
-	return streamDetection(ctx, es.addr, cmd, callback)
+	return es.StreamDetection(ctx, cmd, callback)
 }
 
 func overrideNearByFeatIDWrapper(nearByFeatID string, handler DetectionHandler) DetectionHandler {
@@ -88,9 +88,9 @@ func (err DetectionError) Error() string {
 	return string("DetectionError: " + err)
 }
 
-func streamDetection(ctx context.Context, addr string, q query, callback DetectionHandler) error {
+func (es *Tile38EventStream) StreamDetection(ctx context.Context, q query, callback DetectionHandler) error {
 	interval := 300 * time.Microsecond
-	conn, err := listenTo(addr, q)
+	conn, err := listenTo(es.addr, q)
 	if err != nil {
 		return err
 	}
