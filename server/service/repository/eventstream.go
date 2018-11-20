@@ -163,7 +163,7 @@ func listenTo(addr string, q query) (net.Conn, error) {
 	}
 
 	log.Println("EventStream: REDIS DEBUG:", q)
-	if _, err = fmt.Fprintf(conn, q.cmd()); err != nil {
+	if _, err = fmt.Fprint(conn, q.cmd()); err != nil {
 		return nil, err
 	}
 	buf := make([]byte, 4096)
