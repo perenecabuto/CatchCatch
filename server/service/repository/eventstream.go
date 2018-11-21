@@ -91,7 +91,7 @@ func (es *Tile38EventStream) StreamDetection(ctx context.Context, q query, callb
 	defer conn.Close()
 
 	buf, n := make([]byte, 4096), 0
-	t := time.NewTicker(interval)
+	t := time.NewTimer(interval)
 	defer t.Stop()
 
 	for {
@@ -100,6 +100,8 @@ func (es *Tile38EventStream) StreamDetection(ctx context.Context, q query, callb
 			log.Printf("eventstream:query:stop:%s", q.String())
 			return nil
 		case <-t.C:
+			t.Reset(interval)
+
 			conn.SetReadDeadline(time.Now().Add(interval))
 			if n, err = conn.Read(buf); err != nil {
 				continue
