@@ -84,7 +84,7 @@ func (es *Tile38EventStream) StreamIntersects(ctx context.Context, intersectKey,
 
 func (es *Tile38EventStream) StreamDetection(ctx context.Context, q query, callback DetectionHandler) error {
 	interval := 50 * time.Millisecond
-	conn, err := listenTo(es.addr, q)
+	conn, err := listenTo(ctx, es.addr, q)
 	if err != nil {
 		return err
 	}
@@ -156,21 +156,23 @@ func handleDetection(msg string) (*Detection, error) {
 	return &Detection{featID, lat, lon, nearByFeatID, nearByMeters, intersects, coords}, nil
 }
 
-func listenTo(addr string, q query) (net.Conn, error) {
-	conn, err := net.Dial("tcp", addr)
+var dialer = &net.Dialer{}
+
+func listenTo(ctx context.Context, addr string, q query) (net.Conn, error) {
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 
 	log.Println("EventStream: REDIS DEBUG:", q)
-	if _, err = fmt.Fprint(conn, q.cmd()); err != nil {
+	if _, err = fmt.Fprint(conn, q.cmd(), "\r\n"); err != nil {
 		return nil, err
 	}
 	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
 	res := string(buf[:n])
-	if res != "+OK\r\n" {
-		return nil, fmt.Errorf("expected OK, got '%v' - query: %s", res, q)
+	if !strings.Contains(res, "+OK") {
+		return nil, fmt.Errorf("expected +OK, got '%v' - query: %s", res, q)
 	}
 	return conn, nil
 }
