@@ -52,10 +52,10 @@ func main() {
 
 	metrics, err := metrics.NewCollector(*influxdbAddr, *influxdbDB, *influxdbUser, *influxdbPass)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	if err := metrics.RunGlobalCollector(); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -156,7 +156,7 @@ func mustConnectRedis(addr string, debug bool) *redis.Client {
 func mustConnectNats(url string) *nats.Conn {
 	conn, err := nats.Connect(url)
 	if err != nil {
-		log.Panic("Nat connection:", err)
+		log.Fatal("Nat connection:", err)
 	}
 	return conn
 }
