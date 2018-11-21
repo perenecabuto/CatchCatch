@@ -34,7 +34,7 @@ func NewPlayerHandler(p service.PlayerLocationService, g *GameWorker) *PlayerHan
 
 // OnStart add listeners for game events, games around players
 func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
-	err := h.onGameEvents(ctx, wss)
+	err := h.listenToGameEvents(ctx, wss)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 	return player, nil
 }
 
-func (h *PlayerHandler) onGameEvents(ctx context.Context, wss *websocket.WSServer) error {
+func (h *PlayerHandler) listenToGameEvents(ctx context.Context, wss *websocket.WSServer) error {
 	return h.games.OnGameEvent(ctx, func(p *GameEventPayload) error {
 		switch p.Event {
 		case GameStarted:
