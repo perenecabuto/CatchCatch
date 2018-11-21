@@ -70,7 +70,7 @@ func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConn
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
-		lat, lon := msg.GetLat(), msg.GetLon()
+		lat, lon := float64(float32(msg.GetLat())), float64(float32(msg.GetLon()))
 		if lat == 0 || lon == 0 {
 			return
 		}
