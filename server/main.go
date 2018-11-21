@@ -92,9 +92,9 @@ func main() {
 	workers.Add(worker.NewTaskWithMetrics(playersWatcher, metrics, opts))
 
 	workers.Start(ctx)
-	workers.RunUnique(geofenceEventsWorker, worker.TaskParams{"serverID": serverID}, "geofences-worker")
-	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID}, "checkpoint-watcher")
-	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID}, "features-watcher")
+	workers.RunUnique(geofenceEventsWorker, nil, "geofences-worker")
+	workers.RunUnique(checkpointWatcher, nil, "checkpoint-watcher")
+	workers.RunUnique(featuresWatcher, nil, "features-watcher")
 	workers.RunUnique(playersWatcher, nil, "players-watcher")
 
 	playerH := core.NewPlayerHandler(playerService, playersWatcher, gameWorker)
