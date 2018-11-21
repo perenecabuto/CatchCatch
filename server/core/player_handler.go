@@ -45,10 +45,9 @@ func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) er
 func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnectionHandler) error {
 	player, err := h.newPlayer(c)
 	if err != nil {
-		log.Println("error to create player", err)
-		return err
+		return errors.Wrap(err, "error to create player")
 	}
-	log.Println("new player connected", player)
+	log.Println("[PlayerHandler] player connected", player)
 	c.On(EventPlayerUpdate, h.onPlayerUpdate(player, c))
 	c.OnDisconnected(h.onPlayerDisconnect(player))
 
