@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pkg/errors"
 	gjson "github.com/tidwall/gjson"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
@@ -33,6 +34,7 @@ type PlayerLocationService interface {
 	ObserveFeaturesEventsNearToAdmin(context.Context, AdminNearToFeatureCallback) error
 	ObservePlayersNearToGeofence(context.Context, func(string, model.Player) error) error
 	ObservePlayerNearToCheckpoint(context.Context, PlayerNearToFeatureCallback) error
+	ObservePlayerDelete(context.Context, func(model.Player) error) error
 
 	Clear() error
 }
@@ -162,6 +164,19 @@ func (s *Tile38PlayerLocationService) ObservePlayersNearToGeofence(ctx context.C
 		p := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
 		return callback(gameID, p)
 	})
+}
+
+func (s *Tile38PlayerLocationService) ObservePlayerDelete(
+	ctx context.Context, cb func(model.Player) error) error {
+
+	onRemove := func(d *repository.Detection) error {
+		player := model.Player{ID: d.FeatID, Lat: d.Lat, Lon: d.Lon}
+		err := cb(player)
+		return errors.Cause(err)
+	}
+	return s.stream.StreamNearByPoint(ctx, "player",
+		[]repository.CommandEvent{repository.Del},
+		[]repository.DetectEvent{}, 0.0, 0.0, 0.0, onRemove)
 }
 
 func (s *Tile38PlayerLocationService) Features() ([]*model.Feature, error) {

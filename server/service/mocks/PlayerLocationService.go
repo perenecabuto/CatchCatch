@@ -108,6 +108,20 @@ func (_m *PlayerLocationService) ObserveFeaturesEventsNearToAdmin(_a0 context.Co
 	return r0
 }
 
+// ObservePlayerDelete provides a mock function with given fields: _a0, _a1
+func (_m *PlayerLocationService) ObservePlayerDelete(_a0 context.Context, _a1 func(model.Player) error) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, func(model.Player) error) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ObservePlayerNearToCheckpoint provides a mock function with given fields: _a0, _a1
 func (_m *PlayerLocationService) ObservePlayerNearToCheckpoint(_a0 context.Context, _a1 service.PlayerNearToFeatureCallback) error {
 	ret := _m.Called(_a0, _a1)

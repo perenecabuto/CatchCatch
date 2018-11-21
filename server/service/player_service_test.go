@@ -63,3 +63,40 @@ func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 
 	assert.EqualValues(t, example, actualFeatures)
 }
+
+func TestObservePlayerDelete(t *testing.T) {
+	r := &mocks.Repository{}
+	s := &mocks.EventStream{}
+	pls := service.NewPlayerLocationService(r, s)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	expected := model.Player{ID: "player-1", Lat: 10, Lon: 11}
+
+	any := mock.Anything
+	s.On("StreamNearByPoint", any, any, any, any, any, any, any, any).Return(nil).
+		Run(func(args mock.Arguments) {
+			cb := args[7].(repository.DetectionHandler)
+			d := &repository.Detection{
+				FeatID: expected.ID,
+				Lat:    expected.Lat,
+				Lon:    expected.Lon,
+			}
+			cb(d)
+		})
+
+	resultChan := make(chan model.Player)
+	go pls.ObservePlayerDelete(ctx, func(p model.Player) error {
+		resultChan <- p
+		return nil
+	})
+
+	received := <-resultChan
+	assert.EqualValues(t, expected, received)
+
+	s.AssertCalled(t, "StreamNearByPoint", any,
+		"player",
+		[]repository.CommandEvent{repository.Del},
+		[]repository.DetectEvent{}, 0.0, 0.0, 0.0, any)
+}
