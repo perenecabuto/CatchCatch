@@ -14,6 +14,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/game"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
+	"github.com/perenecabuto/CatchCatch/server/service/messages"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 
 	smocks "github.com/perenecabuto/CatchCatch/server/service/mocks"
@@ -84,9 +85,11 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 		wsDriver := &wsmocks.WSDriver{}
 		gs := &smocks.GameService{}
 		m := &smocks.Dispatcher{}
-		w := core.NewGameWorker(gs, m)
+		pls := &smocks.PlayerLocationService{}
+		gw := core.NewGameWorker(gs, m)
+		pw := core.NewPlayersWatcher(m, pls)
 
-		playerH := core.NewPlayerHandler(nil, w)
+		playerH := core.NewPlayerHandler(pls, pw, gw)
 		wss := websocket.NewWSServer(wsDriver, playerH)
 		c := &wsmocks.WSConnection{}
 
@@ -120,8 +123,10 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	wsDriver := &wsmocks.WSDriver{}
 	gs := &smocks.GameService{}
 	m := &smocks.Dispatcher{}
-	w := core.NewGameWorker(gs, m)
-	playerH := core.NewPlayerHandler(nil, w)
+	pls := &smocks.PlayerLocationService{}
+	gw := core.NewGameWorker(gs, m)
+	pw := core.NewPlayersWatcher(m, pls)
+	playerH := core.NewPlayerHandler(pls, pw, gw)
 	wss := websocket.NewWSServer(wsDriver, playerH)
 
 	c1 := &wsmocks.WSConnection{}
@@ -170,4 +175,35 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 		})
 		c.AssertCalled(t, "Send", expected)
 	}
+}
+
+func TestPlayerHandlerDisconnectDeletedPlayers(t *testing.T) {
+	wsDriver := &wsmocks.WSDriver{}
+	gs := &smocks.GameService{}
+	m := &smocks.Dispatcher{}
+	pls := &smocks.PlayerLocationService{}
+	gw := core.NewGameWorker(gs, m)
+	pw := core.NewPlayersWatcher(m, pls)
+	playerH := core.NewPlayerHandler(pls, pw, gw)
+	wss := websocket.NewWSServer(wsDriver, playerH)
+
+	c := &wsmocks.WSConnection{}
+	c.On("Close").Return(nil)
+
+	playerID := wss.Add(c).ID
+	player := &model.Player{ID: playerID}
+
+	m.On("Subscribe", any, any, any).Run(func(args mock.Arguments) {
+		evt, cb := args[1].(string), args[2].(messages.OnMessage)
+		if evt == core.PlayerWatcherEventDel {
+			data, _ := json.Marshal(player)
+			cb(data)
+		}
+	}).Return(nil)
+
+	ctx := context.Background()
+	err := playerH.OnStart(ctx, wss)
+	require.NoError(t, err)
+
+	c.AssertCalled(t, "Close")
 }

@@ -80,6 +80,7 @@ func main() {
 	geofenceEventsWorker := core.NewGeofenceEventsWorker(playerService, workers)
 	checkpointWatcher := core.NewCheckpointWatcher(dispatcher, playerService)
 	featuresWatcher := core.NewFeaturesEventsWatcher(dispatcher, playerService)
+	playersWatcher := core.NewPlayersWatcher(dispatcher, playerService)
 
 	opts := worker.MetricsOptions{Host: *serverID, Origin: "initialization"}
 	workers.Add(worker.NewTaskWithMetrics(gameWorker, metrics,
@@ -88,13 +89,15 @@ func main() {
 	workers.Add(worker.NewTaskWithMetrics(geofenceEventsWorker, metrics, opts))
 	workers.Add(worker.NewTaskWithMetrics(checkpointWatcher, metrics, opts))
 	workers.Add(worker.NewTaskWithMetrics(featuresWatcher, metrics, opts))
+	workers.Add(worker.NewTaskWithMetrics(playersWatcher, metrics, opts))
 
 	workers.Start(ctx)
 	workers.RunUnique(geofenceEventsWorker, worker.TaskParams{"serverID": serverID}, "geofences-worker")
 	workers.RunUnique(checkpointWatcher, worker.TaskParams{"serverID": serverID}, "checkpoint-watcher")
 	workers.RunUnique(featuresWatcher, worker.TaskParams{"serverID": serverID}, "features-watcher")
+	workers.RunUnique(playersWatcher, nil, "players-watcher")
 
-	playerH := core.NewPlayerHandler(playerService, gameWorker)
+	playerH := core.NewPlayerHandler(playerService, playersWatcher, gameWorker)
 	playersConnections := websocket.NewWSServer(wsdriver, playerH)
 	adminH := core.NewAdminHandler(playerService, featuresWatcher)
 	adminConnections := websocket.NewWSServer(wsdriver, adminH)

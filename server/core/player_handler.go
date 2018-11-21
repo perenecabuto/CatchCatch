@@ -22,19 +22,24 @@ const (
 
 // PlayerHandler handle websocket events
 type PlayerHandler struct {
-	players service.PlayerLocationService
-	games   *GameWorker
+	players       service.PlayerLocationService
+	playerWatcher *PlayersWatcher
+	games         *GameWorker
 }
 
 // NewPlayerHandler PlayerHandler builder
-func NewPlayerHandler(p service.PlayerLocationService, g *GameWorker) *PlayerHandler {
-	handler := &PlayerHandler{p, g}
+func NewPlayerHandler(p service.PlayerLocationService, pw *PlayersWatcher, gw *GameWorker) *PlayerHandler {
+	handler := &PlayerHandler{p, pw, gw}
 	return handler
 }
 
 // OnStart add listeners for game events, games around players
 func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) error {
 	err := h.listenToGameEvents(ctx, wss)
+	if err != nil {
+		return err
+	}
+	err = h.listenToPlayerDeleted(ctx, wss)
 	if err != nil {
 		return err
 	}
@@ -81,6 +86,13 @@ func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *mod
 	}
 	c.Emit(&protobuf.Player{EventName: EventPlayerRegistered, Id: player.ID, Lon: player.Lon, Lat: player.Lat})
 	return player, nil
+}
+
+func (h *PlayerHandler) listenToPlayerDeleted(ctx context.Context, wss *websocket.WSServer) error {
+	return h.playerWatcher.OnPlayerDeleted(ctx, func(p *model.Player) error {
+		wss.Remove(p.ID)
+		return nil
+	})
 }
 
 func (h *PlayerHandler) listenToGameEvents(ctx context.Context, wss *websocket.WSServer) error {

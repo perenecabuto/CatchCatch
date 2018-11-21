@@ -21,14 +21,13 @@ import (
 )
 
 func TestObjectsGraph(t *testing.T) {
-	pls := &smocks.PlayerLocationService{}
+	wsDriver := &wsmocks.WSDriver{}
 	gs := &smocks.GameService{}
 	m := &smocks.Dispatcher{}
-	w := core.NewGameWorker(gs, m)
-
-	playerH := core.NewPlayerHandler(pls, w)
-	wsDriver := &wsmocks.WSDriver{}
-
+	pls := &smocks.PlayerLocationService{}
+	gw := core.NewGameWorker(gs, m)
+	pw := core.NewPlayersWatcher(m, pls)
+	playerH := core.NewPlayerHandler(pls, pw, gw)
 	wss := websocket.NewWSServer(wsDriver, playerH)
 	c := &wsmocks.WSConnection{}
 
