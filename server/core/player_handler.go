@@ -13,6 +13,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 )
 
+// PlayerHandler events
 const (
 	EventPlayerRegistered = "player:registered"
 	EventPlayerDisconnect = "player:disconnect"
