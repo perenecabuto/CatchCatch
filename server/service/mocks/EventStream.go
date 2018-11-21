@@ -37,3 +37,17 @@ func (_m *EventStream) StreamNearByEvents(ctx context.Context, nearByKey string,
 
 	return r0
 }
+
+// StreamNearByPoint provides a mock function with given fields: ctx, nearByKey, commands, detect, lat, lon, dist, callback
+func (_m *EventStream) StreamNearByPoint(ctx context.Context, nearByKey string, commands []repository.CommandEvent, detect []repository.DetectEvent, lat float64, lon float64, dist float64, callback repository.DetectionHandler) error {
+	ret := _m.Called(ctx, nearByKey, commands, detect, lat, lon, dist, callback)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, []repository.CommandEvent, []repository.DetectEvent, float64, float64, float64, repository.DetectionHandler) error); ok {
+		r0 = rf(ctx, nearByKey, commands, detect, lat, lon, dist, callback)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

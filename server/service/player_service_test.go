@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -17,7 +19,7 @@ import (
 
 func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 	r := &mocks.Repository{}
-	s := &mockStream{}
+	s := &mocks.EventStream{}
 	pls := service.NewPlayerLocationService(r, s)
 
 	ctx, finish := context.WithCancel(context.Background())
@@ -25,11 +27,14 @@ func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 
 	adminID := "test-admin-1"
 
-	s.streamNearByEvents = func(ctx context.Context, nearByKey, roamKey, roamID string, meters int, cb repository.DetectionHandler) error {
-		cb(&repository.Detection{NearByFeatID: adminID, FeatID: nearByKey + "-test-1"})
-		cb(&repository.Detection{NearByFeatID: adminID, FeatID: nearByKey + "-test-2"})
-		return nil
-	}
+	// fields: ctx, nearByKey, roamKey, roamID, meters, callback
+	any := mock.Anything
+	s.On("StreamNearByEvents", any, any, any, any, any, any).
+		Run(func(args mock.Arguments) {
+			nearByKey, cb := args[1].(string), args[5].(repository.DetectionHandler)
+			cb(&repository.Detection{NearByFeatID: adminID, FeatID: nearByKey + "-test-1"})
+			cb(&repository.Detection{NearByFeatID: adminID, FeatID: nearByKey + "-test-2"})
+		}).Return(nil)
 
 	example := map[string]model.Feature{
 		"player-test-1":     model.Feature{ID: "player-test-1", Group: "player"},
@@ -57,17 +62,4 @@ func TestObserveFeaturesEventsNearToAdmin(t *testing.T) {
 	wg.Wait()
 
 	assert.EqualValues(t, example, actualFeatures)
-}
-
-type mockStream struct {
-	streamNearByEvents func(ctx context.Context, nearByKey, roamKey, roamID string, meters int, callback repository.DetectionHandler) error
-	streamIntersects   func(ctx context.Context, intersectKey, onKey, onKeyID string, callback repository.DetectionHandler) error
-}
-
-func (s mockStream) StreamNearByEvents(ctx context.Context, nearByKey, roamKey, roamID string, meters int, callback repository.DetectionHandler) error {
-	return s.streamNearByEvents(ctx, nearByKey, roamKey, roamID, meters, callback)
-}
-
-func (s mockStream) StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback repository.DetectionHandler) error {
-	return nil
 }

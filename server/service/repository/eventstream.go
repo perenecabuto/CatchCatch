@@ -14,17 +14,22 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// CommandEvent ...
+type CommandEvent string
 
 // DetectEvent ...
 type DetectEvent string
 
 // DetectEvent none,inside,enter,exit,outside
+// CommandEvent del,set
 const (
 	None    DetectEvent  = ""
 	Inside  DetectEvent  = "inside"
 	Enter   DetectEvent  = "enter"
 	Exit    DetectEvent  = "exit"
 	Outside DetectEvent  = "outside"
+	Set     CommandEvent = "set"
+	Del     CommandEvent = "del"
 )
 
 // Detection represents an detected event
@@ -57,6 +62,10 @@ func (err DetectionError) Error() string {
 type EventStream interface {
 	StreamNearByEvents(ctx context.Context, nearByKey, roamKey, roamID string, meters int, callback DetectionHandler) error
 	StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback DetectionHandler) error
+	StreamNearByPoint(ctx context.Context, nearByKey string,
+		commands []CommandEvent, detect []DetectEvent,
+		lat, lon, dist float64,
+		callback DetectionHandler) error
 }
 
 // Tile38EventStream Tile38 implementation of EventStream
@@ -79,6 +88,32 @@ func (es *Tile38EventStream) StreamNearByEvents(ctx context.Context, nearByKey, 
 func (es *Tile38EventStream) StreamIntersects(ctx context.Context, intersectKey, onKey, onKeyID string, callback DetectionHandler) error {
 	cmd := query{"INTERSECTS", intersectKey, "FENCE", "DETECT", "inside,enter,exit", "GET", onKey, onKeyID}
 	callback = overrideNearByFeatIDWrapper(onKeyID, callback)
+	return es.StreamDetection(ctx, cmd, callback)
+}
+
+func (es *Tile38EventStream) StreamNearByPoint(ctx context.Context,
+	nearByKey string,
+	commands []CommandEvent, detect []DetectEvent,
+	lat, lon, dist float64,
+	callback DetectionHandler) error {
+
+	cmd := query{"NEARBY", nearByKey}
+	if len(commands) > 0 {
+		values := make([]string, len(commands))
+		for i, c := range commands {
+			values[i] = string(c)
+		}
+		cmd = append(cmd, "COMMANDS", strings.Join(values, ","))
+	}
+	if len(detect) > 0 {
+		values := make([]string, len(detect))
+		for i, c := range detect {
+			values[i] = string(c)
+		}
+		cmd = append(cmd, "DETECT", strings.Join(values, ","))
+	}
+	cmd = append(cmd, "FENCE", "POINT", lat, lon, dist)
+
 	return es.StreamDetection(ctx, cmd, callback)
 }
 
