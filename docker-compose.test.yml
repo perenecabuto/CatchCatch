@@ -12,6 +12,8 @@ services:
             - tile38
             - influxdb
         working_dir: /go/src/github.com/perenecabuto/CatchCatch
+        environment:
+            TILE38_ADDR: tile38:9851
         command: make test
 
     tile38:

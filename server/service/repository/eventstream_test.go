@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -16,7 +17,11 @@ import (
 )
 
 func TestNearByPoint(t *testing.T) {
-	addr := "localhost:9851"
+	addr := os.Getenv("TILE38_ADDR")
+	if addr == "" {
+		t.Skip("set TILE38_ADDR env var to run")
+		return
+	}
 	stream := repo.NewEventStream(addr)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -52,8 +57,8 @@ func TestNearByPoint(t *testing.T) {
 
 	select {
 	case d := <-resultChan:
-		assert.Equal(t, "obj1", d.FeatID)
-		assert.Equal(t, repo.Inside, d.Intersects)
+		assert.EqualValues(t, "obj1", d.FeatID)
+		assert.EqualValues(t, repo.Inside, d.Intersects)
 	case <-time.NewTimer(time.Second * 5).C:
 		t.Error("timeout")
 	}
