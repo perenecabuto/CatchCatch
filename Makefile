@@ -53,6 +53,10 @@ build:
 	# Ref: https://blog.filippo.io/shrink-your-go-binaries-with-this-one-weird-trick/
 	$(SERVER_SRC) go build
 
+build-wasm:
+	GOOS=js GOARCH=wasm \
+		go build -v -o web/player/catchcatch.wasm client/wasm/*.go
+
 docker-compose:
 	docker-compose up --build
 
