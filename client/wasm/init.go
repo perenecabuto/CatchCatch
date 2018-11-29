@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"syscall/js"
 
 	"github.com/perenecabuto/CatchCatch/client"
@@ -28,11 +29,22 @@ func callbackFunc(cb func([]js.Value)) js.Callback {
 	return callback
 }
 
+type wasmLogWritter struct {
+}
+
+func (wlw *wasmLogWritter) Write(p []byte) (n int, err error) {
+	text := js.Global().Get("document").Call("getElementById", "log").Get("innerHTML").String()
+	js.Global().Get("document").Call("getElementById", "log").Set("innerHTML", string(p)+"\n<hr />\n"+text)
+	return len(p), nil
+}
+
 func registerCallbacks() {
 	ws := NewWASMWebSocket()
 	cli := client.New(ws)
 	ctx := context.Background()
 	newPlayer := callbackFunc(func(values []js.Value) {
+		log.SetOutput(&wasmLogWritter{})
+
 		if len(values) != 2 {
 			js.Global().Call("newPlayer needs addr, callback parmas")
 			return
