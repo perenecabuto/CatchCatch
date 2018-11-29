@@ -10,34 +10,25 @@
 ## Server
 
 + validate step size on server when player is in game
-+ bug disconnect admin
 
 + monitor games per machine
-+ write tests
++ tests
     - game worker with game watcher
     - tile 38 observers
+    - nats messages
+    - player handler
+    - geofences
+    - functional tests
 
-+ prepare integrated tests
-+ separate "game queue" (pre game) and "game arena" (when game start)
-+ create gamewith events
-+ refactor: use game with events on worker to simplify the logics
-+ refactor: rename worker components for better
-+ refactor: use errors.Wrap on all error parts
-+ worker:
-    - heartbeat to update locks valid time - ok
++ refactor: create gamewith events with On... methods
++ refactor: use game with events on worker to simplify the logic
     - retry task
-    - reenqueue on error (retry) - ok
-    - tests - ok
-+ game handler:
-    - tests
++ worker:
 + monitor:
-    - game start/destroy
+    - game stop
     - errors
-+ redis worker:
-    - remove ID() from interface, just add task with name as parameter
+    - player connections
 
-fix: player isn't being removed by admin
-(needs to disconnect it on players connections/but by message broker event)
 
 ## Client
 
@@ -52,6 +43,7 @@ fix: player isn't being removed by admin
     - game score
     - game play score
     - radar
+
 - show events over players
 - use WASM lib on admin map
 - games around
