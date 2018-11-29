@@ -112,7 +112,7 @@ func main() {
 	}
 	http.Handle("/admin", execfunc.RecoverWrapper(adminHTTPHandler))
 	http.Handle("/player", execfunc.RecoverWrapper(playersHTTPHandler))
-	http.Handle("/", http.FileServer(http.Dir(*webDir)))
+	http.Handle("/web", http.FileServer(http.Dir(*webDir)))
 	http.HandleFunc("/running-jobs", func(w http.ResponseWriter, r *http.Request) {
 		payload, _ := sjson.SetBytes([]byte{}, "jobs", workers.RunningJobs())
 		w.Write(payload)

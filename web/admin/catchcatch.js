@@ -43,7 +43,7 @@ var messages = {
 }
 
 function init() {
-    let socket = new WSS(location.href.replace("http", "ws") + "admin", false);
+    let socket = new WSS(location.origin.replace("http", "ws") + "/admin", false);
     let source = new ol.source.Vector({ wrapX: false });
     let mapSource = new ol.source.Stamen({layer:"toner"});
     let raster = new ol.layer.Tile({ source: mapSource });
@@ -147,7 +147,7 @@ let Player = function (x, y, admin) {
     function connect(registeredFn, disconnectedFn) {
         registeredCallback = registeredFn;
         disconnectedCallback = disconnectedFn;
-        socket = new WSS(location.href.replace("http", "ws") + "player");
+        socket = new WSS(location.origin.replace("http", "ws") + "/player");
         socket.on('player:registered', onPlayerRegistered)
         socket.on('player:updated', onPlayerUpdated)
 
@@ -399,7 +399,13 @@ let AdminEventHandler = function (controller) {
     };
     this.onFeatureAdded = function (msg) {
         let feat = messages.Feature.decode(msg);
-        let geojson = new ol.format.GeoJSON().readFeature(feat.coords);
+        let geojson;
+        try {
+            geojson = new ol.format.GeoJSON().readFeature(feat.coords);
+        } catch {
+            console.error("can't parse feature:", feat.coords);
+            return;
+        }
 
         if (feat.group == "player") {
             let lonlat = geojson.getGeometry().getCoordinates()
