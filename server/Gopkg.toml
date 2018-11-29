@@ -31,11 +31,7 @@
 
 [[constraint]]
   name = "github.com/gogo/protobuf"
-  version = "1.0.0"
-
-[[constraint]]
-  name = "github.com/golang/protobuf"
-  version = "1.0.0"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/kellydunn/golang-geo"

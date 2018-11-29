@@ -42,7 +42,7 @@
   revision = "8d10e4a1bae52cd8b81ffdec3445890d6dccab3d"
 
 [[projects]]
-  digest = "1:7c2fd446293ff7799cc496d3446e674ee67902d119f244de645caf95dff1bb98"
+  digest = "1:34a9a60fade37f8009ed4a19e02924198aba3eabfcc120ee5c6002b7de17212d"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -55,8 +55,8 @@
     "internal/util",
   ]
   pruneopts = "UT"
-  revision = "f3bba01df2026fc865f7782948845db9cf44cf23"
-  version = "v6.14.1"
+  revision = "b3d9bf10f6666b2ee5100a6f3f84f4caf3b4e37d"
+  version = "v6.14.2"
 
 [[projects]]
   branch = "master"
@@ -91,12 +91,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:bbadccf3d3317ea03c0dac0b45b673b4b397c8f91a1d2eff550a3c51c4ad770e"
+  branch = "master"
+  digest = "1:9ad087ef8da75603ce7602782ec5d4dff33b22a5cbf06fce20bb0706b993b89a"
   name = "github.com/gogo/protobuf"
   packages = ["proto"]
   pruneopts = "UT"
-  revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
-  version = "v1.1.1"
+  revision = "07eab6a8298cf32fac45cceaac59424f98421bbc"
 
 [[projects]]
   digest = "1:97df918963298c287643883209a2c3f642e6593379f97ab400c2a2e219ab647d"
@@ -107,12 +107,12 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:3a26588bc48b96825977c1b3df964f8fd842cd6860cc26370588d3563433cf11"
+  digest = "1:236d7e1bdb50d8f68559af37dbcf9d142d56b431c9b2176d41e2a009b664cda8"
   name = "github.com/google/uuid"
   packages = ["."]
   pruneopts = "UT"
-  revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
-  version = "v1.0.0"
+  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -123,7 +123,7 @@
   revision = "df75bb3ccae13e625e5b60e68d9c9590056dded1"
 
 [[projects]]
-  digest = "1:18f8bac7ae238f1d06b347d40fea2a37d029e11ddeac57163182a08c780955f2"
+  digest = "1:718c57979a9197414a044fff2028e57cb9fe145069e4f507059755bfe87f1bfe"
   name = "github.com/influxdata/influxdb"
   packages = [
     "client/v2",
@@ -131,8 +131,19 @@
     "pkg/escape",
   ]
   pruneopts = "UT"
-  revision = "389de31c961831de0a9f4172173337d4a6193909"
-  version = "v1.6.3"
+  revision = "cb03c542a4054f0f4d3dc13919d31c456bdb5c39"
+  version = "v1.7.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2c584d8971881e9f9a7dd2e0a712e83cb5ded51c5173eef1615ce3f047dbded3"
+  name = "github.com/influxdata/platform"
+  packages = [
+    "models",
+    "pkg/escape",
+  ]
+  pruneopts = "UT"
+  revision = "8279ba65c37c86586a8185afceb3dd73597a1e4b"
 
 [[projects]]
   digest = "1:b995d2b18d02dbaf57f413f678228249f65814f3da18a28d5aeafba1141f08fb"
@@ -162,12 +173,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:fc5013a7a6f9600051ad48b059fef4a3035e8692d1c54ffd8dccfaa8ebe0b505"
+  digest = "1:a986a7fd7892494ef22b9cb4f9912734636d6b72d1c54b6afceb7e657f3e94f7"
   name = "github.com/miekg/dns"
   packages = ["."]
   pruneopts = "UT"
-  revision = "ba6747e8a94115e9dc7738afb87850687611df1b"
-  version = "v1.0.12"
+  revision = "a220737569d8137d4c610f80bd33f1dc762522e5"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:4ce94f3d2074662c04677db471456feb56078244ebcfe3789e6e95901c085bc5"
@@ -190,7 +201,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:ab54eea8d482272009e9e4af07d4d9b5236c27b4d8c54a3f2c99d163be883eca"
+  digest = "1:7a137fb7718928e473b7d805434ae563ec41790d3d227cdc64e8b14d1cab8a1f"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -207,8 +218,8 @@
     "types",
   ]
   pruneopts = "UT"
-  revision = "7615b9433f86a8bdf29709bf288bc4fd0636a369"
-  version = "v1.4.2"
+  revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
+  version = "v1.4.3"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
@@ -277,12 +288,12 @@
   revision = "527a540293077c77cf70479bbf9f8efb9f818cb2"
 
 [[projects]]
-  digest = "1:92d68f6e77198b5da8d32e13283d75d2ba4fe01f369bc63cdf48c77cc138bfaf"
+  digest = "1:d1816f8f4877e87cf0a80a25fbc0e7c7a6937bd728ccbf85e2c151c792445a1b"
   name = "github.com/thoas/go-funk"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e2f8da694c9c4fa123eea42cb0d6d47e08f11ff6"
-  version = "0.3"
+  revision = "9132db0aefe2a09565f5124e267ac9a89845d8f6"
+  version = "0.4"
 
 [[projects]]
   digest = "1:2cab41f59638fdb77dda96ab4f9b5860ef30f48967557254eba127e43c756f2e"
@@ -293,20 +304,20 @@
   version = "v1.1.3"
 
 [[projects]]
-  branch = "master"
   digest = "1:d3f968e2a2c9f8506ed44b01b605ade0176ba6cf73ff679073e77cfdef2c0d55"
   name = "github.com/tidwall/match"
   packages = ["."]
   pruneopts = "UT"
   revision = "1731857f09b1f38450e2c12409748407822dc6be"
+  version = "v1.0.0"
 
 [[projects]]
-  digest = "1:f02f814d3bd902a74fe0ff80a8de777d5698a847a509a4b92bfaf11859251806"
+  digest = "1:ea8da5f44f5e15bb589cca1bd9b85ceb9c05257e83824a725fb0243665e3ce1c"
   name = "github.com/tidwall/sjson"
   packages = ["."]
   pruneopts = "UT"
-  revision = "48d34adceb39a5bd6ed7c12f38c78cd425436442"
-  version = "v1.0.2"
+  revision = "c943cc8c8d751d9b33444adf78ae04c2fc8be754"
+  version = "v1.0.3"
 
 [[projects]]
   digest = "1:19fd46009e9bad71f7e9a8367e7317ed632f89926352a7d59822edec785ae4f3"
@@ -329,11 +340,11 @@
     "ed25519/internal/edwards25519",
   ]
   pruneopts = "UT"
-  revision = "7c1a557ab941a71c619514f229f0b27ccb0c27cf"
+  revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
 
 [[projects]]
   branch = "master"
-  digest = "1:9672bfa4cb9ea2fa3710bf583ebd606b178275bd143b78c0b00f11ccc5cc5bda"
+  digest = "1:6ddf6c3e9b07757c0ca36e93c94c2226be964f5e7408ce03bfe33c1504bbc5d0"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -348,15 +359,15 @@
     "websocket",
   ]
   pruneopts = "UT"
-  revision = "146acd28ed5894421fb5aac80ca93bc1b1f46f87"
+  revision = "adae6a3d119ae4890b46832a2e88a95adc62b8e7"
 
 [[projects]]
   branch = "master"
-  digest = "1:c2789211d4035eb0843b85958ecf7cb4a5ea91c2d4decee652c94ce898e433cb"
+  digest = "1:8775d8a768d9e65e8b659172804aac5db1fc8d563ba766470a6c2698c57c61a7"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "4497e2df6f9e69048a54498c7affbbec3294ad47"
+  revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
 
 [[projects]]
   digest = "1:aa4d6967a3237f8367b6bf91503964a77183ecf696f1273e8ad3551bb4412b5f"
