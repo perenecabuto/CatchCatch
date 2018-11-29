@@ -53,3 +53,10 @@ _testmain.go
 
 # Coverage files
 roveralls.coverprofile
+
+# docker deps
+appendonly.aof
+config
+influxdb.conf
+queue.db
+
