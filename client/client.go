@@ -105,6 +105,10 @@ func (p *Player) listen(ctx context.Context) error {
 				if p.state.Lat != 0 || p.state.Lon != 0 {
 					p.UpdatePlayer(p.state.Lat, p.state.Lon)
 				}
+				fn, ok := p.eventHandlers[core.EventPlayerRegistered]
+				if ok {
+					fn(p.state)
+				}
 
 			case core.GameStarted.String():
 				payload := protobuf.GameInfo{}
@@ -185,6 +189,12 @@ func (p *Player) Disconnect() error {
 	return p.ws.Close()
 }
 
+func (p *Player) OnRegistered(fn func(player game.Player) error) {
+	p.eventHandlerChan <- EventHandler{core.EventPlayerRegistered,
+		func(params ...interface{}) error {
+			return fn(params[0].(game.Player))
+		}}
+}
 func (p *Player) OnGameStarted(fn func(game, role string) error) {
 	p.eventHandlerChan <- EventHandler{core.GameStarted,
 		func(params ...interface{}) error {
