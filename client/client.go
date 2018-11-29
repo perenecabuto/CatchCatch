@@ -102,9 +102,7 @@ func (p *Player) listen(ctx context.Context) error {
 				if err := proto.Unmarshal(msg.Data, &payload); err != nil {
 					return errors.Wrap(err, "can't parse player")
 				}
-				if p.state.Lat != 0 || p.state.Lon != 0 {
-					p.UpdatePlayer(p.state.Lat, p.state.Lon)
-				}
+				p.state.ID = payload.Id
 				fn, ok := p.eventHandlers[core.EventPlayerRegistered]
 				if ok {
 					fn(p.state)

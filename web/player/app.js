@@ -24,6 +24,7 @@ const init = () => {
             };
 
             player.onRegistered(function(p) {
+                console.log(p)
                 navigator.geolocation.watchPosition(updatePosition, null, options);
                 navigator.geolocation.getCurrentPosition(updatePosition);
                 player.update(10, 10);

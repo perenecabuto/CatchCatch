@@ -70,7 +70,7 @@ func registerCallbacks() {
 			"onRegistered": callbackFunc(func(vals []js.Value) {
 				cb := vals[0]
 				player.OnRegistered(func(player game.Player) error {
-					payload, _ := json.Marshal(player)
+					payload, _ := json.Marshal(&player)
 					cb.Invoke(js.ValueOf(string(payload)))
 					return nil
 				})
