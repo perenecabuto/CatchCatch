@@ -8,8 +8,8 @@ import (
 )
 
 type WebSocketMessage struct {
-	data []byte
-	err  error
+	Data []byte
+	Err  error
 }
 
 type WebSocket interface {

@@ -86,12 +86,12 @@ func (p *Player) listen(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			if msg.err != nil {
-				return errors.Wrapf(msg.err,
+			if msg.Err != nil {
+				return errors.Wrapf(msg.Err,
 					"error listening player:%s msg", p.state.ID)
 			}
 			payload := &protobuf.Simple{}
-			if err := proto.Unmarshal(msg.data, payload); err != nil {
+			if err := proto.Unmarshal(msg.Data, payload); err != nil {
 				return errors.Wrap(err, "can't parse message")
 			}
 			log.Println("Received event:", payload.GetEventName())
@@ -99,7 +99,7 @@ func (p *Player) listen(ctx context.Context) error {
 			switch payload.GetEventName() {
 			case core.EventPlayerRegistered:
 				payload := protobuf.Player{}
-				if err := proto.Unmarshal(msg.data, &payload); err != nil {
+				if err := proto.Unmarshal(msg.Data, &payload); err != nil {
 					return errors.Wrap(err, "can't parse player")
 				}
 				if p.state.Lat != 0 || p.state.Lon != 0 {
@@ -108,7 +108,7 @@ func (p *Player) listen(ctx context.Context) error {
 
 			case core.GameStarted.String():
 				payload := protobuf.GameInfo{}
-				if err := proto.Unmarshal(msg.data, &payload); err != nil {
+				if err := proto.Unmarshal(msg.Data, &payload); err != nil {
 					return errors.Wrap(err, "can't parse game info")
 				}
 				fn, ok := p.eventHandlers[core.GameStarted]
@@ -118,7 +118,7 @@ func (p *Player) listen(ctx context.Context) error {
 
 			case core.GamePlayerNearToTarget.String():
 				payload := protobuf.Distance{}
-				if err := proto.Unmarshal(msg.data, &payload); err != nil {
+				if err := proto.Unmarshal(msg.Data, &payload); err != nil {
 					return errors.Wrap(err, "can't parse game info")
 				}
 				fn, ok := p.eventHandlers[core.GamePlayerNearToTarget]
@@ -128,7 +128,7 @@ func (p *Player) listen(ctx context.Context) error {
 
 			case core.GamePlayerLose.String():
 				payload := protobuf.Simple{}
-				if err := proto.Unmarshal(msg.data, &payload); err != nil {
+				if err := proto.Unmarshal(msg.Data, &payload); err != nil {
 					return errors.Wrap(err, "can't parse game info")
 				}
 				fn, ok := p.eventHandlers[core.GamePlayerLose]
@@ -138,7 +138,7 @@ func (p *Player) listen(ctx context.Context) error {
 
 			case core.GamePlayerWin.String():
 				payload := protobuf.Distance{}
-				if err := proto.Unmarshal(msg.data, &payload); err != nil {
+				if err := proto.Unmarshal(msg.Data, &payload); err != nil {
 					return errors.Wrap(err, "can't parse game info")
 				}
 				fn, ok := p.eventHandlers[core.GamePlayerWin]
@@ -148,7 +148,7 @@ func (p *Player) listen(ctx context.Context) error {
 
 			case core.GameFinished.String():
 				payload := protobuf.GameRank{}
-				if err := proto.Unmarshal(msg.data, &payload); err != nil {
+				if err := proto.Unmarshal(msg.Data, &payload); err != nil {
 					return errors.Wrap(err, "can't parse game info")
 				}
 				rank := make(Rank)
