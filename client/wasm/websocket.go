@@ -50,7 +50,6 @@ func (ws WASMWebSocket) NewConnection(url string) (client.WebSocket, error) {
 		for i := 0; i < data.Length(); i++ {
 			converted[i] = byte(data.Index(i).Int())
 		}
-		log.Printf("SUCCESS onmessage: %+v", string(converted))
 		msg := &client.WebSocketMessage{Data: converted}
 		select {
 		case <-time.NewTimer(time.Second).C:
