@@ -34,6 +34,7 @@ const init = () => {
             });
             player.onDisconnect(() => {
                 console.log("disconnected!");
+                location.href = location.href;
             });
             player.onGameStarted((game, role) => {
                 console.log("game stared", game, "role", role);
