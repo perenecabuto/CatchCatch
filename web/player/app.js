@@ -35,10 +35,31 @@ const init = () => {
                 view.setCenter([lon, lat]);
             };
 
-            player.onRegistered(function(p) {
-                console.log(p);
+            player.onRegistered(state => {
+                console.log("registered as:", state);
                 navigator.geolocation.watchPosition(updatePosition, null, options);
                 navigator.geolocation.getCurrentPosition(updatePosition);
+            });
+            player.onDisconnect(() => {
+                console.log("disconnected!");
+            });
+            player.onGameStarted((game, role) => {
+                console.log("game stared", game, "role", role);
+                player.coords(lonlat => console.log('lonlat', lonlat));
+                navigator.geolocation.watchPosition(updatePosition, null, options);
+                navigator.geolocation.getCurrentPosition(updatePosition);
+            });
+            player.onGamePlayerNearToTarget(dist => {
+                console.log("near to target:", dist);
+            })
+            player.onGamePlayerLose(() => {
+                console.log("you lose");
+            });
+            player.onGamePlayerWin(dist => {
+                console.log("you win - dist to target:", dist)
+            });
+            player.onGameFinished((game, rank) => {
+                console.warn("game finished", game, "rank", rank);
             });
 
             map.on('moveend', function(evt) {

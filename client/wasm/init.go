@@ -25,8 +25,7 @@ func callbackFunc(cb func([]js.Value)) js.Callback {
 	return callback
 }
 
-type wasmLogWritter struct {
-}
+type wasmLogWritter struct{}
 
 func (wlw *wasmLogWritter) Write(p []byte) (n int, err error) {
 	text := js.Global().Get("document").Call("getElementById", "log").Get("innerHTML").String()
@@ -55,14 +54,29 @@ func registerCallbacks() {
 		}
 
 		playerWrapper := map[string]interface{}{
+			// (p *Player) Disconnect() error {
+			"disconnect": callbackFunc(func(vals []js.Value) {
+				err := player.Disconnect()
+				if err != nil {
+					logError(err.Error())
+				}
+			}),
+			// (p *Player) UpdatePlayer(lat, lon float64) error {
 			"update": callbackFunc(func(vals []js.Value) {
 				lat, lon := vals[0].Float(), vals[1].Float()
 				err := player.UpdatePlayer(lat, lon)
 				if err != nil {
 					logError(err.Error())
 				}
-				return
 			}),
+			// (p *Player) Coords() LatLon {
+			"coords": callbackFunc(func(vals []js.Value) {
+				cb := vals[0]
+				latlon := player.Coords()
+				data, _ := json.Marshal(&latlon)
+				cb.Invoke(string(data))
+			}),
+			// (p *Player) OnRegistered(fn func(player game.Player) error) {
 			"onRegistered": callbackFunc(func(vals []js.Value) {
 				cb := vals[0]
 				player.OnRegistered(func(player game.Player) error {
@@ -71,10 +85,52 @@ func registerCallbacks() {
 					return nil
 				})
 			}),
+			// (p *Player) OnGameStarted(fn func(game, role string) error) {
 			"onGameStarted": callbackFunc(func(vals []js.Value) {
 				cb := vals[0]
 				player.OnGameStarted(func(game, role string) error {
 					cb.Invoke(game, role)
+					return nil
+				})
+			}),
+			// (p *Player) OnGamePlayerNearToTarget(fn func(dist float64) error) {
+			"onGamePlayerNearToTarget": callbackFunc(func(vals []js.Value) {
+				cb := vals[0]
+				player.OnGamePlayerNearToTarget(func(dist float64) error {
+					cb.Invoke(dist)
+					return nil
+				})
+			}),
+			// (p *Player) OnGamePlayerLose(fn func() error) {
+			"onGamePlayerLose": callbackFunc(func(vals []js.Value) {
+				cb := vals[0]
+				player.OnGamePlayerLose(func() error {
+					cb.Invoke()
+					return nil
+				})
+			}),
+			// (p *Player) OnGamePlayerWin(fn func(dist float64) error) {
+			"onGamePlayerWin": callbackFunc(func(vals []js.Value) {
+				cb := vals[0]
+				player.OnGamePlayerWin(func(dist float64) error {
+					cb.Invoke(dist)
+					return nil
+				})
+			}),
+			// (p *Player) OnGameFinished(fn func(game string, rank Rank) error) {
+			"onGameFinished": callbackFunc(func(vals []js.Value) {
+				cb := vals[0]
+				player.OnGameFinished(func(game string, rank client.Rank) error {
+					data, _ := json.Marshal(&rank)
+					cb.Invoke(game, string(data))
+					return nil
+				})
+			}),
+			// (p *Player) OnDisconnect(fn func() error) {
+			"onDisconnect": callbackFunc(func(vals []js.Value) {
+				cb := vals[0]
+				player.OnDisconnect(func() error {
+					cb.Invoke()
 					return nil
 				})
 			}),
