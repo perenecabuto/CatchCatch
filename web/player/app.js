@@ -1,13 +1,5 @@
 const init = () => {
-    const go = new Go();
     const addr = "localhost:5000";
-    let mod, inst;
-
-    WebAssembly.instantiateStreaming(fetch("catchcatch.wasm"), go.importObject).then(async (result) => {
-        mod = result.module;
-        inst = result.instance;
-        await go.run(inst);
-    });
 
     let mapSource = new ol.source.Stamen({layer:"toner"});
     let raster = new ol.layer.Tile({ source: mapSource });
@@ -20,7 +12,7 @@ const init = () => {
         layers: [raster, vector], target: 'map', view: view
     });
 
-    document.addEventListener("catchcatch:ready", function() {
+    onCatchCatchReady(function() {
         catchcatch.NewPlayer(addr, function(player) {
             let options = {
                 enableHighAccuracy: true,
