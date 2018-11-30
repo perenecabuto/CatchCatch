@@ -1,5 +1,11 @@
 # TODO
 
+## Bugs
+
+- jogo inicia com mesmos players
+- jogo inicia com players muito proximos
+- jogador q perdeu o jogo esta podendo voltar para o jogo
+
 ## Deploy
 
 + continuous deploy
@@ -32,9 +38,8 @@
 
 ## Client
 
-+ Cli WASM
++ Cli WASM - ok
 + PWA
-+ New Android APP
 
 - player web interface
     - splash
@@ -64,8 +69,7 @@
 
 - player status
     client tem que enviar pings temporarios para notificar atividade
-- players que nao tiverem atualizacao em nenhum
-- criar um ConnectedPlayer para guardar as caracteristicas?
+- players que nao tiverem atualizacao sao removidos
 
 # GameWorker reliable
 
