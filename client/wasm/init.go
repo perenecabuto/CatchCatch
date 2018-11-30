@@ -12,10 +12,6 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/game"
 )
 
-type WASMClient struct {
-	client *client.Client
-}
-
 func logError(msg string) {
 	js.Global().Get("console").Call("error", msg)
 }
