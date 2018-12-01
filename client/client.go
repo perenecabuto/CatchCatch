@@ -203,7 +203,10 @@ func (p *Player) Coords() LatLon {
 }
 
 func (p *Player) Disconnect() error {
-	return p.ws.Close()
+	payload := protobuf.Simple{Id: p.state.ID, EventName: core.EventPlayerExit}
+	data, _ := proto.Marshal(&payload)
+	err := p.ws.Send(data)
+	return errors.Wrapf(err, "can't disconnect player:%+v", p.state.ID)
 }
 
 func (p *Player) OnRegistered(fn func(player game.Player) error) {

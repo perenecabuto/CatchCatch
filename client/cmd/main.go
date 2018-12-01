@@ -33,7 +33,7 @@ func main() {
 	cli := client.New(ws)
 
 	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGABRT, syscall.SIGKILL)
+	signal.Notify(interrupt, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGABRT, syscall.SIGKILL)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

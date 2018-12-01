@@ -18,6 +18,7 @@ const (
 	EventPlayerRegistered = "player:registered"
 	EventPlayerDisconnect = "player:disconnect"
 	EventPlayerUpdate     = "player:update"
+	EventPlayerExit       = "player:exit"
 	EventPlayerPing       = "player:ping"
 
 	PlayerExpirationInSec = 2 * 60
@@ -57,6 +58,7 @@ func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnect
 	}
 	log.Println("[PlayerHandler] player connected", player)
 	c.On(EventPlayerUpdate, h.onPlayerUpdate(player, c))
+	c.On(EventPlayerExit, h.onPlayerExit(player, c))
 	c.On(EventPlayerPing, h.onPing(player, c))
 	c.OnDisconnected(h.onPlayerDisconnect(player))
 	return nil
@@ -65,7 +67,17 @@ func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnect
 func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) func() {
 	return func() {
 		log.Println(EventPlayerDisconnect, player.ID)
-		// h.players.Remove(player.ID)
+	}
+}
+
+func (h *PlayerHandler) onPlayerExit(player *model.Player, c *websocket.WSConnectionHandler) func([]byte) {
+	return func([]byte) {
+		err := h.players.Remove(player.ID)
+		if err != nil {
+			log.Printf("%+v", errors.Cause(err))
+			return
+		}
+		c.Close()
 	}
 }
 
