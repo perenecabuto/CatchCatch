@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
 	gjson "github.com/tidwall/gjson"
 
@@ -19,6 +20,7 @@ var ErrFeatureNotFound = repository.ErrFeatureNotFound
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
 	Set(p *model.Player) error
+	GetByID(id string) (*model.Player, error)
 	Remove(playerID string) error
 	All() (model.PlayerList, error)
 
@@ -56,6 +58,22 @@ func NewPlayerLocationService(repo repository.Repository, stream repository.Even
 // Exists add new player
 func (s *Tile38PlayerLocationService) Exists(p *model.Player) (bool, error) {
 	return s.repo.Exists("player", p.ID)
+}
+
+func (s *Tile38PlayerLocationService) GetByID(id string) (*model.Player, error) {
+	f, err := s.repo.FeatureByID("player", id)
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	coords := gjson.Get(f.Coordinates, "coordinates").Array()
+	if len(coords) != 2 {
+		coords = make([]gjson.Result, 2)
+	}
+	p := &model.Player{ID: f.ID, Lat: coords[1].Float(), Lon: coords[0].Float()}
+	return p, nil
 }
 
 // Set player data

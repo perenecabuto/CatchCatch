@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-redis/redis"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/assert"
@@ -99,4 +101,43 @@ func TestObservePlayerDelete(t *testing.T) {
 		"player",
 		[]repository.CommandEvent{repository.Del},
 		[]repository.DetectEvent{}, 0.0, 0.0, 0.0, any)
+}
+
+func TestPlayerServiceGetPlayerByID(t *testing.T) {
+	tests := []struct {
+		repoError   error
+		assertError assert.ErrorAssertionFunc
+		feat        *model.Feature
+		expectedID  string
+		expected    *model.Player
+	}{
+		{
+			nil, assert.NoError,
+			&model.Feature{ID: "test-get-by-id", Group: "player", Coordinates: ""},
+			"test-get-by-id", &model.Player{ID: "test-get-by-id"},
+		},
+		{
+			redis.Nil, assert.NoError,
+			nil,
+			"anything", nil,
+		},
+		{
+			errors.New("fail"), assert.Error,
+			nil,
+			"anything", nil,
+		},
+	}
+
+	for _, tt := range tests {
+		r := &mocks.Repository{}
+		s := &mocks.EventStream{}
+		pls := service.NewPlayerLocationService(r, s)
+
+		r.On("FeatureByID", "player", tt.expectedID).Return(tt.feat, tt.repoError)
+
+		player, err := pls.GetByID(tt.expectedID)
+		tt.assertError(t, err)
+
+		assert.EqualValues(t, tt.expected, player)
+	}
 }

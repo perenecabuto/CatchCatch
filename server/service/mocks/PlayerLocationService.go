@@ -94,6 +94,29 @@ func (_m *PlayerLocationService) GeofenceByID(id string) (*model.Feature, error)
 	return r0, r1
 }
 
+// GetByID provides a mock function with given fields: id
+func (_m *PlayerLocationService) GetByID(id string) (*model.Player, error) {
+	ret := _m.Called(id)
+
+	var r0 *model.Player
+	if rf, ok := ret.Get(0).(func(string) *model.Player); ok {
+		r0 = rf(id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Player)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ObserveFeaturesEventsNearToAdmin provides a mock function with given fields: _a0, _a1
 func (_m *PlayerLocationService) ObserveFeaturesEventsNearToAdmin(_a0 context.Context, _a1 service.AdminNearToFeatureCallback) error {
 	ret := _m.Called(_a0, _a1)
