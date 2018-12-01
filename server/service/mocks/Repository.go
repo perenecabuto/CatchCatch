@@ -59,6 +59,20 @@ func (_m *Repository) Exists(group string, id string) (bool, error) {
 	return r0, r1
 }
 
+// Expire provides a mock function with given fields: group, id, expireInSecs
+func (_m *Repository) Expire(group string, id string, expireInSecs int) error {
+	ret := _m.Called(group, id, expireInSecs)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, int) error); ok {
+		r0 = rf(group, id, expireInSecs)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // FeatureByID provides a mock function with given fields: group, id
 func (_m *Repository) FeatureByID(group string, id string) (*model.Feature, error) {
 	ret := _m.Called(group, id)

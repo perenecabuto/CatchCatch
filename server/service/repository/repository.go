@@ -15,6 +15,7 @@ const (
 // Repository is the geospatial repository
 type Repository interface {
 	SetFeature(group, id, geojson string) (*model.Feature, error)
+	Expire(group, id string, expireInSecs int) error
 	Exists(group, id string) (bool, error)
 	FeatureByID(group, id string) (*model.Feature, error)
 	RemoveFeature(group, id string) error
@@ -44,6 +45,12 @@ func (r *Tile38Repository) SetFeature(group, id, geojson string) (*model.Feature
 		return nil, err
 	}
 	return &model.Feature{ID: id, Coordinates: geojson, Group: group}, nil
+}
+
+// Expire set feature expiration time in secs
+func (r *Tile38Repository) Expire(group, id string, expireInSecs int) error {
+	cmd := redis.NewStringCmd("EXPIRE", group, id, expireInSecs)
+	return r.client.Process(cmd)
 }
 
 // RemoveFeature removes a feature

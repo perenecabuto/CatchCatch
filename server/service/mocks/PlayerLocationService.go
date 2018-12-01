@@ -201,13 +201,27 @@ func (_m *PlayerLocationService) RemoveAdmin(id string) error {
 	return r0
 }
 
-// Set provides a mock function with given fields: p
-func (_m *PlayerLocationService) Set(p *model.Player) error {
-	ret := _m.Called(p)
+// Set provides a mock function with given fields: p, expireInSecs
+func (_m *PlayerLocationService) Set(p *model.Player, expireInSecs int) error {
+	ret := _m.Called(p, expireInSecs)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.Player) error); ok {
-		r0 = rf(p)
+	if rf, ok := ret.Get(0).(func(*model.Player, int) error); ok {
+		r0 = rf(p, expireInSecs)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetActive provides a mock function with given fields: p, expireInSecs
+func (_m *PlayerLocationService) SetActive(p *model.Player, expireInSecs int) error {
+	ret := _m.Called(p, expireInSecs)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*model.Player, int) error); ok {
+		r0 = rf(p, expireInSecs)
 	} else {
 		r0 = ret.Error(0)
 	}

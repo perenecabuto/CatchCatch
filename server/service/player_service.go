@@ -19,8 +19,10 @@ var ErrFeatureNotFound = repository.ErrFeatureNotFound
 
 // PlayerLocationService manage players and features
 type PlayerLocationService interface {
-	Set(p *model.Player) error
 	GetByID(id string) (*model.Player, error)
+
+	Set(p *model.Player, expireInSecs int) error
+	SetActive(p *model.Player, expireInSecs int) error
 	Remove(playerID string) error
 	All() (model.PlayerList, error)
 
@@ -77,10 +79,18 @@ func (s *Tile38PlayerLocationService) GetByID(id string) (*model.Player, error) 
 }
 
 // Set player data
-func (s *Tile38PlayerLocationService) Set(p *model.Player) error {
+func (s *Tile38PlayerLocationService) Set(p *model.Player, expireInSecs int) error {
 	_, err := s.repo.SetFeature("player", p.ID,
 		fmt.Sprintf(`{"type": "Point", "coordinates": [%f, %f]}`, p.Lon, p.Lat))
+	if err != nil {
+		return err
+	}
+	err = s.SetActive(p, expireInSecs)
 	return err
+}
+
+func (s *Tile38PlayerLocationService) SetActive(p *model.Player, expireInSecs int) error {
+	return s.repo.Expire("player", p.ID, expireInSecs)
 }
 
 // Remove player
