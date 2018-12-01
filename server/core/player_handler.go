@@ -18,6 +18,9 @@ const (
 	EventPlayerRegistered = "player:registered"
 	EventPlayerDisconnect = "player:disconnect"
 	EventPlayerUpdate     = "player:update"
+	EventPlayerPing       = "player:ping"
+
+	PlayerExpirationInSec = 2 * 60
 )
 
 // PlayerHandler handle websocket events
@@ -48,21 +51,27 @@ func (h *PlayerHandler) OnStart(ctx context.Context, wss *websocket.WSServer) er
 
 // OnConnection handles game and admin connection events
 func (h *PlayerHandler) OnConnection(ctx context.Context, c *websocket.WSConnectionHandler) error {
-	player, err := h.newPlayer(c)
+	player, err := h.connectPlayer(c)
 	if err != nil {
 		return errors.Wrap(err, "error to create player")
 	}
 	log.Println("[PlayerHandler] player connected", player)
 	c.On(EventPlayerUpdate, h.onPlayerUpdate(player, c))
+	c.On(EventPlayerPing, h.onPing(player, c))
 	c.OnDisconnected(h.onPlayerDisconnect(player))
-
 	return nil
 }
 
 func (h *PlayerHandler) onPlayerDisconnect(player *model.Player) func() {
 	return func() {
 		log.Println(EventPlayerDisconnect, player.ID)
-		h.players.Remove(player.ID)
+		// h.players.Remove(player.ID)
+	}
+}
+
+func (h *PlayerHandler) onPing(player *model.Player, c *websocket.WSConnectionHandler) func([]byte) {
+	return func(buf []byte) {
+		h.players.SetActive(player, PlayerExpirationInSec)
 	}
 }
 
@@ -75,14 +84,22 @@ func (h *PlayerHandler) onPlayerUpdate(player *model.Player, c *websocket.WSConn
 			return
 		}
 		player.Lat, player.Lon = lat, lon
-		h.players.Set(player)
+		h.players.Set(player, PlayerExpirationInSec)
 	}
 }
 
-func (h *PlayerHandler) newPlayer(c *websocket.WSConnectionHandler) (player *model.Player, err error) {
-	player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
-	if err := h.players.Set(player); err != nil {
-		return nil, errors.Wrapf(err, "could not register player:%s", player.ID)
+func (h *PlayerHandler) connectPlayer(c *websocket.WSConnectionHandler) (player *model.Player, err error) {
+	player, err = h.players.GetByID(c.ID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "fail trying to find player:%s", c.ID)
+	}
+	if player == nil {
+		player = &model.Player{ID: c.ID, Lat: 0, Lon: 0}
+		if err := h.players.Set(player, PlayerExpirationInSec); err != nil {
+			return nil, errors.Wrapf(err, "could not register player:%s", player.ID)
+		}
+	} else {
+		h.players.SetActive(player, PlayerExpirationInSec)
 	}
 	c.Emit(&protobuf.Player{EventName: EventPlayerRegistered, Id: player.ID, Lon: player.Lon, Lat: player.Lat})
 	return player, nil

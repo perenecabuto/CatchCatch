@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/url"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -77,11 +78,21 @@ func (p *Player) listen(ctx context.Context) error {
 		cancel()
 	})
 
+	pingInterval := time.Second * core.PlayerExpirationInSec / 2
+	ping := time.NewTimer(pingInterval)
+	defer ping.Stop()
+
 	chann := p.ws.Listen(ctx)
 	for {
 		select {
 		case handler := <-p.eventHandlerChan:
 			p.eventHandlers[handler.GameWorkerEvent] = handler.EventHandlerFunc
+		case <-ping.C:
+			if err := p.Ping(); err != nil {
+				return errors.Cause(err)
+			}
+			ping.Reset(pingInterval)
+
 		case msg, ok := <-chann:
 			if !ok {
 				return nil
@@ -166,6 +177,13 @@ func (p *Player) listen(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+func (p *Player) Ping() error {
+	payload := protobuf.Simple{Id: "ping", EventName: core.EventPlayerPing}
+	data, _ := proto.Marshal(&payload)
+	err := p.ws.Send(data)
+	return errors.Wrapf(err, "can't ping:%+v", p.state.ID)
 }
 
 func (p *Player) UpdatePlayer(lat, lon float64) error {
