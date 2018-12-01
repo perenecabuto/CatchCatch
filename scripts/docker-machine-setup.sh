@@ -5,9 +5,14 @@ export WORKERS="worker1 worker2"
 export MACHINES="$MANAGER $WORKERS"
 
 for machine in $MACHINES; do
-# docker-machine rm $machine
-docker-machine create -d virtualbox $machine
-docker-machine start $machine
+    docker-machine rm $machine
+    docker-machine create -d virtualbox $machine
+    #docker-machine create \
+	#	--driver digitalocean \
+	#	--digitalocean-access-token $(TOKEN) \
+    #    $machine
+
+    docker-machine start $machine
 done
 
 eval "$(docker-machine env $MANAGER)"
