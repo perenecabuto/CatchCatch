@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ws := client.NewGorillaWebSocket()
+	ws := client.NewXNetWebSocket()
 	cli := client.New(ws)
 
 	interrupt := make(chan os.Signal, 1)
