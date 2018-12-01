@@ -15,6 +15,7 @@ import (
 
 	"github.com/perenecabuto/CatchCatch/server/core"
 	"github.com/perenecabuto/CatchCatch/server/game"
+	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -34,10 +35,13 @@ func TestObjectsGraph(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pls.On("Set", mock.Anything).Return(nil)
+	ws := wss.Add(c)
+	player := &model.Player{ID: ws.ID}
+	pls.On("GetByID", mock.Anything).Return(player, nil)
+	pls.On("SetActive", mock.Anything, mock.Anything).Return(nil)
+	pls.On("Set", mock.Anything, mock.Anything).Return(nil)
 	c.On("Send", mock.Anything).Return(nil)
 
-	ws := wss.Add(c)
 	playerH.OnConnection(ctx, ws)
 
 	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
