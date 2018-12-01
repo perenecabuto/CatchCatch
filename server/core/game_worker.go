@@ -105,10 +105,9 @@ func (gw GameWorker) Run(ctx context.Context, params worker.TaskParams) error {
 		return ErrGameCoordsCantBeEmpty
 	}
 
-	// FIXME: avoid duplicated games
-	// gw.service.Remove(gameID)
-	// notify game id to destroy
-	// listen to game destroy and exit if this message arrives here
+	// TODO: store and recover running game time
+	// TODO: add timer to notify players about game time
+	gw.service.Remove(gameID)
 	log.Printf("GameWorker:%s:Create", gameID)
 	g, err := gw.service.Create(gameID, coordinates)
 	if err != nil {
