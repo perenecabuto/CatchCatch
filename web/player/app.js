@@ -29,6 +29,7 @@ const init = () => {
 
             player.onRegistered(state => {
                 console.log("registered as:", state);
+                view.setCenter([state.lon, state.lat]);
                 navigator.geolocation.watchPosition(updatePosition, null, options);
                 navigator.geolocation.getCurrentPosition(updatePosition);
             });
