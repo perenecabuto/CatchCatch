@@ -27,6 +27,11 @@ const init = () => {
                 view.setCenter([lon, lat]);
             };
 
+            map.on('moveend', function(evt) {
+                let center = map.getView().getCenter();
+                player.update(center[1], center[0]);
+            });
+
             player.onRegistered(state => {
                 console.log("registered as:", state);
                 view.setCenter([state.lon, state.lat]);
@@ -54,11 +59,6 @@ const init = () => {
             });
             player.onGameFinished((game, rank) => {
                 console.warn("game finished", game, "rank", rank);
-            });
-
-            map.on('moveend', function(evt) {
-                let center = map.getView().getCenter();
-                player.update(center[1], center[0]);
             });
         });
     });
