@@ -90,7 +90,7 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 		pw := core.NewPlayersWatcher(m, pls)
 
 		playerH := core.NewPlayerHandler(pls, pw, gw)
-		wss := websocket.NewWSServer(wsDriver, playerH)
+		wss := websocket.NewWSServer(wsDriver)
 		c := &wsmocks.WSConnection{}
 
 		expected, err := proto.Marshal(tt.proto)
@@ -127,7 +127,7 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	gw := core.NewGameWorker(gs, m)
 	pw := core.NewPlayersWatcher(m, pls)
 	playerH := core.NewPlayerHandler(pls, pw, gw)
-	wss := websocket.NewWSServer(wsDriver, playerH)
+	wss := websocket.NewWSServer(wsDriver)
 
 	c1 := &wsmocks.WSConnection{}
 	c2 := &wsmocks.WSConnection{}
@@ -185,7 +185,7 @@ func TestPlayerHandlerDisconnectDeletedPlayers(t *testing.T) {
 	gw := core.NewGameWorker(gs, m)
 	pw := core.NewPlayersWatcher(m, pls)
 	playerH := core.NewPlayerHandler(pls, pw, gw)
-	wss := websocket.NewWSServer(wsDriver, playerH)
+	wss := websocket.NewWSServer(wsDriver)
 
 	c := &wsmocks.WSConnection{}
 	c.On("Close").Return(nil)

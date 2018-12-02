@@ -23,8 +23,7 @@ type WSDriver interface {
 
 // WSServer manage WS connections
 type WSServer struct {
-	driver  WSDriver
-	handler WSEventHandler
+	driver WSDriver
 
 	connections connectionGroup
 	sync.RWMutex
@@ -33,8 +32,8 @@ type WSServer struct {
 type connectionGroup map[string]*WSConnectionHandler
 
 // NewWSServer create a new WSServer
-func NewWSServer(driver WSDriver, handler WSEventHandler) *WSServer {
-	wss := &WSServer{driver: driver, handler: handler}
+func NewWSServer(driver WSDriver) *WSServer {
+	wss := &WSServer{driver: driver}
 	wss.connections = make(connectionGroup)
 	return wss
 }
@@ -46,8 +45,8 @@ type WSEventHandler interface {
 }
 
 // Listen to WS connections
-func (wss *WSServer) Listen(ctx context.Context) (http.Handler, error) {
-	err := wss.handler.OnStart(ctx, wss)
+func (wss *WSServer) Listen(ctx context.Context, handler WSEventHandler) (http.Handler, error) {
+	err := handler.OnStart(ctx, wss)
 	if err != nil {
 		return nil, errors.Cause(err)
 	}
@@ -60,7 +59,7 @@ func (wss *WSServer) Listen(ctx context.Context) (http.Handler, error) {
 			log.Println("[WSServer] Listen: error to notify connect event:", err)
 			return
 		}
-		err = wss.handler.OnConnection(connctx, conn)
+		err := handler.OnConnection(connctx, conn)
 		if err != nil {
 			log.Println("[WSServer] Listen: handler.OnConnection error:", err)
 			return

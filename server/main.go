@@ -97,16 +97,16 @@ func main() {
 	workers.RunUnique(featuresWatcher, nil, "features-watcher")
 	workers.RunUnique(playersWatcher, nil, "players-watcher")
 
-	playerH := core.NewPlayerHandler(playerService, playersWatcher, gameWorker)
-	playersConnections := websocket.NewWSServer(wsdriver, playerH)
 	adminH := core.NewAdminHandler(playerService, featuresWatcher)
-	adminConnections := websocket.NewWSServer(wsdriver, adminH)
-
-	adminHTTPHandler, err := adminConnections.Listen(ctx)
+	adminConnections := websocket.NewWSServer(wsdriver)
+	adminHTTPHandler, err := adminConnections.Listen(ctx, adminH)
 	if err != nil {
 		log.Fatal(err)
 	}
-	playersHTTPHandler, err := playersConnections.Listen(ctx)
+
+	playerH := core.NewPlayerHandler(playerService, playersWatcher, gameWorker)
+	playersConnections := websocket.NewWSServer(wsdriver)
+	playersHTTPHandler, err := playersConnections.Listen(ctx, playerH)
 	if err != nil {
 		log.Fatal(err)
 	}

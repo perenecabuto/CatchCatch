@@ -53,8 +53,8 @@ func TestWSServer_Listen(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			wss := websocket.NewWSServer(tt.driver, tt.eventHandler)
-			got, err := wss.Listen(ctx)
+			wss := websocket.NewWSServer(tt.driver)
+			got, err := wss.Listen(ctx, tt.eventHandler)
 			tt.assertError(t, err)
 			tt.assertResponse(t, got)
 			tt.eventHandler.AssertExpectations(t)
