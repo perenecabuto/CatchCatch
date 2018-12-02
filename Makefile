@@ -54,8 +54,10 @@ build:
 	$(SERVER_SRC) go build
 
 build-wasm:
-	GOOS=js GOARCH=wasm \
-		go build -v -o web/player/catchcatch.wasm client/wasm/*.go
+	@echo -n "building... "
+	@GOOS=js GOARCH=wasm \
+		go build -ldflags="-s -w" -v -o web/player/catchcatch.wasm client/wasm/*.go
+	@echo done
 
 docker-compose:
 	docker-compose up --build
