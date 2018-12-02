@@ -133,15 +133,7 @@ func (wss *WSServer) BroadcastFrom(fromID string, message Message) error {
 
 // Broadcast event message to all connections
 func (wss *WSServer) Broadcast(message Message) error {
-	wss.RLock()
-	connections := wss.connections
-	wss.RUnlock()
-	for _, c := range connections {
-		if err := c.Emit(message); err != nil {
-			return err
-		}
-	}
-	return nil
+	return wss.BroadcastFrom("", message)
 }
 
 // Close connection by id
