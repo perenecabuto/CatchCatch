@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -50,7 +51,8 @@ func (wss *WSServer) Listen(ctx context.Context, handler WSEventHandler) (http.H
 	}
 
 	return wss.driver.HTTPHandler(ctx, func(connctx context.Context, c WSConnection) {
-		conn := wss.Add(c)
+		id := wss.GenIDFor(c)
+		conn := wss.Add(id, c)
 		defer wss.Remove(conn.ID)
 		err := handler.OnConnection(connctx, conn)
 		if err != nil {
@@ -73,19 +75,23 @@ func (wss *WSServer) Get(id string) *WSConnectionHandler {
 }
 
 // Add Conn for session id
-func (wss *WSServer) Add(c WSConnection) *WSConnectionHandler {
-	conn := NewWSConnectionHandler(c)
+func (wss *WSServer) Add(id string, c WSConnection) *WSConnectionHandler {
+	conn := NewWSConnectionHandler(c, id)
 	wss.Lock()
 	wss.connections[conn.ID] = conn
 	wss.Unlock()
 	return conn
 }
 
+func (wss *WSServer) GenIDFor(c WSConnection) string {
+	id := uuid.NewV4().String()
+	return id
+}
+
 // Remove Conn by session id
 func (wss *WSServer) Remove(id string) {
 	if c := wss.Get(id); c != nil {
 		c.Close()
-
 		wss.Lock()
 		delete(wss.connections, id)
 		wss.Unlock()

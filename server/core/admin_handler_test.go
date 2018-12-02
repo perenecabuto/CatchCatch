@@ -27,8 +27,9 @@ func TestAdminHandlerMustNotifyAboutFeaturesNear(t *testing.T) {
 
 	adminConn := &wsmocks.WSConnection{}
 	adminConn.On("Send", mock.Anything).Return(nil)
-	wss := websocket.NewWSServer(nil, h)
-	adminID := wss.Add(adminConn).ID
+	wss := websocket.NewWSServer(nil)
+	adminID := "admin-test-1"
+	wss.Add(adminID, adminConn)
 
 	action := "added"
 	example := &protobuf.Feature{

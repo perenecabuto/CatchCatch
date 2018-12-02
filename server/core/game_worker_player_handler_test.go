@@ -29,14 +29,14 @@ func TestObjectsGraph(t *testing.T) {
 	gw := core.NewGameWorker(gs, m)
 	pw := core.NewPlayersWatcher(m, pls)
 	playerH := core.NewPlayerHandler(pls, pw, gw)
-	wss := websocket.NewWSServer(wsDriver, playerH)
+	wss := websocket.NewWSServer(wsDriver)
 	c := &wsmocks.WSConnection{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ws := wss.Add(c)
-	player := &model.Player{ID: ws.ID}
+	player := &model.Player{ID: "player-test-1"}
+	ws := wss.Add(player.ID, c)
 	pls.On("GetByID", mock.Anything).Return(player, nil)
 	pls.On("SetActive", mock.Anything, mock.Anything).Return(nil)
 	pls.On("Set", mock.Anything, mock.Anything).Return(nil)

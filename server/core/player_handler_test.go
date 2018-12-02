@@ -88,26 +88,28 @@ func TestPlayerHandlerObeserveAndNotifyPlayerNearToTargetEvent(t *testing.T) {
 		pls := &smocks.PlayerLocationService{}
 		gw := core.NewGameWorker(gs, m)
 		pw := core.NewPlayersWatcher(m, pls)
-
-		playerH := core.NewPlayerHandler(pls, pw, gw)
 		wss := websocket.NewWSServer(wsDriver)
 		c := &wsmocks.WSConnection{}
+
+		playerH := core.NewPlayerHandler(pls, pw, gw)
 
 		expected, err := proto.Marshal(tt.proto)
 		require.NoError(t, err)
 
-		c.On("Send", mock.MatchedBy(func(msg []byte) bool {
+		c.On("Send", mock.Anything).Run(func(args mock.Arguments) {
+			msg := args[0].([]byte)
 			log.Println("Send:expected", string(expected))
 			log.Println("Send:actual", string(msg))
-			return true
-		})).Return(nil)
+		}).Return(nil)
 
-		tt.payload.PlayerID = wss.Add(c).ID
-		m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
-			data, _ := json.Marshal(tt.payload)
-			cb(data)
-			return true
-		})).Return(nil)
+		wss.Add(tt.payload.PlayerID, c)
+		m.On("Subscribe", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+			topic, cb := args[1].(string), args[2].(messages.OnMessage)
+			if topic == core.GameWorkerEventsTopic {
+				data, _ := json.Marshal(tt.payload)
+				cb(data)
+			}
+		}).Return(nil)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -126,26 +128,24 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	pls := &smocks.PlayerLocationService{}
 	gw := core.NewGameWorker(gs, m)
 	pw := core.NewPlayersWatcher(m, pls)
-	playerH := core.NewPlayerHandler(pls, pw, gw)
 	wss := websocket.NewWSServer(wsDriver)
-
-	c1 := &wsmocks.WSConnection{}
-	c2 := &wsmocks.WSConnection{}
-	c3 := &wsmocks.WSConnection{}
-	c1.On("Send", mock.Anything).Return(nil)
-	c2.On("Send", mock.Anything).Return(nil)
-	c3.On("Send", mock.Anything).Return(nil)
-	player1ID := wss.Add(c1).ID
-	player2ID := wss.Add(c2).ID
-	player3ID := wss.Add(c3).ID
+	playerH := core.NewPlayerHandler(pls, pw, gw)
 
 	gameID := "player-handler-game-1"
 	players := []game.Player{
-		game.Player{Player: model.Player{ID: player3ID, Lat: 1, Lon: 2}, Role: "hunter"},
-		game.Player{Player: model.Player{ID: player2ID, Lat: 1, Lon: 3}, Role: "hunter"},
-		game.Player{Player: model.Player{ID: player1ID, Lat: 1, Lon: 1}, Role: "target"},
+		game.Player{Player: model.Player{ID: "player-test-3", Lat: 1, Lon: 2}, Role: "hunter"},
+		game.Player{Player: model.Player{ID: "player-test-2", Lat: 1, Lon: 3}, Role: "hunter"},
+		game.Player{Player: model.Player{ID: "player-test-1", Lat: 1, Lon: 1}, Role: "target"},
 	}
-	g := game.NewGameWithParams(gameID, true, players, player3ID)
+
+	connections := make([]*wsmocks.WSConnection, len(players))
+	for i, p := range players {
+		c := &wsmocks.WSConnection{}
+		c.On("Send", mock.Anything).Return(nil)
+		connections[i] = c
+		wss.Add(p.ID, c)
+	}
+	g := game.NewGameWithParams(gameID, true, players, players[2].ID)
 
 	m.On("Subscribe", mock.Anything, mock.Anything, mock.MatchedBy(func(cb func(data []byte) error) bool {
 		for _, p := range players {
@@ -161,7 +161,6 @@ func TestPlayerHandlerSendRankOnGameFinished(t *testing.T) {
 	err := playerH.OnStart(ctx, wss)
 	require.NoError(t, err)
 
-	connections := []*wsmocks.WSConnection{c1, c2, c3}
 	for _, c := range connections {
 		playerRank := g.Rank().PlayerRank
 		rank := make([]*protobuf.PlayerRank, len(playerRank))
@@ -184,14 +183,14 @@ func TestPlayerHandlerDisconnectDeletedPlayers(t *testing.T) {
 	pls := &smocks.PlayerLocationService{}
 	gw := core.NewGameWorker(gs, m)
 	pw := core.NewPlayersWatcher(m, pls)
-	playerH := core.NewPlayerHandler(pls, pw, gw)
 	wss := websocket.NewWSServer(wsDriver)
+	playerH := core.NewPlayerHandler(pls, pw, gw)
 
 	c := &wsmocks.WSConnection{}
 	c.On("Close").Return(nil)
 
-	playerID := wss.Add(c).ID
-	player := &model.Player{ID: playerID}
+	player := &model.Player{ID: "deleted-player-test"}
+	wss.Add(player.ID, c)
 
 	m.On("Subscribe", any, any, any).Run(func(args mock.Arguments) {
 		evt, cb := args[1].(string), args[2].(messages.OnMessage)

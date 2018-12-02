@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/golang/protobuf/proto"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/perenecabuto/CatchCatch/server/execfunc"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
@@ -32,8 +32,7 @@ type WSConnectionHandler struct {
 }
 
 // NewWSConnectionHandler creates a new WSConnectionHandler
-func NewWSConnectionHandler(c WSConnection) *WSConnectionHandler {
-	id := uuid.NewV4().String()
+func NewWSConnectionHandler(c WSConnection, id string) *WSConnectionHandler {
 	return &WSConnectionHandler{c, id, make(map[string]WSEventCallback), func() {}, func() {}, make([]byte, 512)}
 }
 
