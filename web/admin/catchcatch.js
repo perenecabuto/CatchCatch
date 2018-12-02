@@ -26,7 +26,7 @@ function log(msg) {
 
 var messages = {
     load: function(onLoaded) {
-        protobuf.load("/protobuf/message.proto",  function(err, root) {
+        protobuf.load("protobuf/message.proto",  function(err, root) {
             if (err) throw err;
 
             let entities = Object.keys(root.toJSON().nested.protobuf.nested);
