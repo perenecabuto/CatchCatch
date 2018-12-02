@@ -72,7 +72,7 @@ func NewXNetWSDriver() WSDriver {
 }
 
 // HTTPHandler implements WSDriver.Handler
-func (d XNetWSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
+func (d *XNetWSDriver) HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler {
 	return websocket.Server{
 		Handler: func(c *websocket.Conn) {
 			conn := &XNetWSConn{Conn: c}
@@ -88,12 +88,12 @@ type XNetWSConn struct {
 }
 
 // Read implements WSConnection.Read
-func (c XNetWSConn) Read(buff *[]byte) (int, error) {
+func (c *XNetWSConn) Read(buff *[]byte) (int, error) {
 	err := websocket.Message.Receive(c.Conn, buff)
 	return len(*buff), err
 }
 
 // Send implements WSConnection.Send
-func (c XNetWSConn) Send(payload []byte) error {
+func (c *XNetWSConn) Send(payload []byte) error {
 	return websocket.Message.Send(c.Conn, payload)
 }
