@@ -25,7 +25,8 @@ func (d *GobwasWSDriver) HTTPHandler(ctx context.Context, onConnect func(context
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		ctx := r.WithContext(ctx).Context()
 		conn := &GobwasWSConn{Conn: c}
