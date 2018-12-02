@@ -98,8 +98,8 @@ function init() {
     });
 
     let evtHandler = new AdminEventHandler(controller);
-    socket.on('connect', evtHandler.onConnect);
     socket.on('disconnect', evtHandler.onDisconnected)
+    socket.on('admin:connected', evtHandler.onConnect);
     socket.on("admin:players:disconnected", evtHandler.onRemotePlayerDestroy);
     socket.on("admin:feature:added", evtHandler.onFeatureAdded);
     socket.on("admin:feature:inside", evtHandler.onFeatureAdded);

@@ -7,8 +7,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
-	"github.com/perenecabuto/CatchCatch/server/protobuf"
 )
 
 var (
@@ -54,11 +52,6 @@ func (wss *WSServer) Listen(ctx context.Context, handler WSEventHandler) (http.H
 	return wss.driver.HTTPHandler(ctx, func(connctx context.Context, c WSConnection) {
 		conn := wss.Add(c)
 		defer wss.Remove(conn.ID)
-		err := conn.Emit(&protobuf.Simple{EventName: "connect", Id: conn.ID})
-		if err != nil {
-			log.Println("[WSServer] Listen: error to notify connect event:", err)
-			return
-		}
 		err := handler.OnConnection(connctx, conn)
 		if err != nil {
 			log.Println("[WSServer] Listen: handler.OnConnection error:", err)

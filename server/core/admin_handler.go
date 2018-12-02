@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
@@ -68,6 +69,10 @@ func (h *AdminHandler) OnConnection(ctx context.Context, c *websocket.WSConnecti
 
 	lat, lon := 0.0, 0.0
 	h.players.SetAdmin(c.ID, lat, lon)
+	err := c.Emit(&protobuf.Simple{EventName: "admin:connected", Id: c.ID})
+	if err != nil {
+		return errors.Cause(err)
+	}
 
 	c.OnDisconnected(func() {
 		h.players.RemoveAdmin(c.ID)
@@ -88,7 +93,6 @@ func (h *AdminHandler) onUpdatePosition(so *websocket.WSConnectionHandler) func(
 	return func(buf []byte) {
 		msg := &protobuf.Player{}
 		proto.Unmarshal(buf, msg)
-		log.Println("admin position", msg)
 		h.players.SetAdmin(so.ID, msg.GetLat(), msg.GetLon())
 	}
 }
