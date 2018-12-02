@@ -3,13 +3,13 @@ package core
 import (
 	"context"
 
-	"github.com/perenecabuto/CatchCatch/server/service/messages"
+	"github.com/golang/protobuf/proto"
 	"github.com/tidwall/gjson"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/perenecabuto/CatchCatch/server/model"
 	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/perenecabuto/CatchCatch/server/service"
+	"github.com/perenecabuto/CatchCatch/server/service/messages"
 	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
