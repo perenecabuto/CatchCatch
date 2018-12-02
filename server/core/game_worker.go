@@ -24,16 +24,15 @@ var (
 	ErrGameCoordsCantBeEmpty = errors.New("coordinates is empty or invalid")
 )
 
-const (
-	minPlayersPerGame = 3
-	gameChangeTopic   = "game:update"
-)
-
+// GameWorker default config
 var (
+	GameWorkerEventsTopic = "game:update"
+
 	// GameTimeOut default 5 min
 	// TODO: move it to worker constructor!!!
 	GameTimeOut           = 5 * time.Minute
 	GameWorkerIdleTimeOut = time.Hour
+	MinPlayersPerGame     = 3
 )
 
 // GameWorkerEvent represents game events for players
@@ -82,7 +81,7 @@ func (gw GameWorker) ID() string {
 
 // OnGameEvent notifies games events
 func (gw *GameWorker) OnGameEvent(ctx context.Context, cb func(payload *GameEventPayload) error) error {
-	return gw.messages.Subscribe(ctx, gameChangeTopic, func(data []byte) error {
+	return gw.messages.Subscribe(ctx, GameWorkerEventsTopic, func(data []byte) error {
 		payload := &GameEventPayload{}
 		err := json.Unmarshal(data, payload)
 		// TODO: check better if it will not stop the listener
@@ -206,7 +205,7 @@ func (gw *GameWorker) processGameEvent(g *service.GameWithCoords, gevt game.Even
 	case game.GamePlayerNearToTarget:
 		err = gw.publish(GamePlayerNearToTarget, &gevt.Player, g.Game)
 	case game.GamePlayerAdded, game.GamePlayerRemoved:
-		ready := !g.Started() && len(g.Players()) >= minPlayersPerGame
+		ready := !g.Started() && len(g.Players()) >= MinPlayersPerGame
 		if ready {
 			g.Start()
 			started = true
@@ -261,7 +260,7 @@ func (gw *GameWorker) publish(evt GameWorkerEvent, player *game.Player, g *game.
 		p.Rank = g.Rank()
 	}
 	data, _ := json.Marshal(p)
-	err := gw.messages.Publish(gameChangeTopic, data)
+	err := gw.messages.Publish(GameWorkerEventsTopic, data)
 	log.Printf("GameWorker:%s:Publish:%-v", g.ID, evt)
 	return errors.Wrapf(err, "GameWorker:%s:Publish:%-v", g.ID, p)
 }
