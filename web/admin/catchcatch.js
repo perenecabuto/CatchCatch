@@ -268,7 +268,7 @@ let AdminController = function (socket, sourceLayer, view) {
             let connectionsEl = document.getElementById("connections");
             playerEl.getElementsByClassName("disconnect-btn")[0]
                 .addEventListener("click", () => this.disconnectPlayer(player.id));
-            connectionsEl.appendChild(playerEl);
+            connectionsEl.insertBefore(playerEl, connectionsEl.firstChild);
         }
 
         let lon = Number((player.lon).toFixed(5));
