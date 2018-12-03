@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -18,6 +17,12 @@ var (
 // WSDriver is an interface for WS communication
 type WSDriver interface {
 	HTTPHandler(ctx context.Context, onConnect func(context.Context, WSConnection)) http.Handler
+}
+
+// Authenticator return an connection id
+// or an error when it can't be retrieved
+type Authenticator interface {
+	GetConnectionID(WSConnection) (string, error)
 }
 
 // WSServer manage WS connections
@@ -44,24 +49,32 @@ type WSEventHandler interface {
 }
 
 // Listen to WS connections
-func (wss *WSServer) Listen(ctx context.Context, handler WSEventHandler) (http.Handler, error) {
+func (wss *WSServer) Listen(ctx context.Context,
+	handler WSEventHandler, auth Authenticator) (http.Handler, error) {
+
 	err := handler.OnStart(ctx, wss)
 	if err != nil {
 		return nil, errors.Cause(err)
 	}
 
 	return wss.driver.HTTPHandler(ctx, func(connctx context.Context, c WSConnection) {
-		id := wss.GenIDFor(c)
+		id, err := auth.GetConnectionID(c)
+		if err != nil {
+			c.Close()
+			log.Printf("[WSServer] Listen: auth.GetConnectionID: %+v", err)
+			return
+		}
 		conn := wss.Add(id, c)
 		defer wss.Remove(conn.ID)
-		err := handler.OnConnection(connctx, conn)
+
+		err = handler.OnConnection(connctx, conn)
 		if err != nil {
-			log.Println("[WSServer] Listen: handler.OnConnection error:", err)
+			log.Printf("[WSServer] Listen: handler.OnConnection error: %+v", err)
 			return
 		}
 		err = conn.listen(connctx)
 		if err != nil {
-			log.Println("[WSServer] Listen: conn.listen error:", err)
+			log.Printf("[WSServer] Listen: conn.listen error: %+v", err)
 		}
 	}), nil
 }
@@ -81,11 +94,6 @@ func (wss *WSServer) Add(id string, c WSConnection) *WSConnectionHandler {
 	wss.connections[conn.ID] = conn
 	wss.Unlock()
 	return conn
-}
-
-func (wss *WSServer) GenIDFor(c WSConnection) string {
-	id := uuid.NewV4().String()
-	return id
 }
 
 // Remove Conn by session id

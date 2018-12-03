@@ -21,6 +21,7 @@ import (
 	"github.com/perenecabuto/CatchCatch/server/service/messages"
 	"github.com/perenecabuto/CatchCatch/server/service/repository"
 	"github.com/perenecabuto/CatchCatch/server/websocket"
+	"github.com/perenecabuto/CatchCatch/server/websocket/auth"
 	"github.com/perenecabuto/CatchCatch/server/worker"
 )
 
@@ -99,14 +100,14 @@ func main() {
 
 	adminH := core.NewAdminHandler(playerService, featuresWatcher)
 	adminConnections := websocket.NewWSServer(wsdriver)
-	adminHTTPHandler, err := adminConnections.Listen(ctx, adminH)
+	adminHTTPHandler, err := adminConnections.Listen(ctx, adminH, auth.NewRandom())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	playerH := core.NewPlayerHandler(playerService, playersWatcher, gameWorker)
 	playersConnections := websocket.NewWSServer(wsdriver)
-	playersHTTPHandler, err := playersConnections.Listen(ctx, playerH)
+	playersHTTPHandler, err := playersConnections.Listen(ctx, playerH, auth.NewRandom())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -54,7 +54,8 @@ func TestWSServer_Listen(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			wss := websocket.NewWSServer(tt.driver)
-			got, err := wss.Listen(ctx, tt.eventHandler)
+			connAuth := &mocks.Authenticator{}
+			got, err := wss.Listen(ctx, tt.eventHandler, connAuth)
 			tt.assertError(t, err)
 			tt.assertResponse(t, got)
 			tt.eventHandler.AssertExpectations(t)
