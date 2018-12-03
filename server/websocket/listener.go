@@ -21,32 +21,31 @@ type WSConnection interface {
 
 // WSConnectionHandler represents a WS connection
 type WSConnectionHandler struct {
-	WSConnection
+	ID string
 
-	ID             string
+	conn           WSConnection
 	eventCallbacks map[string]WSEventCallback
+	buffer         []byte
 	onDisconnected func()
 	stop           context.CancelFunc
-
-	buffer []byte
 }
 
 // NewWSConnectionHandler creates a new WSConnectionHandler
 func NewWSConnectionHandler(c WSConnection, id string) *WSConnectionHandler {
-	return &WSConnectionHandler{c, id, make(map[string]WSEventCallback), func() {}, func() {}, make([]byte, 512)}
+	return &WSConnectionHandler{id, c, make(map[string]WSEventCallback), make([]byte, 512), func() {}, func() {}}
 }
 
 // WSEventCallback is called when a event happens
 type WSEventCallback func([]byte)
 
-func (c *WSConnectionHandler) listen(ctx context.Context) error {
-	ctx, c.stop = context.WithCancel(ctx)
+func (ch *WSConnectionHandler) listen(ctx context.Context) error {
+	ctx, ch.stop = context.WithCancel(ctx)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			if err := c.readMessage(); err != nil {
+			if err := ch.readMessage(); err != nil {
 				return err
 			}
 		}
@@ -54,14 +53,14 @@ func (c *WSConnectionHandler) listen(ctx context.Context) error {
 }
 
 // On this connection event trigger callback with its message
-func (c *WSConnectionHandler) On(event string, callback WSEventCallback) {
-	c.eventCallbacks[event] = callback
+func (ch *WSConnectionHandler) On(event string, callback WSEventCallback) {
+	ch.eventCallbacks[event] = callback
 }
 
 // OnDisconnected register event callback to closed connections
-func (c *WSConnectionHandler) OnDisconnected(fn func()) {
+func (ch *WSConnectionHandler) OnDisconnected(fn func()) {
 	if fn != nil {
-		c.onDisconnected = fn
+		ch.onDisconnected = fn
 	}
 }
 
@@ -72,24 +71,24 @@ type Message interface {
 }
 
 // Emit send payload on eventX to socket id
-func (c *WSConnectionHandler) Emit(message Message) error {
+func (ch *WSConnectionHandler) Emit(message Message) error {
 	payload, err := proto.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	return c.Send(payload)
+	return ch.conn.Send(payload)
 }
 
 // Close WS connection and stop listening
-func (c *WSConnectionHandler) Close() {
-	c.stop()
-	c.WSConnection.Close()
-	go c.onDisconnected()
+func (ch *WSConnectionHandler) Close() {
+	ch.stop()
+	ch.conn.Close()
+	go ch.onDisconnected()
 }
 
-func (c *WSConnectionHandler) readMessage() error {
-	length, err := c.Read(&c.buffer)
+func (ch *WSConnectionHandler) readMessage() error {
+	length, err := ch.conn.Read(&ch.buffer)
 	if err != nil {
 		return err
 	}
@@ -97,19 +96,19 @@ func (c *WSConnectionHandler) readMessage() error {
 		return nil
 	}
 	msg := &protobuf.Simple{}
-	if err := proto.Unmarshal(c.buffer[:length], msg); err != nil {
-		return fmt.Errorf("readMessage(unmarshall): %s %s", err.Error(), c.buffer[:length])
+	if err := proto.Unmarshal(ch.buffer[:length], msg); err != nil {
+		return fmt.Errorf("readMessage(unmarshall): %s %s", err.Error(), ch.buffer[:length])
 	}
 	if len(msg.String()) == 0 {
 		log.Println("message error:", msg)
-		return fmt.Errorf("Invalid payload: %s", c.buffer)
+		return fmt.Errorf("Invalid payload: %s", ch.buffer)
 	}
-	cb, exists := c.eventCallbacks[msg.GetEventName()]
+	cb, exists := ch.eventCallbacks[msg.GetEventName()]
 	if !exists {
 		return fmt.Errorf("No callback found for: %v", msg)
 	}
 	return execfunc.WithRecover(func() error {
-		cb(c.buffer)
+		cb(ch.buffer)
 		return nil
 	})
 }
