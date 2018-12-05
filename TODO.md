@@ -4,7 +4,6 @@
 
 - jogo inicia com mesmos players
 - jogo inicia com players muito proximos
-- jogador q perdeu o jogo esta podendo voltar para o jogo
 
 ## Deploy
 

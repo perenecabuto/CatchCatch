@@ -280,3 +280,24 @@ func TestGameGetRank(t *testing.T) {
 	expected := NewGameRank("test").ByPlayersDistanceToTarget(players)
 	assert.Equal(t, expected, actual)
 }
+
+func TestGameDoNotUpdateRemovedPlayerWhenGameIsStarted(t *testing.T) {
+	g := NewGame("test")
+	g.SetPlayer("target", 0.0, 0.0)
+	g.SetPlayer("player1", 0.1, 0.1)
+	g.SetPlayer("player2", 2.0, 2.0)
+	g.Start()
+
+	loser := funk.Find(g.Players(), func(p Player) bool { return p.Role == GameRoleHunter }).(Player)
+	target := funk.Find(g.Players(), func(p Player) bool { return p.Role == GameRoleTarget }).(Player)
+
+	evt := g.RemovePlayer(loser.ID)
+
+	loser = funk.Find(g.Players(), func(p Player) bool { return p.Lose }).(Player)
+	expected := Event{Name: GamePlayerRanWay, Player: loser}
+	assert.Equal(t, expected, evt)
+
+	evt = g.SetPlayer(loser.ID, target.Lon, target.Lat)
+	expected = GameEventNothing
+	assert.Equal(t, expected, evt)
+}

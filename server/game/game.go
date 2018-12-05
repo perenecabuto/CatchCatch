@@ -151,7 +151,8 @@ func (g *Game) SetPlayer(id string, lon, lat float64) Event {
 		g.players.Set(Player{
 			model.Player{ID: id, Lon: lon, Lat: lat}, GameRoleUndefined, 0, false})
 		return Event{Name: GamePlayerAdded}
-	} else {
+	}
+	if !exists || p.Lose {
 		return GameEventNothing
 	}
 
