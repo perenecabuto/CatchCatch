@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/perenecabuto/CatchCatch/server/protobuf"
 	"github.com/pkg/errors"
 )
 
@@ -59,8 +61,17 @@ func (wss *WSServer) Listen(ctx context.Context,
 
 	return wss.driver.HTTPHandler(ctx, func(connctx context.Context, c WSConnection) {
 		id, err := auth.GetConnectionID(c)
-		if err != nil {
+		defer func() {
+			var info string
+			if err != nil {
+				info = err.Error()
+			}
+			payload := &protobuf.Info{Id: "none", EventName: "disconnect", Message: info}
+			data, _ := proto.Marshal(payload)
+			c.Send(data)
 			c.Close()
+		}()
+		if err != nil {
 			log.Printf("[WSServer] Listen: auth.GetConnectionID: %+v", err)
 			return
 		}

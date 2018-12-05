@@ -389,8 +389,9 @@ let AdminEventHandler = function (controller) {
         controller.centerByLocation();
         controller.requestFeatures();
     };
-    this.onDisconnected = function () {
-        log("disconnected");
+    this.onDisconnected = function (msg) {
+        let data = messages.Info.decode(msg);
+        log("disconnected: " + data.message);
         controller.resetInterface();
     };
     this.onRemotePlayerDestroy = function (msg) {
@@ -460,9 +461,8 @@ function WSS(address, reconnect) {
     }
 
     function onClose() {
-        triggerEvent('disconnect');
         if (!reconnect) return;
-        ws.onclose();
+        ws.init();
     }
 
     function onError(event) {

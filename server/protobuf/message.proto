@@ -5,7 +5,12 @@ package protobuf;
 message Simple {
     required string event_name = 1;
     optional string id = 2;
-    optional string info = 3;
+}
+
+message Info {
+    required string event_name = 1;
+    required string message = 2;
+    optional string id = 3;
 }
 
 message Feature {
