@@ -12,7 +12,9 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-// GobwasWSDriver is a WSDriver implementation based on gobwas/ws
+/*
+GobwasWSDriver is a WSDriver implementation based on gobwas/ws
+*/
 type GobwasWSDriver struct{}
 
 // NewGobwasWSDriver creates a gobwas/ws WSDriver
@@ -29,7 +31,7 @@ func (d *GobwasWSDriver) HTTPHandler(ctx context.Context, onConnect func(context
 			return
 		}
 		ctx := r.WithContext(ctx).Context()
-		conn := &GobwasWSConn{Conn: c}
+		conn := &GobwasWSConn{Conn: c, cookies: r.Cookies()}
 		onConnect(ctx, conn)
 	})
 }
@@ -37,6 +39,7 @@ func (d *GobwasWSDriver) HTTPHandler(ctx context.Context, onConnect func(context
 // GobwasWSConn wraps gobwas/ws connections
 type GobwasWSConn struct {
 	net.Conn
+	cookies []*http.Cookie
 }
 
 // Send implements WSConnection.Send
@@ -63,7 +66,14 @@ func (c *GobwasWSConn) Read(buff *[]byte) (int, error) {
 	return length, nil
 }
 
-// XNetWSDriver is a WSDriver implementation based on x/net/websocket
+// Cookies returns ws connection request cookies
+func (c *GobwasWSConn) Cookies() []*http.Cookie {
+	return c.cookies
+}
+
+/*
+XNetWSDriver is a WSDriver implementation based on x/net/websocket
+*/
 type XNetWSDriver struct{}
 
 // NewXNetWSDriver creates a x/net/websocket WSDriver
@@ -96,4 +106,9 @@ func (c *XNetWSConn) Read(buff *[]byte) (int, error) {
 // Send implements WSConnection.Send
 func (c *XNetWSConn) Send(payload []byte) error {
 	return websocket.Message.Send(c.Conn, payload)
+}
+
+// Cookies returns ws connection request cookies
+func (c *XNetWSConn) Cookies() []*http.Cookie {
+	return c.Conn.Request().Cookies()
 }

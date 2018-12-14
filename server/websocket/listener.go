@@ -14,6 +14,7 @@ import (
 
 // WSConnection is an interface for WS communication
 type WSConnection interface {
+	Cookies() []*http.Cookie
 	Read(*[]byte) (int, error)
 	Send(payload []byte) error
 	Close() error

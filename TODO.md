@@ -61,7 +61,6 @@
 + admin client
 + bin to load admin shape file
 + add event to listen for players closer/inside a shape
-+ admin event for player connected
 + admin event for player entered into a game
 
 ## Status de player

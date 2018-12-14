@@ -385,6 +385,8 @@ let AdminController = function (socket, sourceLayer, view) {
 let AdminEventHandler = function (controller) {
     this.onConnect = function (msg) {
         let data = messages.Simple.decode(msg);
+        var img = "https://lh3.googleusercontent.com/a-/AN66SAzKNaXq6k5k7o6KTENlTIPOL102ex8RVIencK5p9Q";
+        document.getElementById("avatar").src = img;
         log("connected as " + data.id);
         controller.centerByLocation();
         controller.requestFeatures();

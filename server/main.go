@@ -98,9 +98,20 @@ func main() {
 	workers.RunUnique(featuresWatcher, nil, "features-watcher")
 	workers.RunUnique(playersWatcher, nil, "players-watcher")
 
+	// pubKeyPath := "../auth/keys/app.rsa.pub"
+	// verifyBytes, err := ioutil.ReadFile(pubKeyPath)
+	// if err != nil {
+	// 	log.Panic(err)
+	// }
+	// verifyKey, err := jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
+	// if err != nil {
+	// 	log.Panic(err)
+	// }
+	connAuth := auth.NewGroup(auth.NewJWT([]byte("catchcatch")), auth.NewString(), auth.NewRandom())
+
 	adminH := core.NewAdminHandler(playerService, featuresWatcher)
 	adminConnections := websocket.NewWSServer(wsdriver)
-	adminHTTPHandler, err := adminConnections.Listen(ctx, adminH, auth.NewRandom())
+	adminHTTPHandler, err := adminConnections.Listen(ctx, adminH, connAuth)
 	if err != nil {
 		log.Fatal(err)
 	}

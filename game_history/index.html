@@ -1,0 +1,33 @@
+<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-database.js"></script>
+<script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "AIzaSyDGYLyGnPSThIuKTXiRfI00WXBdFg_WUg4",
+        authDomain: "catchcatch-161101.firebaseapp.com",
+        databaseURL: "https://catchcatch-161101.firebaseio.com",
+        projectId: "catchcatch-161101",
+        storageBucket: "catchcatch-161101.appspot.com",
+        messagingSenderId: "107569463120"
+    };
+    firebase.initializeApp(config);
+
+    let jwtValue = {
+        "sub": "perenecabuto",
+        "picture": "https://lh3.googleusercontent.com/a-/AN66SAzKNaXq6k5k7o6KTENlTIPOL102ex8RVIencK5p9Q",
+        "name": "Felipe Ramos (Perene Cabuto)",
+        "email": "perenecabuto@gmail.com",
+        "origin": "google",
+        "exp": 1543974426
+    };
+
+    let username = jwtValue["sub"];
+    let email = jwtValue["email"];
+    let pictureURL = jwtValue["picture"];
+
+    firebase.database().ref('users/' + username).set({
+        username: username,
+        email: email,
+        picture: pictureURL
+    });
+</script>
